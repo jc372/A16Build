@@ -12,13 +12,12 @@ BOOT_MOUNT="$ROOT_MOUNT/boot"
 cleanup() {
   mountpoint -q "$BOOT_MOUNT" && sudo umount "$BOOT_MOUNT" || true
   mountpoint -q "$ROOT_MOUNT" && sudo umount "$ROOT_MOUNT" || true
-  sudo vgchange -an >/dev/null 2>&1 || true
   [[ -n "$LOOP_DEV" ]] && sudo losetup -d "$LOOP_DEV" || true
   rm -rf "$WORK"
 }
 trap cleanup EXIT
 
-for cmd in curl xz tar awk lsblk losetup mount mountpoint partprobe pvscan vgchange udevadm sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
+for cmd in curl xz tar awk lsblk losetup mount mountpoint partprobe udevadm sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
 mkdir -p "$OUT"
 
 echo "Downloading Fedora Xfce ARM64 base image"
@@ -41,11 +40,9 @@ mkdir -p "$BOOT_MOUNT"
 LOOP_DEV="$(sudo losetup --find --show --partscan "$WORK/fedora-a16-xfce.raw")"
 sudo partprobe "$LOOP_DEV"
 sudo udevadm settle --timeout=15
-sudo pvscan --cache --activate ay >/dev/null 2>&1 || true
-sudo udevadm settle --timeout=15
 lsblk -o NAME,FSTYPE,LABEL,MOUNTPOINT "$LOOP_DEV"
 sudo blkid || true
-mapfile -t PARTITIONS < <(lsblk -rpn -o NAME,TYPE | awk '$2 == "part" || $2 == "lvm" {print $1}')
+mapfile -t PARTITIONS < <(lsblk -lnpo NAME,TYPE "$LOOP_DEV" | awk '$2 == "part" {print $1}')
 [[ ${#PARTITIONS[@]} -gt 0 ]] || { echo "No mountable partitions found in Fedora image" >&2; exit 2; }
 PROBE="$WORK/probe"
 mkdir "$PROBE"
