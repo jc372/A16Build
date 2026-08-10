@@ -19,8 +19,9 @@ apply_one() {
   patches="$FETCH_DIR/${name}.patches"
   rm -rf "$patches"; mkdir -p "$patches"
   echo "Fetching $name: $msgid"
-  # b4 fetch obtains the full thread without mutating the kernel tree.
-  (cd "$FETCH_DIR" && b4 fetch -o "${name}.mbx" "$msgid")
+  # b4 am retrieves and prepares a git-am-ready mailbox without mutating the tree.
+  # -n controls the stable mailbox base name; b4 appends .mbx.
+  (cd "$FETCH_DIR" && b4 am --no-cover -n "$name" "$msgid")
   git mailsplit -d3 -o"$patches" "$mailbox" >/dev/null
   shopt -s nullglob
   for patch in "$patches"/*; do
