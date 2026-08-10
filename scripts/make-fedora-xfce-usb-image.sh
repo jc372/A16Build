@@ -17,7 +17,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for cmd in curl xz tar awk lsblk losetup mount mountpoint sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
+for cmd in curl xz tar awk lsblk losetup mount mountpoint partprobe udevadm sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
 mkdir -p "$OUT"
 
 echo "Downloading Fedora Xfce ARM64 base image"
@@ -38,6 +38,8 @@ DTB_REL="dtb-$VERSION/qcom/glymur-asus-zenbook-a16-ux3607oa.dtb"
 # avoids libguestfs/supermin, which cannot reliably launch its appliance there.
 mkdir -p "$BOOT_MOUNT"
 LOOP_DEV="$(sudo losetup --find --show --partscan "$WORK/fedora-a16-xfce.raw")"
+sudo partprobe "$LOOP_DEV"
+sudo udevadm settle --timeout=15
 lsblk -o NAME,FSTYPE,LABEL,MOUNTPOINT "$LOOP_DEV"
 mapfile -t PARTITIONS < <(lsblk -lnpo NAME,TYPE "$LOOP_DEV" | awk '$2 == "part" {print $1}')
 [[ ${#PARTITIONS[@]} -gt 0 ]] || { echo "No partitions found in Fedora image" >&2; exit 2; }
