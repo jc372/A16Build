@@ -49,6 +49,19 @@ Use a separate, non-default USB boot path. Keep the internal Windows drive and i
 
 Exact DTB and bootloader filenames can change while the A16 support is upstreaming; inspect `dtbs/` in the artifact and the target distro's existing ARM64 boot entries instead of guessing. Secure Boot may reject an unsigned development `Image`; do not disable or modify Windows boot protection solely for this test.
 
+## Disposable Fedora GUI USB image
+
+The **Build Fedora Xfce GUI USB image** workflow creates a complete ARM64 Fedora Rawhide Xfce disk image with the custom A16 kernel as an additional, non-default boot entry. Xfce is deliberately used as a compact GUI for early bring-up.
+
+Download its `.raw.xz` artifact and checksum, verify it, then write it to a dedicated USB drive (16 GB or larger) from another machine:
+
+```bash
+sha256sum -c fedora-xfce-a16-*.raw.xz.sha256
+xz -d -c fedora-xfce-a16-*.raw.xz | sudo dd of=/dev/sdX bs=16M conv=fsync status=progress
+```
+
+`/dev/sdX` must be the whole removable USB drive—not a partition and never the internal Windows disk. Boot it through the firmware’s one-time boot menu, then select **Fedora Xfce — ASUS Zenbook A16 test kernel** in GRUB. The stock Fedora entry remains available as a fallback. The script does not touch NVRAM, default boot order, Windows EFI, or the internal disk.
+
 ## Safety and status
 
 Hardware support is evolving. Expect regressions, and treat this as a disposable test environment. The workflow deliberately never creates an EFI boot entry, writes firmware variables, flashes firmware, or packages a disk image.

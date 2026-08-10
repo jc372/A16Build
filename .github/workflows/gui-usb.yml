@@ -1,0 +1,46 @@
+name: Build Fedora Xfce GUI USB image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
+            gcc-aarch64-linux-gnu device-tree-compiler zstd pipx libguestfs-tools
+          pipx install b4
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Build A16 kernel bundle
+        run: |
+          git clone --depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git linux-next
+          bash scripts/apply-series.sh "$GITHUB_WORKSPACE/linux-next"
+          bash scripts/build.sh "$GITHUB_WORKSPACE/linux-next"
+          bash scripts/package.sh "$GITHUB_WORKSPACE/linux-next"
+      - name: Find latest Fedora Xfce ARM64 raw image
+        id: fedora
+        run: |
+          base=https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Spins/aarch64/images
+          image=$(curl -fsSL "$base/" | grep -oE 'Fedora-Xfce-Disk-Rawhide-[0-9]{8}\.n\.[0-9]+\.aarch64\.raw\.xz' | sort -Vu | tail -n1)
+          test -n "$image"
+          echo "url=$base/$image" >> "$GITHUB_OUTPUT"
+      - name: Create non-default GUI USB image
+        run: |
+          bundle=$(find out -maxdepth 1 -name 'zenbook-a16-*.tar.zst' -print -quit)
+          bash scripts/make-fedora-xfce-usb-image.sh "$bundle" "${{ steps.fedora.outputs.url }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedora-xfce-a16-usb-${{ github.run_number }}
+          path: |
+            out/fedora-xfce-a16-*.raw.xz
+            out/fedora-xfce-a16-*.raw.xz.sha256
+          if-no-files-found: error
+          retention-days: 7
