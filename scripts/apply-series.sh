@@ -37,7 +37,11 @@ apply_one() {
   echo "Fetching $name: $msgid"
   # b4 am retrieves and prepares a git-am-ready mailbox without mutating the tree.
   # -n controls the stable mailbox base name; b4 appends .mbx.
-  (cd "$FETCH_DIR" && b4 am --no-cover -n "$name" "$msgid")
+  if [[ "$name" == "a16" && -n "${A16_PATCH_SELECTION:-}" ]]; then
+    (cd "$FETCH_DIR" && b4 am --no-cover -P "$A16_PATCH_SELECTION" -n "$name" "$msgid")
+  else
+    (cd "$FETCH_DIR" && b4 am --no-cover -n "$name" "$msgid")
+  fi
   git mailsplit -d3 -o"$patches" "$mailbox" >/dev/null
   shopt -s nullglob
   for patch in "$patches"/*; do

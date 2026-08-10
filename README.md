@@ -8,6 +8,8 @@ It is designed for testing upstream enablement. It is not an installer, not a re
 
 `config/series.env` holds the A16 mailing-list Message-ID. Update it whenever an updated series is posted. Prerequisites belong in `DEPENDENCY_SERIES_MSGIDS` **only after confirming they are absent from the current linux-next tree**. Keep the list empty otherwise.
 
+`A16_PATCH_SELECTION` records the numbered patches that are still missing from the configured A16 series. It is set to `3` because linux-next has already integrated the binding and board-DTS patches from the current series. Set it empty for a new, wholly missing series, or update it after checking the latest linux-next integration.
+
 `scripts/apply-series.sh` downloads each series with `b4`, splits it into individual patches, and checks every patch before applying it:
 
 - applies a clean patch with `git am --3way`;
