@@ -85,10 +85,10 @@ fi
 # Reuse Fedora's proven generic initramfs and root options. The custom Image and
 # matching modules/DTB are added as a separate BLS menu entry; nothing becomes
 # the default boot choice.
-INITRD="$(find "$BOOT_MOUNT" -maxdepth 1 -type f -name 'initramfs-*.img' -printf '%f\n' | head -n1)"
-ENTRY="$(find "$BOOT_MOUNT/loader/entries" -maxdepth 1 -type f -name '*.conf' -printf '%f\n' | head -n1)"
+INITRD="$(sudo find "$BOOT_MOUNT" -maxdepth 1 -type f -name 'initramfs-*.img' -printf '%f\n' | head -n1)"
+ENTRY="$(sudo find "$BOOT_MOUNT/loader/entries" -maxdepth 1 -type f -name '*.conf' -printf '%f\n' | head -n1)"
 [[ -n "$INITRD" && -n "$ENTRY" ]] || { echo "Could not locate Fedora boot files" >&2; exit 2; }
-OPTIONS="$(sed -n 's/^options //p' "$BOOT_MOUNT/loader/entries/$ENTRY" | head -n1)"
+OPTIONS="$(sudo sed -n 's/^options //p' "$BOOT_MOUNT/loader/entries/$ENTRY" | head -n1)"
 [[ -n "$OPTIONS" ]] || { echo "Could not obtain Fedora kernel options" >&2; exit 2; }
 
 cat > "$WORK/a16.conf" <<EOF
