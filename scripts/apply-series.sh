@@ -13,6 +13,22 @@ command -v b4 >/dev/null || { echo "b4 is required (pipx install b4)" >&2; exit 
 source "$SERIES_FILE"
 mkdir -p "$FETCH_DIR"
 
+has_landed_new_file_blob() {
+  local patch="$1" blob found=0
+  # A current linux-next integration can retain the new board file while later
+  # commits change adjacent shared DTSIs, making neither forward nor reverse
+  # application clean.  An exact blob match is reliable evidence that this
+  # patch's new-file payload has landed.
+  while IFS= read -r blob; do
+    found=1
+    git -C "$TREE" cat-file -e "${blob}^{blob}" 2>/dev/null || return 1
+  done < <(awk '
+    /^new file mode/ { want=1; next }
+    want && /^index 000000000000\.\./ { split($2, a, ".."); print a[2]; want=0 }
+  ' "$patch")
+  (( found == 1 ))
+}
+
 apply_one() {
   local msgid="$1" name="$2" mailbox patches patch count=0 skipped=0
   mailbox="$FETCH_DIR/${name}.mbx"
@@ -30,6 +46,10 @@ apply_one() {
     git -C "$TREE" apply --check "$patch" >/dev/null 2>&1 || {
       if git -C "$TREE" apply --reverse --check "$patch" >/dev/null 2>&1; then
         echo "SKIP already applied: $(sed -n 's/^Subject: \[PATCH[^]]*\] //p' "$patch" | head -1)"
+        ((skipped+=1)); continue
+      fi
+      if has_landed_new_file_blob "$patch"; then
+        echo "SKIP landed new-file payload: $(sed -n 's/^Subject: \[PATCH[^]]*\] //p' "$patch" | head -1)"
         ((skipped+=1)); continue
       fi
       echo "ERROR patch neither applies nor reverses: $patch" >&2
