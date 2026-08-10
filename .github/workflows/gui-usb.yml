@@ -2,6 +2,10 @@ name: Build Fedora Xfce GUI USB image
 
 on:
   workflow_dispatch:
+    inputs:
+      kernel_run_id:
+        description: Optional successful nightly run ID; blank uses the newest one
+        required: false
 
 permissions:
   contents: read
@@ -9,22 +13,30 @@ permissions:
 jobs:
   image:
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
-      - name: Install build and image tools
+      - name: Reclaim runner disk for the raw USB image
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h
+      - name: Install image tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
-            gcc-aarch64-linux-gnu device-tree-compiler zstd pipx libguestfs-tools
-          pipx install b4
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Build A16 kernel bundle
+          sudo apt-get install -y zstd libguestfs-tools
+      - name: Download latest successful kernel bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RUN: ${{ inputs.kernel_run_id }}
         run: |
-          git clone --depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git linux-next
-          bash scripts/apply-series.sh "$GITHUB_WORKSPACE/linux-next"
-          bash scripts/build.sh "$GITHUB_WORKSPACE/linux-next"
-          bash scripts/package.sh "$GITHUB_WORKSPACE/linux-next"
+          run_id="$REQUESTED_RUN"
+          if [ -z "$run_id" ]; then
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" \
+              --workflow "Nightly ASUS Zenbook A16 kernel" --status success --limit 1 \
+              --json databaseId --jq '.[0].databaseId')
+          fi
+          test -n "$run_id" && test "$run_id" != "null"
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir kernel-artifact
       - name: Find latest Fedora Xfce ARM64 raw image
         id: fedora
         run: |
@@ -34,13 +46,12 @@ jobs:
           echo "url=$base/$image" >> "$GITHUB_OUTPUT"
       - name: Create non-default GUI USB image
         run: |
-          bundle=$(find out -maxdepth 1 -name 'zenbook-a16-*.tar.zst' -print -quit)
-          bash scripts/make-fedora-xfce-usb-image.sh "$bundle" "${{ steps.fedora.outputs.url }}"
+          bundle=$(find kernel-artifact -name 'zenbook-a16-*.tar.zst' -print -quit)
+          SPLIT_SIZE=1900m bash scripts/make-fedora-xfce-usb-image.sh "$bundle" "${{ steps.fedora.outputs.url }}"
       - uses: actions/upload-artifact@v4
         with:
           name: fedora-xfce-a16-usb-${{ github.run_number }}
           path: |
-            out/fedora-xfce-a16-*.raw.xz
-            out/fedora-xfce-a16-*.raw.xz.sha256
+            out/fedora-xfce-a16-*.raw.xz.*
           if-no-files-found: error
           retention-days: 7

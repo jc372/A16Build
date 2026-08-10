@@ -14,12 +14,33 @@ permissions:
   contents: read
 
 jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    outputs:
+      revision: ${{ steps.ref.outputs.revision }}
+    steps:
+      - id: ref
+        env:
+          REQUESTED_REF: ${{ inputs.linux_next_ref || 'master' }}
+        run: |
+          revision=$(git ls-remote https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git "$REQUESTED_REF" | awk 'NR==1 {print $1}')
+          echo "revision=${revision:-$REQUESTED_REF}" >> "$GITHUB_OUTPUT"
   build:
+    needs: probe
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+      - name: Restore unchanged kernel bundle
+        id: kernel-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            out/*.tar.zst
+            out/*.sha256
+          key: a16-kernel-${{ needs.probe.outputs.revision }}-${{ hashFiles('config/series.env', 'scripts/apply-series.sh', 'scripts/build.sh', 'scripts/package.sh') }}
       - name: Install build prerequisites
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
@@ -27,15 +48,19 @@ jobs:
           pipx install b4
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Clone linux-next
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
         run: |
           git clone --depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git linux-next
           git -C linux-next fetch --depth=1 origin "${{ inputs.linux_next_ref || 'master' }}"
           git -C linux-next checkout FETCH_HEAD
       - name: Apply minimal A16 series
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
         run: bash scripts/apply-series.sh "$GITHUB_WORKSPACE/linux-next"
       - name: Build ARM64 kernel, DTBs, and modules
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
         run: bash scripts/build.sh "$GITHUB_WORKSPACE/linux-next"
       - name: Package
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
         run: bash scripts/package.sh "$GITHUB_WORKSPACE/linux-next"
       - uses: actions/upload-artifact@v4
         with:

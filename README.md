@@ -22,6 +22,11 @@ It never uses `git am --skip`, `--ignore-space-change`, or force application. Th
 
 The workflow runs nightly at 03:23 UTC and supports **Run workflow** for an on-demand build. Fork this repository, enable Actions, and run the workflow. Download the `zenbook-a16-linux-next-N` artifact from the run; it includes a `.sha256` checksum.
 
+There are two deliberately separate workflows:
+
+- **Nightly ASUS Zenbook A16 kernel** builds (or restores) the kernel bundle only.
+- **Build Fedora Xfce GUI USB image** consumes a successful kernel bundle and creates the disposable GUI USB image; it never recompiles the kernel.
+
 For a local Ubuntu/Debian build:
 
 ```bash
@@ -53,11 +58,14 @@ Exact DTB and bootloader filenames can change while the A16 support is upstreami
 
 The **Build Fedora Xfce GUI USB image** workflow creates a complete ARM64 Fedora Rawhide Xfce disk image with the custom A16 kernel as an additional, non-default boot entry. Xfce is deliberately used as a compact GUI for early bring-up.
 
-Download its `.raw.xz` artifact and checksum, verify it, then write it to a dedicated USB drive (16 GB or larger) from another machine:
+It reuses the newest successful nightly kernel artifact (or a run ID you supply) and does not compile the kernel again. The nightly workflow also caches an unchanged bundle by linux-next revision and build-script configuration.
+
+Download its `.raw.xz.00.part`, `.01.part` (and any later parts), plus the checksum. Reassemble and verify it, then write it to a dedicated USB drive (16 GB or larger) from another machine:
 
 ```bash
+cat fedora-xfce-a16-*.raw.xz.*.part > fedora-xfce-a16.raw.xz
 sha256sum -c fedora-xfce-a16-*.raw.xz.sha256
-xz -d -c fedora-xfce-a16-*.raw.xz | sudo dd of=/dev/sdX bs=16M conv=fsync status=progress
+xz -d -c fedora-xfce-a16.raw.xz | sudo dd of=/dev/sdX bs=16M conv=fsync status=progress
 ```
 
 `/dev/sdX` must be the whole removable USB drive—not a partition and never the internal Windows disk. Boot it through the firmware’s one-time boot menu, then select **Fedora Xfce — ASUS Zenbook A16 test kernel** in GRUB. The stock Fedora entry remains available as a fallback. The script does not touch NVRAM, default boot order, Windows EFI, or the internal disk.

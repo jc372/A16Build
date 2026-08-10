@@ -57,4 +57,9 @@ EOF
 FINAL="$OUT/fedora-xfce-a16-$VERSION.raw.xz"
 xz -T0 -c "$WORK/fedora-a16-xfce.raw" > "$FINAL"
 sha256sum "$FINAL" > "$FINAL.sha256"
+if [[ -n "${SPLIT_SIZE:-}" ]]; then
+  split -b "$SPLIT_SIZE" -d -a 2 --additional-suffix=.part "$FINAL" "$FINAL."
+  rm "$FINAL"
+  echo "Split image into $(basename "$FINAL").00.part, .01.part, ..."
+fi
 echo "Created: $FINAL"
