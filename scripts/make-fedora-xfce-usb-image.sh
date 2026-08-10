@@ -50,6 +50,7 @@ mapfile -t PARTITIONS < <(lsblk -rpn -o NAME,TYPE | awk '$2 == "part" || $2 == "
 PROBE="$WORK/probe"
 mkdir "$PROBE"
 ROOT_PART=""
+ROOT_SUBVOL=""
 BOOT_PART=""
 for part in "${PARTITIONS[@]}"; do
   if sudo mount -o ro "$part" "$PROBE" 2>/dev/null; then
@@ -57,9 +58,25 @@ for part in "${PARTITIONS[@]}"; do
     if [[ -d "$PROBE/loader/entries" || -d "$PROBE/grub2" ]]; then BOOT_PART="$part"; fi
     sudo umount "$PROBE"
   fi
+  # Fedora btrfs disk images normally use a top-level container with a `root`
+  # subvolume. Inspect that container when the default mount has no /usr.
+  if [[ -z "$ROOT_PART" && "$(lsblk -no FSTYPE "$part")" == "btrfs" ]] && sudo mount -o ro,subvolid=5 "$part" "$PROBE" 2>/dev/null; then
+    for subvol in "$PROBE"/*; do
+      if [[ -d "$subvol/usr" && -d "$subvol/etc" ]]; then
+        ROOT_PART="$part"
+        ROOT_SUBVOL="$(basename "$subvol")"
+        break
+      fi
+    done
+    sudo umount "$PROBE"
+  fi
 done
 [[ -n "$ROOT_PART" ]] || { echo "Could not find Fedora root partition" >&2; exit 2; }
-sudo mount "$ROOT_PART" "$ROOT_MOUNT"
+if [[ -n "$ROOT_SUBVOL" ]]; then
+  sudo mount -o "subvol=$ROOT_SUBVOL" "$ROOT_PART" "$ROOT_MOUNT"
+else
+  sudo mount "$ROOT_PART" "$ROOT_MOUNT"
+fi
 [[ -d "$ROOT_MOUNT/usr" ]] || { echo "Fedora root subvolume was not mounted" >&2; exit 2; }
 if [[ -n "$BOOT_PART" && "$BOOT_PART" != "$ROOT_PART" ]]; then
   sudo mount "$BOOT_PART" "$BOOT_MOUNT"
