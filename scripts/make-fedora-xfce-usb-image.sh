@@ -38,12 +38,26 @@ DTB_REL="dtb-$VERSION/qcom/glymur-asus-zenbook-a16-ux3607oa.dtb"
 # avoids libguestfs/supermin, which cannot reliably launch its appliance there.
 mkdir -p "$BOOT_MOUNT"
 LOOP_DEV="$(sudo losetup --find --show --partscan "$WORK/fedora-a16-xfce.raw")"
-ROOT_PART="$(lsblk -lnpo NAME,FSTYPE "$LOOP_DEV" | awk '$2 == "btrfs" {print $1; exit}')"
-BOOT_PART="$(lsblk -lnpo NAME,FSTYPE "$LOOP_DEV" | awk '$2 == "ext4" {print $1; exit}')"
-[[ -n "$ROOT_PART" ]] || { echo "Could not find Fedora btrfs root partition" >&2; exit 2; }
+lsblk -o NAME,FSTYPE,LABEL,MOUNTPOINT "$LOOP_DEV"
+mapfile -t PARTITIONS < <(lsblk -lnpo NAME,TYPE "$LOOP_DEV" | awk '$2 == "part" {print $1}')
+[[ ${#PARTITIONS[@]} -gt 0 ]] || { echo "No partitions found in Fedora image" >&2; exit 2; }
+PROBE="$WORK/probe"
+mkdir "$PROBE"
+ROOT_PART=""
+BOOT_PART=""
+for part in "${PARTITIONS[@]}"; do
+  if sudo mount -o ro "$part" "$PROBE" 2>/dev/null; then
+    if [[ -d "$PROBE/usr" && -d "$PROBE/etc" ]]; then ROOT_PART="$part"; fi
+    if [[ -d "$PROBE/loader/entries" || -d "$PROBE/grub2" ]]; then BOOT_PART="$part"; fi
+    sudo umount "$PROBE"
+  fi
+done
+[[ -n "$ROOT_PART" ]] || { echo "Could not find Fedora root partition" >&2; exit 2; }
 sudo mount "$ROOT_PART" "$ROOT_MOUNT"
 [[ -d "$ROOT_MOUNT/usr" ]] || { echo "Fedora root subvolume was not mounted" >&2; exit 2; }
-if [[ -n "$BOOT_PART" ]]; then sudo mount "$BOOT_PART" "$BOOT_MOUNT"; fi
+if [[ -n "$BOOT_PART" && "$BOOT_PART" != "$ROOT_PART" ]]; then
+  sudo mount "$BOOT_PART" "$BOOT_MOUNT"
+fi
 
 # Reuse Fedora's proven generic initramfs and root options. The custom Image and
 # matching modules/DTB are added as a separate BLS menu entry; nothing becomes
