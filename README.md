@@ -68,7 +68,7 @@ sha256sum -c fedora-xfce-a16-*.raw.xz.sha256
 xz -d -c fedora-xfce-a16.raw.xz | sudo dd of=/dev/sdX bs=16M conv=fsync status=progress
 ```
 
-`/dev/sdX` must be the whole removable USB drive—not a partition and never the internal Windows disk. Boot it through the firmware’s one-time boot menu, then select **Fedora Xfce — ASUS Zenbook A16 test kernel** in GRUB. The stock Fedora entry remains available as a fallback. The script does not touch NVRAM, default boot order, Windows EFI, or the internal disk.
+`/dev/sdX` must be the whole removable USB drive—not a partition and never the internal Windows disk. Boot it through the firmware’s one-time boot menu, then select **Fedora Xfce - ASUS Zenbook A16 test kernel** in GRUB. The stock Fedora entry remains available as a fallback. The script does not touch NVRAM, default boot order, Windows EFI, or the internal disk.
 
 ## Safety and status
 

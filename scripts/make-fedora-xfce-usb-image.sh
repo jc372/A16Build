@@ -6,9 +6,18 @@ BUNDLE="${1:?usage: $0 <zenbook-a16-*.tar.zst> <fedora-raw.xz-url>}"
 BASE_URL="${2:?usage: $0 <zenbook-a16-*.tar.zst> <fedora-raw.xz-url>}"
 OUT="${OUT:-$PWD/out}"
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+LOOP_DEV=""
+ROOT_MOUNT="$WORK/root"
+BOOT_MOUNT="$ROOT_MOUNT/boot"
+cleanup() {
+  mountpoint -q "$BOOT_MOUNT" && sudo umount "$BOOT_MOUNT" || true
+  mountpoint -q "$ROOT_MOUNT" && sudo umount "$ROOT_MOUNT" || true
+  [[ -n "$LOOP_DEV" ]] && sudo losetup -d "$LOOP_DEV" || true
+  rm -rf "$WORK"
+}
+trap cleanup EXIT
 
-for cmd in curl xz tar guestfish awk; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
+for cmd in curl xz tar awk lsblk losetup mount mountpoint sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
 mkdir -p "$OUT"
 
 echo "Downloading Fedora Xfce ARM64 base image"
@@ -25,18 +34,28 @@ DTB_REL="dtb-$VERSION/qcom/glymur-asus-zenbook-a16-ux3607oa.dtb"
   echo "A16 DTB not found in kernel bundle" >&2; exit 2;
 }
 
+# Mount the raw disk directly. This works on GitHub-hosted Ubuntu runners and
+# avoids libguestfs/supermin, which cannot reliably launch its appliance there.
+mkdir -p "$BOOT_MOUNT"
+LOOP_DEV="$(sudo losetup --find --show --partscan "$WORK/fedora-a16-xfce.raw")"
+ROOT_PART="$(lsblk -lnpo NAME,FSTYPE "$LOOP_DEV" | awk '$2 == "btrfs" {print $1; exit}')"
+BOOT_PART="$(lsblk -lnpo NAME,FSTYPE "$LOOP_DEV" | awk '$2 == "ext4" {print $1; exit}')"
+[[ -n "$ROOT_PART" ]] || { echo "Could not find Fedora btrfs root partition" >&2; exit 2; }
+sudo mount "$ROOT_PART" "$ROOT_MOUNT"
+[[ -d "$ROOT_MOUNT/usr" ]] || { echo "Fedora root subvolume was not mounted" >&2; exit 2; }
+if [[ -n "$BOOT_PART" ]]; then sudo mount "$BOOT_PART" "$BOOT_MOUNT"; fi
+
 # Reuse Fedora's proven generic initramfs and root options. The custom Image and
 # matching modules/DTB are added as a separate BLS menu entry; nothing becomes
 # the default boot choice.
-BOOT_LIST="$(guestfish --ro -a "$WORK/fedora-a16-xfce.raw" -i ls /boot)"
-INITRD="$(printf '%s\n' "$BOOT_LIST" | awk '/^initramfs-.*\.img$/{print; exit}')"
-ENTRY="$(guestfish --ro -a "$WORK/fedora-a16-xfce.raw" -i ls /boot/loader/entries | awk '/\.conf$/{print; exit}')"
+INITRD="$(find "$BOOT_MOUNT" -maxdepth 1 -type f -name 'initramfs-*.img' -printf '%f\n' | head -n1)"
+ENTRY="$(find "$BOOT_MOUNT/loader/entries" -maxdepth 1 -type f -name '*.conf' -printf '%f\n' | head -n1)"
 [[ -n "$INITRD" && -n "$ENTRY" ]] || { echo "Could not locate Fedora boot files" >&2; exit 2; }
-OPTIONS="$(guestfish --ro -a "$WORK/fedora-a16-xfce.raw" -i cat "/boot/loader/entries/$ENTRY" | sed -n 's/^options //p' | head -n1)"
+OPTIONS="$(sed -n 's/^options //p' "$BOOT_MOUNT/loader/entries/$ENTRY" | head -n1)"
 [[ -n "$OPTIONS" ]] || { echo "Could not obtain Fedora kernel options" >&2; exit 2; }
 
 cat > "$WORK/a16.conf" <<EOF
-title Fedora Xfce — ASUS Zenbook A16 test kernel
+title Fedora Xfce - ASUS Zenbook A16 test kernel
 version $VERSION
 linux /Image-$VERSION
 initrd /$INITRD
@@ -44,15 +63,10 @@ devicetree /$DTB_REL
 options $OPTIONS
 EOF
 
-guestfish --rw -a "$WORK/fedora-a16-xfce.raw" -i <<EOF
-copy-in $STAGE/Image /boot
-mv /boot/Image /boot/Image-$VERSION
-copy-in $STAGE/dtbs /boot
-mv /boot/dtbs /boot/dtb-$VERSION
-copy-in $STAGE/modules/lib/modules/$VERSION /usr/lib/modules
-copy-in $WORK/a16.conf /boot/loader/entries
-mv /boot/loader/entries/a16.conf /boot/loader/entries/a16-$VERSION.conf
-EOF
+sudo install -m 0644 "$STAGE/Image" "$BOOT_MOUNT/Image-$VERSION"
+sudo cp -a "$STAGE/dtbs" "$BOOT_MOUNT/dtb-$VERSION"
+sudo cp -a "$STAGE/modules/lib/modules/$VERSION" "$ROOT_MOUNT/usr/lib/modules/"
+sudo install -m 0644 "$WORK/a16.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION.conf"
 
 FINAL="$OUT/fedora-xfce-a16-$VERSION.raw.xz"
 xz -T0 -c "$WORK/fedora-a16-xfce.raw" > "$FINAL"
