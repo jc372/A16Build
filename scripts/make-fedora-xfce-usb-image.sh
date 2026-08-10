@@ -17,12 +17,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for cmd in curl xz tar awk lsblk losetup mount mountpoint partprobe udevadm sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
+for cmd in curl xz tar awk lsblk losetup mount mountpoint partprobe pv udevadm sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
 mkdir -p "$OUT"
 
 echo "Downloading Fedora Xfce ARM64 base image"
 curl --fail --location --retry 3 "$BASE_URL" -o "$WORK/fedora.raw.xz"
-xz -T0 -d -c "$WORK/fedora.raw.xz" > "$WORK/fedora-a16-xfce.raw"
+echo "Expanding Fedora raw image"
+pv -pterb "$WORK/fedora.raw.xz" | xz -T0 -d > "$WORK/fedora-a16-xfce.raw"
 
 mkdir "$WORK/bundle"
 tar --zstd -C "$WORK/bundle" -xf "$BUNDLE"
@@ -103,7 +104,9 @@ sudo cp -a "$STAGE/modules/lib/modules/$VERSION" "$ROOT_MOUNT/usr/lib/modules/"
 sudo install -m 0644 "$WORK/a16.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION.conf"
 
 FINAL="$OUT/fedora-xfce-a16-$VERSION.raw.xz"
-xz -T0 -c "$WORK/fedora-a16-xfce.raw" > "$FINAL"
+echo "Compressing finished USB image"
+pv -pterb -s "$(stat -c%s "$WORK/fedora-a16-xfce.raw")" "$WORK/fedora-a16-xfce.raw" | xz -T0 -1 > "$FINAL"
+echo "Writing checksum and artifact parts"
 sha256sum "$FINAL" > "$FINAL.sha256"
 if [[ -n "${SPLIT_SIZE:-}" ]]; then
   split -b "$SPLIT_SIZE" -d -a 2 --additional-suffix=.part "$FINAL" "$FINAL."
