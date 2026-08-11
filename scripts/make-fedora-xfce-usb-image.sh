@@ -10,8 +10,8 @@ LOOP_DEV=""
 ROOT_MOUNT="$WORK/root"
 BOOT_MOUNT="$ROOT_MOUNT/boot"
 cleanup() {
-  mountpoint -q "$BOOT_MOUNT" && sudo umount "$BOOT_MOUNT" || true
-  mountpoint -q "$ROOT_MOUNT" && sudo umount "$ROOT_MOUNT" || true
+  sudo mountpoint -q "$BOOT_MOUNT" && sudo umount "$BOOT_MOUNT" || true
+  sudo mountpoint -q "$ROOT_MOUNT" && sudo umount "$ROOT_MOUNT" || true
   [[ -n "$LOOP_DEV" ]] && sudo losetup -d "$LOOP_DEV" || true
   rm -rf "$WORK"
 }
@@ -117,6 +117,16 @@ sudo install -m 0644 "$WORK/a16.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION.c
 if [[ -f "$BOOT_MOUNT/grub2/grub.cfg" ]]; then
   sudo tee -a "$BOOT_MOUNT/grub2/grub.cfg" < "$WORK/a16-grub.cfg" >/dev/null
 fi
+
+# All filesystem writes must reach the raw backing file before it is compressed.
+# Keeping the image mounted here previously produced an artifact with the
+# pre-edit boot partition despite a successful workflow run.
+echo "Flushing image filesystem changes"
+sync
+if sudo mountpoint -q "$BOOT_MOUNT"; then sudo umount "$BOOT_MOUNT"; fi
+if sudo mountpoint -q "$ROOT_MOUNT"; then sudo umount "$ROOT_MOUNT"; fi
+sudo losetup -d "$LOOP_DEV"
+LOOP_DEV=""
 
 FINAL="$OUT/fedora-xfce-a16-$VERSION.raw.xz"
 echo "Compressing finished USB image"
