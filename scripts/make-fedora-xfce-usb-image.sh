@@ -98,10 +98,25 @@ devicetree /$DTB_REL
 options $OPTIONS
 EOF
 
+cat > "$WORK/a16-grub.cfg" <<EOF
+
+menuentry 'Fedora Xfce - ASUS Zenbook A16 test kernel' {
+    linux /Image-$VERSION $OPTIONS
+    initrd /$INITRD
+    devicetree /$DTB_REL
+}
+EOF
+
 sudo install -m 0644 "$STAGE/Image" "$BOOT_MOUNT/Image-$VERSION"
 sudo cp -a "$STAGE/dtbs" "$BOOT_MOUNT/dtb-$VERSION"
 sudo cp -a "$STAGE/modules/lib/modules/$VERSION" "$ROOT_MOUNT/usr/lib/modules/"
 sudo install -m 0644 "$WORK/a16.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION.conf"
+# Some Fedora ARM images do not refresh GRUB's BLS enumeration on a copied raw
+# image. Keep the BLS entry and append an explicit GRUB fallback so the test
+# kernel is always selectable without becoming the default.
+if [[ -f "$BOOT_MOUNT/grub2/grub.cfg" ]]; then
+  sudo tee -a "$BOOT_MOUNT/grub2/grub.cfg" < "$WORK/a16-grub.cfg" >/dev/null
+fi
 
 FINAL="$OUT/fedora-xfce-a16-$VERSION.raw.xz"
 echo "Compressing finished USB image"
