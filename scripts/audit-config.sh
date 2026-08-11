@@ -13,6 +13,9 @@ while IFS= read -r requirement; do
   elif [[ "$requirement" =~ ^\#\ (CONFIG_[A-Za-z0-9_]+)\ is\ not\ set$ ]]; then
     symbol="${BASH_REMATCH[1]}"
     actual="$(grep -E "^(# ${symbol} is not set|${symbol}=)" "$CONFIG" | tail -n1 || true)"
+    # Hidden Kconfig symbols are omitted entirely once their parent option is
+    # disabled. An absent line is therefore equivalent to "not set" here.
+    [[ -z "$actual" ]] && actual="$requirement"
   else
     continue
   fi
