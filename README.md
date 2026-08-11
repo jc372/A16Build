@@ -24,6 +24,8 @@ The workflow runs nightly at 03:23 UTC and supports **Run workflow** for an on-d
 
 `config/a16-required.config` is the reviewed A16 early-boot set. `scripts/build.sh` applies it after importing and normalizing Fedora Rawhide's AArch64 config, runs `olddefconfig` again, and then calls `scripts/audit-config.sh`. Update this list deliberately when upstream renames or removes a symbol; do not weaken the audit just to make CI green.
 
+`config/build-overrides.config` removes only large build-time debug, sanitizer, BTF, GDB, and module-signing payloads that are not needed for boot diagnostics. The workflow also reclaims unused hosted-runner SDKs and persists a 5 GB `ccache`, including after failed builds, so unchanged translation units are reused on retries. GitHub-hosted runners themselves are ephemeral, so a run completed before this cache was added cannot be resumed.
+
 There are two deliberately separate workflows:
 
 - **Nightly ASUS Zenbook A16 kernel** builds (or restores) the kernel bundle only.

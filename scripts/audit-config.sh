@@ -7,12 +7,17 @@ REQUIRED="${2:-$ROOT/config/a16-required.config}"
 missing=0
 
 while IFS= read -r requirement; do
-  [[ "$requirement" =~ ^CONFIG_[A-Za-z0-9_]+= ]] || continue
-  symbol="${requirement%%=*}"
-  actual="$(grep -E "^${symbol}=" "$CONFIG" | tail -n1 || true)"
+  if [[ "$requirement" =~ ^CONFIG_[A-Za-z0-9_]+= ]]; then
+    symbol="${requirement%%=*}"
+    actual="$(grep -E "^${symbol}=" "$CONFIG" | tail -n1 || true)"
+  elif [[ "$requirement" =~ ^\#\ (CONFIG_[A-Za-z0-9_]+)\ is\ not\ set$ ]]; then
+    symbol="${BASH_REMATCH[1]}"
+    actual="$(grep -E "^(# ${symbol} is not set|${symbol}=)" "$CONFIG" | tail -n1 || true)"
+  else
+    continue
+  fi
   if [[ "$actual" != "$requirement" ]]; then
-    printf 'MISSING %-42s expected=%s actual=%s\n' \
-      "$symbol" "${requirement#*=}" "${actual#*=}" >&2
+    printf 'MISSING %-42s expected=%s actual=%s\n' "$symbol" "$requirement" "$actual" >&2
     missing=1
   else
     printf 'OK      %s\n' "$requirement"

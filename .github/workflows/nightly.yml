@@ -36,6 +36,20 @@ jobs:
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
+      - name: Reclaim runner disk for the Fedora module build
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+      - name: Restore compiler cache
+        id: ccache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-${{ github.run_id }}
+          restore-keys: |
+            a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-
+            a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-
+            a16-ccache-${{ runner.os }}-
       - name: Restore unchanged kernel bundle
         id: kernel-cache
         uses: actions/cache@v4
@@ -49,9 +63,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
-            gcc-aarch64-linux-gnu device-tree-compiler zstd pipx curl dwarves
+            gcc-aarch64-linux-gnu device-tree-compiler zstd pipx curl ccache
           pipx install b4
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          ccache --max-size=5G
+          ccache --zero-stats
       - name: Clone linux-next
         if: steps.kernel-cache.outputs.cache-hit != 'true'
         run: |
@@ -63,6 +79,10 @@ jobs:
         run: bash scripts/apply-series.sh "$GITHUB_WORKSPACE/linux-next"
       - name: Build ARM64 kernel, DTBs, and modules
         if: steps.kernel-cache.outputs.cache-hit != 'true'
+        env:
+          CCACHE_DIR: /home/runner/.cache/ccache
+          BUILD_CC: ccache aarch64-linux-gnu-gcc
+          BUILD_HOSTCC: ccache gcc
         run: bash scripts/build.sh "$GITHUB_WORKSPACE/linux-next"
       - name: Package
         if: steps.kernel-cache.outputs.cache-hit != 'true'
@@ -75,3 +95,12 @@ jobs:
             out/*.sha256
           if-no-files-found: error
           retention-days: 14
+      - name: Show compiler cache statistics
+        if: always() && steps.kernel-cache.outputs.cache-hit != 'true'
+        run: ccache --show-stats || true
+      - name: Save compiler cache
+        if: always() && steps.kernel-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-${{ github.run_id }}
