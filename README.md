@@ -1,6 +1,6 @@
 # Nightly ASUS Zenbook A16 (UX3607OA) Linux kernels
 
-This repository builds an **ARM64 development kernel** from `linux-next`, then applies the Qualcomm ASUS Zenbook A16 / Snapdragon X2 (Glymur) patch series and only explicitly listed missing prerequisites. It publishes an `Image`, DTBs, and modules in a compressed GitHub Actions artifact.
+This repository builds an **ARM64 development kernel** from `linux-next`, then applies the Qualcomm ASUS Zenbook A16 / Snapdragon X2 (Glymur) patch series and only explicitly listed missing prerequisites. It starts with Fedora Rawhide's current AArch64 kernel configuration, forces the early-boot Glymur supplier and peripheral drivers built in, and fails the build if any required option is lost. It publishes an `Image`, DTBs, modules, and build diagnostics in a compressed GitHub Actions artifact.
 
 It is designed for testing upstream enablement. It is not an installer, not a recovery image, and not a replacement for the Windows boot chain.
 
@@ -20,7 +20,9 @@ It never uses `git am --skip`, `--ignore-space-change`, or force application. Th
 
 ## GitHub Actions
 
-The workflow runs nightly at 03:23 UTC and supports **Run workflow** for an on-demand build. Fork this repository, enable Actions, and run the workflow. Download the `zenbook-a16-linux-next-N` artifact from the run; it includes a `.sha256` checksum.
+The workflow runs nightly at 03:23 UTC and supports **Run workflow** for an on-demand build. Fork this repository, enable Actions, and run the workflow. Download the `zenbook-a16-linux-next-N` artifact from the run; it includes a `.sha256` checksum. The bundle's `metadata/` directory records the exact `.config`, Fedora config source and digest, linux-next commit, kernel release, A16 DTB and checksum, configuration audit, and Qualcomm/all-module inventories.
+
+`config/a16-required.config` is the reviewed A16 early-boot set. `scripts/build.sh` applies it after importing and normalizing Fedora Rawhide's AArch64 config, runs `olddefconfig` again, and then calls `scripts/audit-config.sh`. Update this list deliberately when upstream renames or removes a symbol; do not weaken the audit just to make CI green.
 
 There are two deliberately separate workflows:
 
@@ -56,7 +58,15 @@ Exact DTB and bootloader filenames can change while the A16 support is upstreami
 
 ## Disposable Fedora GUI USB image
 
-The **Build Fedora Xfce GUI USB image** workflow creates a complete ARM64 Fedora Rawhide Xfce disk image with the custom A16 kernel as an additional, non-default boot entry. Xfce is deliberately used as a compact GUI for early bring-up.
+The **Build Fedora Xfce GUI USB image** workflow creates a complete ARM64 Fedora Rawhide Xfce disk image with the custom A16 kernel as an additional, non-default boot entry. Xfce is deliberately used as a compact GUI for early bring-up. The image overlays the newest Rawhide `qcom-firmware` package, makes that firmware available in the A16 initramfs, installs module dependency metadata, and stores the kernel build metadata under `/usr/share/a16-build/`.
+
+The A16 entry is permanently configured for visible bring-up diagnostics. It removes `rhgb`, `quiet`, `splash`, and `nomodeset`, disables Plymouth, and adds:
+
+```text
+rd.plymouth=0 plymouth.enable=0 plymouth.use-simpledrm=0 loglevel=7 ignore_loglevel initcall_debug deferred_probe_timeout=30 systemd.show_status=1 rd.systemd.show_status=1 rootwait
+```
+
+These options expose kernel and systemd progress while preserving Qualcomm DRM initialization. The stock Fedora entry remains unchanged for comparison.
 
 It reuses the newest successful nightly kernel artifact (or a run ID you supply) and does not compile the kernel again. The nightly workflow also caches an unchanged bundle by linux-next revision and build-script configuration.
 

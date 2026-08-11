@@ -18,17 +18,22 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       revision: ${{ steps.ref.outputs.revision }}
+      fedora_config_sha: ${{ steps.ref.outputs.fedora_config_sha }}
     steps:
+      - uses: actions/checkout@v4
       - id: ref
         env:
           REQUESTED_REF: ${{ inputs.linux_next_ref || 'master' }}
         run: |
           revision=$(git ls-remote https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git "$REQUESTED_REF" | awk 'NR==1 {print $1}')
           echo "revision=${revision:-$REQUESTED_REF}" >> "$GITHUB_OUTPUT"
+          source config/build.env
+          fedora_config_sha=$(curl -fsSL "$FEDORA_CONFIG_URL" | sha256sum | awk '{print $1}')
+          echo "fedora_config_sha=$fedora_config_sha" >> "$GITHUB_OUTPUT"
   build:
     needs: probe
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - name: Restore unchanged kernel bundle
@@ -38,13 +43,13 @@ jobs:
           path: |
             out/*.tar.zst
             out/*.sha256
-          key: a16-kernel-${{ needs.probe.outputs.revision }}-${{ hashFiles('config/series.env', 'scripts/apply-series.sh', 'scripts/build.sh', 'scripts/package.sh') }}
+          key: a16-kernel-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-${{ hashFiles('config/*.env', 'config/*.config', 'scripts/apply-series.sh', 'scripts/audit-config.sh', 'scripts/build.sh', 'scripts/package.sh') }}
       - name: Install build prerequisites
         if: steps.kernel-cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
-            gcc-aarch64-linux-gnu device-tree-compiler zstd pipx
+            gcc-aarch64-linux-gnu device-tree-compiler zstd pipx curl dwarves
           pipx install b4
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Clone linux-next
