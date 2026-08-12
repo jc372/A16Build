@@ -31,7 +31,7 @@ There are three workflows:
 - **Nightly ASUS Zenbook A16 kernel** builds (or restores) the kernel bundle only.
 - **Build Fedora Xfce GUI USB image** quickly creates an image from an existing
   successful kernel run. Leave its run ID blank to use the newest successful one.
-- **Build kernel then Fedora Xfce GUI USB image** performs the full kernel and GUI
+- **Full build - kernel and Fedora Xfce GUI USB image** performs the full kernel and GUI
   image sequence in one run. Use this longer workflow when an overnight rebuild
   is needed; the GUI stage uses the exact kernel artifact produced by its first stage.
 

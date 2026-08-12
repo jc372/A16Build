@@ -1,4 +1,4 @@
-name: Build kernel then Fedora Xfce GUI USB image
+name: Full build - kernel and Fedora Xfce GUI USB image
 
 on:
   workflow_dispatch:
