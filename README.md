@@ -26,12 +26,14 @@ The workflow runs nightly at 03:23 UTC and supports **Run workflow** for an on-d
 
 `config/build-overrides.config` removes only large build-time debug, sanitizer, BTF, GDB, and module-signing payloads that are not needed for boot diagnostics. The workflow also reclaims unused hosted-runner SDKs and persists a 5 GB `ccache`, including after failed builds, so unchanged translation units are reused on retries. GitHub-hosted runners themselves are ephemeral, so a run completed before this cache was added cannot be resumed.
 
-There are two workflows:
+There are three workflows:
 
 - **Nightly ASUS Zenbook A16 kernel** builds (or restores) the kernel bundle only.
-- **Build Fedora Xfce GUI USB image** automatically runs the kernel workflow first
-  and uses that exact bundle. Supplying a successful kernel run ID skips the new
-  kernel build and reuses the requested bundle instead.
+- **Build Fedora Xfce GUI USB image** quickly creates an image from an existing
+  successful kernel run. Leave its run ID blank to use the newest successful one.
+- **Build kernel then Fedora Xfce GUI USB image** performs the full kernel and GUI
+  image sequence in one run. Use this longer workflow when an overnight rebuild
+  is needed; the GUI stage uses the exact kernel artifact produced by its first stage.
 
 For a local Ubuntu/Debian build:
 
