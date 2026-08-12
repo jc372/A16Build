@@ -40,7 +40,9 @@ jobs:
   build:
     needs: probe
     runs-on: ubuntu-24.04
-    timeout-minutes: 300
+    # GitHub-hosted jobs permit at most six hours. Leave the full window for a
+    # cold Fedora module build; cached retries normally finish much sooner.
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - name: Reclaim runner disk for the Fedora module build

@@ -66,13 +66,19 @@ Exact DTB and bootloader filenames can change while the A16 support is upstreami
 
 The **Build Fedora Xfce GUI USB image** workflow creates a complete ARM64 Fedora Rawhide Xfce disk image with the custom A16 kernel as an additional, non-default boot entry. Xfce is deliberately used as a compact GUI for early bring-up. The image overlays the newest Rawhide `qcom-firmware` package, makes that firmware available in the A16 initramfs, installs module dependency metadata, and stores the kernel build metadata under `/usr/share/a16-build/`.
 
-The A16 entry is permanently configured for visible bring-up diagnostics. It removes `rhgb`, `quiet`, `splash`, and `nomodeset`, disables Plymouth, and adds:
+The image provides three A16 GRUB profiles. All remove `rhgb`, `quiet`,
+`splash`, and `nomodeset`, disable Plymouth, and retain `rootwait`:
 
-```text
-rd.plymouth=0 plymouth.enable=0 plymouth.use-simpledrm=0 loglevel=7 ignore_loglevel initcall_debug deferred_probe_timeout=30 systemd.show_status=1 rd.systemd.show_status=1 rootwait
-```
+- **normal, no splash** uses the custom kernel without verbose diagnostics;
+- **debug logging** adds `loglevel=7`, `ignore_loglevel`, `initcall_debug`,
+  `deferred_probe_timeout=30`, and visible systemd status;
+- **firmware framebuffer, MSM DRM disabled** adds the debug options and blocks
+  both the built-in MSM DRM registration initcall and the modular `msm` driver,
+  preserving the early framebuffer for display-handoff diagnosis. This profile
+  therefore also works with the already-built kernel where MSM DRM is built in.
 
-These options expose kernel and systemd progress while preserving Qualcomm DRM initialization. The stock Fedora entry remains unchanged for comparison.
+Choose or edit these options directly in GRUB; changing them only requires a
+GUI-image rebuild, not a kernel compile. The stock Fedora entry remains unchanged.
 
 It reuses the newest successful nightly kernel artifact (or a run ID you supply) and does not compile the kernel again. The nightly workflow also caches an unchanged bundle by linux-next revision and build-script configuration.
 
@@ -84,7 +90,7 @@ sha256sum -c fedora-xfce-a16-*.raw.xz.sha256
 xz -d -c fedora-xfce-a16.raw.xz | sudo dd of=/dev/sdX bs=16M conv=fsync status=progress
 ```
 
-`/dev/sdX` must be the whole removable USB drive—not a partition and never the internal Windows disk. Boot it through the firmware’s one-time boot menu, then select **Fedora Xfce - ASUS Zenbook A16 test kernel** in GRUB. The stock Fedora entry remains available as a fallback. The script does not touch NVRAM, default boot order, Windows EFI, or the internal disk.
+`/dev/sdX` must be the whole removable USB drive—not a partition and never the internal Windows disk. Boot it through the firmware’s one-time boot menu, then select the desired **Fedora Xfce - ASUS Zenbook A16** profile in GRUB. The stock Fedora entry remains available as a fallback. The script does not touch NVRAM, default boot order, Windows EFI, or the internal disk.
 
 ## Safety and status
 

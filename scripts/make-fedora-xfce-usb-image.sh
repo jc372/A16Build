@@ -107,22 +107,21 @@ ENTRY="$(sudo find "$BOOT_MOUNT/loader/entries" -maxdepth 1 -type f -name '*.con
 OPTIONS="$(sudo sed -n 's/^options //p' "$BOOT_MOUNT/loader/entries/$ENTRY" | head -n1)"
 [[ -n "$OPTIONS" ]] || { echo "Could not obtain Fedora kernel options" >&2; exit 2; }
 
-# Strip graphical/quiet modes (including a stale nomodeset) and make the A16
-# entry permanently useful for deferred-probe and display bring-up debugging.
+# Strip graphical/quiet modes and stale diagnostics inherited from Fedora.
+# Boot-time experiments belong in separate GRUB entries so they can be changed
+# without rebuilding the kernel. All A16 profiles keep Plymouth disabled.
 read -r -a FEDORA_OPTIONS <<< "$OPTIONS"
-DEBUG_OPTIONS=(
-  rd.plymouth=0 plymouth.enable=0 plymouth.use-simpledrm=0
-  loglevel=7 ignore_loglevel initcall_debug deferred_probe_timeout=30
-  systemd.show_status=1 rd.systemd.show_status=1 rootwait
-)
 FILTERED_OPTIONS=()
 for option in "${FEDORA_OPTIONS[@]}"; do
   case "$option" in
-    rhgb|quiet|splash|nomodeset|rd.plymouth=*|plymouth.*|loglevel=*|ignore_loglevel|initcall_debug|deferred_probe_timeout=*|systemd.show_status=*|rd.systemd.show_status=*|rootwait) ;;
+    rhgb|quiet|splash|nomodeset|rd.plymouth=*|plymouth.*|loglevel=*|ignore_loglevel|initcall_debug|initcall_blacklist=msm_drm_register|deferred_probe_timeout=*|systemd.show_status=*|rd.systemd.show_status=*|rootwait|module_blacklist=*|modprobe.blacklist=*|rd.driver.blacklist=*) ;;
     *) FILTERED_OPTIONS+=("$option") ;;
   esac
 done
-OPTIONS="${FILTERED_OPTIONS[*]} ${DEBUG_OPTIONS[*]}"
+BASE_OPTIONS="${FILTERED_OPTIONS[*]} rd.plymouth=0 plymouth.enable=0 rootwait"
+NORMAL_OPTIONS="$BASE_OPTIONS"
+DEBUG_OPTIONS="$BASE_OPTIONS loglevel=7 ignore_loglevel initcall_debug deferred_probe_timeout=30 systemd.show_status=1 rd.systemd.show_status=1"
+FIRMWARE_FB_OPTIONS="$DEBUG_OPTIONS initcall_blacklist=msm_drm_register module_blacklist=msm modprobe.blacklist=msm rd.driver.blacklist=msm"
 
 # A compressed cpio member may be concatenated to Fedora's stock initramfs.
 # This preserves its known-good ARM64 userspace while making the latest Glymur
@@ -133,23 +132,40 @@ sudo chown "$(id -u):$(id -g)" "$WORK/$A16_INITRD"
 (cd "$WORK/qcom-firmware" && find usr/lib/firmware -print0 \
   | cpio --null -o -H newc --quiet | gzip -9 >> "$WORK/$A16_INITRD")
 
-cat > "$WORK/a16.conf" <<EOF
-title Fedora Xfce - ASUS Zenbook A16 test kernel
+write_bls_entry() {
+  local output="$1" title="$2" options="$3"
+  cat > "$output" <<EOF
+title $title
 version $VERSION
 linux /Image-$VERSION
 initrd /$A16_INITRD
 devicetree /$DTB_REL
-options $OPTIONS
+options $options
 EOF
+}
 
-cat > "$WORK/a16-grub.cfg" <<EOF
+write_grub_entry() {
+  local title="$1" options="$2"
+  cat >> "$WORK/a16-grub.cfg" <<EOF
 
-menuentry 'Fedora Xfce - ASUS Zenbook A16 test kernel' {
-    linux /Image-$VERSION $OPTIONS
+menuentry '$title' {
+    linux /Image-$VERSION $options
     initrd /$A16_INITRD
     devicetree /$DTB_REL
 }
 EOF
+}
+
+: > "$WORK/a16-grub.cfg"
+write_bls_entry "$WORK/a16-normal.conf" \
+  "Fedora Xfce - ASUS Zenbook A16 (normal, no splash)" "$NORMAL_OPTIONS"
+write_bls_entry "$WORK/a16-debug.conf" \
+  "Fedora Xfce - ASUS Zenbook A16 (debug logging)" "$DEBUG_OPTIONS"
+write_bls_entry "$WORK/a16-firmware-fb.conf" \
+  "Fedora Xfce - ASUS Zenbook A16 (firmware framebuffer, MSM DRM disabled)" "$FIRMWARE_FB_OPTIONS"
+write_grub_entry "Fedora Xfce - ASUS Zenbook A16 (normal, no splash)" "$NORMAL_OPTIONS"
+write_grub_entry "Fedora Xfce - ASUS Zenbook A16 (debug logging)" "$DEBUG_OPTIONS"
+write_grub_entry "Fedora Xfce - ASUS Zenbook A16 (firmware framebuffer, MSM DRM disabled)" "$FIRMWARE_FB_OPTIONS"
 
 sudo install -m 0644 "$STAGE/Image" "$BOOT_MOUNT/Image-$VERSION"
 sudo install -m 0644 "$WORK/$A16_INITRD" "$BOOT_MOUNT/$A16_INITRD"
@@ -159,8 +175,12 @@ sudo depmod -b "$ROOT_MOUNT" "$VERSION"
 sudo mkdir -p "$ROOT_MOUNT/usr/share/a16-build"
 sudo cp -a "$STAGE/metadata/." "$ROOT_MOUNT/usr/share/a16-build/"
 printf '%s\n' "$QCOM_FIRMWARE_RPM" | sudo tee "$ROOT_MOUNT/usr/share/a16-build/qcom-firmware-rpm.txt" >/dev/null
-printf '%s\n' "$OPTIONS" | sudo tee "$ROOT_MOUNT/usr/share/a16-build/kernel-command-line.txt" >/dev/null
-sudo install -m 0644 "$WORK/a16.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION.conf"
+printf '%s\n' "$NORMAL_OPTIONS" | sudo tee "$ROOT_MOUNT/usr/share/a16-build/kernel-command-line-normal.txt" >/dev/null
+printf '%s\n' "$DEBUG_OPTIONS" | sudo tee "$ROOT_MOUNT/usr/share/a16-build/kernel-command-line-debug.txt" >/dev/null
+printf '%s\n' "$FIRMWARE_FB_OPTIONS" | sudo tee "$ROOT_MOUNT/usr/share/a16-build/kernel-command-line-firmware-fb.txt" >/dev/null
+sudo install -m 0644 "$WORK/a16-normal.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION-normal.conf"
+sudo install -m 0644 "$WORK/a16-debug.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION-debug.conf"
+sudo install -m 0644 "$WORK/a16-firmware-fb.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION-firmware-fb.conf"
 # Some Fedora ARM images do not refresh GRUB's BLS enumeration on a copied raw
 # image. Keep the BLS entry and append an explicit GRUB fallback so the test
 # kernel is always selectable without becoming the default.
