@@ -4,15 +4,27 @@ on:
   workflow_dispatch:
     inputs:
       kernel_run_id:
-        description: Optional successful nightly run ID; blank uses the newest one
+        description: Optional successful kernel run ID; blank builds a new kernel first
         required: false
+      linux_next_ref:
+        description: linux-next branch/tag/commit to build when kernel run ID is blank
+        required: false
+        default: master
 
 permissions:
   contents: read
   actions: read
 
 jobs:
+  kernel:
+    if: inputs.kernel_run_id == ''
+    uses: ./.github/workflows/nightly.yml
+    with:
+      linux_next_ref: ${{ inputs.linux_next_ref || 'master' }}
+
   image:
+    needs: kernel
+    if: always() && (needs.kernel.result == 'success' || needs.kernel.result == 'skipped')
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -25,19 +37,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y zstd pv rpm2cpio cpio kmod
-      - name: Download latest successful kernel bundle
+      - name: Download newly built kernel bundle
+        if: inputs.kernel_run_id == ''
+        uses: actions/download-artifact@v4
+        with:
+          pattern: zenbook-a16-linux-next-*
+          path: kernel-artifact
+          merge-multiple: true
+      - name: Download requested existing kernel bundle
+        if: inputs.kernel_run_id != ''
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED_RUN: ${{ inputs.kernel_run_id }}
         run: |
-          run_id="$REQUESTED_RUN"
-          if [ -z "$run_id" ]; then
-            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" \
-              --workflow "Nightly ASUS Zenbook A16 kernel" --status success --limit 1 \
-              --json databaseId --jq '.[0].databaseId')
-          fi
-          test -n "$run_id" && test "$run_id" != "null"
-          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir kernel-artifact
+          gh run download "$REQUESTED_RUN" --repo "$GITHUB_REPOSITORY" --dir kernel-artifact
       - name: Find latest Fedora Xfce ARM64 raw image
         id: fedora
         run: |

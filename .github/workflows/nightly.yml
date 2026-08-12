@@ -3,6 +3,13 @@ name: Nightly ASUS Zenbook A16 kernel
 on:
   schedule:
     - cron: '23 3 * * *'
+  workflow_call:
+    inputs:
+      linux_next_ref:
+        description: linux-next branch/tag/commit to build
+        required: false
+        type: string
+        default: master
   workflow_dispatch:
     inputs:
       linux_next_ref:
