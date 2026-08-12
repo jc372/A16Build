@@ -5,6 +5,8 @@ set -Eeuo pipefail
 BUNDLE="${1:?usage: $0 <zenbook-a16-*.tar.zst> <fedora-raw.xz-url>}"
 BASE_URL="${2:?usage: $0 <zenbook-a16-*.tar.zst> <fedora-raw.xz-url>}"
 OUT="${OUT:-$PWD/out}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/config/build.env"
 WORK="$(mktemp -d)"
 LOOP_DEV=""
 ROOT_MOUNT="$WORK/root"
@@ -17,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for cmd in curl xz tar awk lsblk losetup mount mountpoint partprobe pv udevadm sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
+for cmd in curl xz tar awk cpio gzip rpm2cpio depmod lsblk losetup mount mountpoint partprobe pv udevadm sudo; do command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 2; }; done
 mkdir -p "$OUT"
 
 echo "Downloading Fedora Xfce ARM64 base image"
@@ -80,6 +82,22 @@ if [[ -n "$BOOT_PART" && "$BOOT_PART" != "$ROOT_PART" ]]; then
   sudo mount "$BOOT_PART" "$BOOT_MOUNT"
 fi
 
+# Overlay the newest Rawhide Qualcomm firmware package. The base image can lag
+# the repository, while Glymur GPU/video/DSP firmware is still moving quickly.
+echo "Downloading latest Fedora Rawhide Qualcomm firmware"
+QCOM_FIRMWARE_RPM="$(curl --fail --location --retry 3 "$QCOM_FIRMWARE_BASE_URL/" \
+  | grep -oE 'qcom-firmware-[^"<]+\.noarch\.rpm' | sort -Vu | tail -n1)"
+[[ -n "$QCOM_FIRMWARE_RPM" ]] || { echo "Could not locate qcom-firmware RPM" >&2; exit 2; }
+curl --fail --location --retry 3 "$QCOM_FIRMWARE_BASE_URL/$QCOM_FIRMWARE_RPM" \
+  -o "$WORK/$QCOM_FIRMWARE_RPM"
+mkdir "$WORK/qcom-firmware"
+(cd "$WORK/qcom-firmware" && rpm2cpio "$WORK/$QCOM_FIRMWARE_RPM" | cpio -idm --quiet)
+[[ -d "$WORK/qcom-firmware/usr/lib/firmware/qcom" ]] || {
+  echo "Downloaded RPM has no Qualcomm firmware tree" >&2; exit 2;
+}
+sudo mkdir -p "$ROOT_MOUNT/usr/lib/firmware"
+sudo cp -a "$WORK/qcom-firmware/usr/lib/firmware/." "$ROOT_MOUNT/usr/lib/firmware/"
+
 # Reuse Fedora's proven generic initramfs and root options. The custom Image and
 # matching modules/DTB are added as a separate BLS menu entry; nothing becomes
 # the default boot choice.
@@ -89,11 +107,37 @@ ENTRY="$(sudo find "$BOOT_MOUNT/loader/entries" -maxdepth 1 -type f -name '*.con
 OPTIONS="$(sudo sed -n 's/^options //p' "$BOOT_MOUNT/loader/entries/$ENTRY" | head -n1)"
 [[ -n "$OPTIONS" ]] || { echo "Could not obtain Fedora kernel options" >&2; exit 2; }
 
+# Strip graphical/quiet modes (including a stale nomodeset) and make the A16
+# entry permanently useful for deferred-probe and display bring-up debugging.
+read -r -a FEDORA_OPTIONS <<< "$OPTIONS"
+DEBUG_OPTIONS=(
+  rd.plymouth=0 plymouth.enable=0 plymouth.use-simpledrm=0
+  loglevel=7 ignore_loglevel initcall_debug deferred_probe_timeout=30
+  systemd.show_status=1 rd.systemd.show_status=1 rootwait
+)
+FILTERED_OPTIONS=()
+for option in "${FEDORA_OPTIONS[@]}"; do
+  case "$option" in
+    rhgb|quiet|splash|nomodeset|rd.plymouth=*|plymouth.*|loglevel=*|ignore_loglevel|initcall_debug|deferred_probe_timeout=*|systemd.show_status=*|rd.systemd.show_status=*|rootwait) ;;
+    *) FILTERED_OPTIONS+=("$option") ;;
+  esac
+done
+OPTIONS="${FILTERED_OPTIONS[*]} ${DEBUG_OPTIONS[*]}"
+
+# A compressed cpio member may be concatenated to Fedora's stock initramfs.
+# This preserves its known-good ARM64 userspace while making the latest Glymur
+# firmware available before the real root filesystem is mounted.
+A16_INITRD="initramfs-$VERSION-a16.img"
+sudo cp "$BOOT_MOUNT/$INITRD" "$WORK/$A16_INITRD"
+sudo chown "$(id -u):$(id -g)" "$WORK/$A16_INITRD"
+(cd "$WORK/qcom-firmware" && find usr/lib/firmware -print0 \
+  | cpio --null -o -H newc --quiet | gzip -9 >> "$WORK/$A16_INITRD")
+
 cat > "$WORK/a16.conf" <<EOF
 title Fedora Xfce - ASUS Zenbook A16 test kernel
 version $VERSION
 linux /Image-$VERSION
-initrd /$INITRD
+initrd /$A16_INITRD
 devicetree /$DTB_REL
 options $OPTIONS
 EOF
@@ -102,14 +146,20 @@ cat > "$WORK/a16-grub.cfg" <<EOF
 
 menuentry 'Fedora Xfce - ASUS Zenbook A16 test kernel' {
     linux /Image-$VERSION $OPTIONS
-    initrd /$INITRD
+    initrd /$A16_INITRD
     devicetree /$DTB_REL
 }
 EOF
 
 sudo install -m 0644 "$STAGE/Image" "$BOOT_MOUNT/Image-$VERSION"
+sudo install -m 0644 "$WORK/$A16_INITRD" "$BOOT_MOUNT/$A16_INITRD"
 sudo cp -a "$STAGE/dtbs" "$BOOT_MOUNT/dtb-$VERSION"
 sudo cp -a "$STAGE/modules/lib/modules/$VERSION" "$ROOT_MOUNT/usr/lib/modules/"
+sudo depmod -b "$ROOT_MOUNT" "$VERSION"
+sudo mkdir -p "$ROOT_MOUNT/usr/share/a16-build"
+sudo cp -a "$STAGE/metadata/." "$ROOT_MOUNT/usr/share/a16-build/"
+printf '%s\n' "$QCOM_FIRMWARE_RPM" | sudo tee "$ROOT_MOUNT/usr/share/a16-build/qcom-firmware-rpm.txt" >/dev/null
+printf '%s\n' "$OPTIONS" | sudo tee "$ROOT_MOUNT/usr/share/a16-build/kernel-command-line.txt" >/dev/null
 sudo install -m 0644 "$WORK/a16.conf" "$BOOT_MOUNT/loader/entries/a16-$VERSION.conf"
 # Some Fedora ARM images do not refresh GRUB's BLS enumeration on a copied raw
 # image. Keep the BLS entry and append an explicit GRUB fallback so the test

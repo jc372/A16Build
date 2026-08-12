@@ -12,6 +12,7 @@ export PATH="$PATH:$HOME/.local/bin"
 command -v b4 >/dev/null || { echo "b4 is required (pipx install b4)" >&2; exit 2; }
 source "$SERIES_FILE"
 mkdir -p "$FETCH_DIR"
+git -C "$TREE" rev-parse HEAD > "$ROOT/build/linux-next-base-commit.txt"
 
 has_landed_new_file_blob() {
   local patch="$1" blob found=0

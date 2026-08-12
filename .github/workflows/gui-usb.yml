@@ -1,10 +1,17 @@
 name: Build Fedora Xfce GUI USB image
 
 on:
+  workflow_call:
+    inputs:
+      use_current_run_kernel:
+        description: Download the kernel artifact produced earlier in this workflow run
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       kernel_run_id:
-        description: Optional successful nightly run ID; blank uses the newest one
+        description: Optional successful kernel run ID; blank uses the newest one
         required: false
 
 permissions:
@@ -24,8 +31,16 @@ jobs:
       - name: Install image tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y zstd pv
-      - name: Download latest successful kernel bundle
+          sudo apt-get install -y zstd pv rpm2cpio cpio kmod
+      - name: Download kernel bundle from this workflow run
+        if: inputs.use_current_run_kernel
+        uses: actions/download-artifact@v4
+        with:
+          pattern: zenbook-a16-linux-next-*
+          path: kernel-artifact
+          merge-multiple: true
+      - name: Download existing kernel bundle
+        if: ${{ !inputs.use_current_run_kernel }}
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED_RUN: ${{ inputs.kernel_run_id }}
