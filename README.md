@@ -74,22 +74,6 @@ installer is not the tool for it — Windows is.
 
 ---
 
-## Step 5 — Build and install the kernel
-
-Plug the stick into the new install and run, from the stick's directory:
-
-```bash
-bash a16-port.sh --verify     # applies the patches to a scratch copy and checks every hash
-sudo bash a16-port.sh         # same again, then builds and installs beside the existing kernels
-```
-
-`--verify` builds nothing. Run it first: it will tell you in about a minute whether the payload
-on your stick is the one this port was tested against.
-
-The build takes a while (a full kernel). Everything it does is logged to `~/a16-port/`.
-
----
-
 ## Step 4 — Make Ubuntu start (EFI work, from Windows)
 
 **This is the step that fails.** A fresh install on this machine does not start: the
@@ -143,6 +127,22 @@ mounting, what else is on the partition, and what to check when nothing starts.
 
 Do the same edit later for the kernel you build in step 5: it is the same file, one more entry.
 Once the machine runs, `/boot/efi` is that same partition, so that one can be done from Linux.
+
+## Step 5 — Build and install the kernel
+
+Plug the stick into the new install and run, from the stick's directory:
+
+```bash
+bash a16-port.sh --verify     # applies the patches to a scratch copy and checks every hash
+sudo bash a16-port.sh         # same again, then builds and installs beside the existing kernels
+```
+
+`--verify` builds nothing. Run it first: it will tell you in about a minute whether the payload
+on your stick is the one this port was tested against.
+
+The build takes a while (a full kernel). Everything it does is logged to `~/a16-port/`.
+
+---
 
 ## Step 6 — Start it up
 
