@@ -69,12 +69,12 @@ Your stick now holds everything needed to build the kernel.
    before updating anything.
 
 Once Ubuntu is installed, **the Ubuntu installer will fail if you run it again** for a repair
-or reinstall. Firmware, BIOS and boot-menu changes are done from Windows instead — see
-**Step 4a** below.
+or reinstall. Ubuntu will not start until the EFI work in **Step 4** is done, and the Ubuntu
+installer is not the tool for it — Windows is.
 
 ---
 
-## Step 4 — Build and install the kernel
+## Step 5 — Build and install the kernel
 
 Plug the stick into the new install and run, from the stick's directory:
 
@@ -90,14 +90,24 @@ The build takes a while (a full kernel). Everything it does is logged to `~/a16-
 
 ---
 
-## Step 4a — The boot entry, from Windows
+## Step 4 — Make Ubuntu start (EFI work, from Windows)
+
+**This is the step that fails.** A fresh install on this machine does not start: the
+firmware has no boot entry it can use and no EFI variable Linux can write, so Ubuntu
+installs fine and then boots to nothing. The fix is done here, from Windows, and it has to
+happen before anything else can run on the Linux side.
+
+The short version is below; [the full page](docs/efi-on-windows.md) covers mounting, what
+is on the partition, the repair scripts, and what to check when nothing starts.
 
 The new kernel needs a menu entry, and the menu is a **file on the EFI partition**, so this part
 is done from Windows. The short version is below; [the full page](docs/efi-on-windows.md) covers
 mounting, what else is on the partition, and what to check when nothing starts.
 
-1. **Secure Boot: off for Linux, on for Windows — every time you switch.** Press **Esc** at
-   power-on to reach firmware setup.
+1. **Secure Boot: off for Linux, on for Windows — every time you switch.**
+   **F2** at power-on opens **firmware setup** — that is where Secure Boot is set.
+   **Esc** at power-on shows the **boot options** — that is where you pick the stick, or pick
+   which entry to start. Two different menus; do not confuse them.
 
 2. **Mount the EFI partition.** Command Prompt, as Administrator, either:
 
@@ -131,7 +141,10 @@ mounting, what else is on the partition, and what to check when nothing starts.
    entry costs you a menu trip, not the machine. If the entry does nothing when picked, the
    kernel file it names is missing — mount the partition again and check the filenames.
 
-## Step 5 — Start it up
+Do the same edit later for the kernel you build in step 5: it is the same file, one more entry.
+Once the machine runs, `/boot/efi` is that same partition, so that one can be done from Linux.
+
+## Step 6 — Start it up
 
 Choose the new kernel from the boot menu. **Check the display first** — if the panel comes up,
 you have the whole thing: internal display, external monitor, Bluetooth, and Wi-Fi, which works
