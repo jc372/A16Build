@@ -3,9 +3,6 @@
 How to take a stock **ASUS Zenbook A16 (UX3607OA)** from "Windows only" to a working
 **linux-next** install, on one machine, without a second computer.
 
-This is the front door. Every section below is a step that has been done on this hardware;
-anything still open is marked as open rather than written as if it works.
-
 ---
 
 ## 0. At a glance
