@@ -6,7 +6,7 @@ everything lives here so the story is in one place.
 
 Provenance: copied from `A16UbuntuBuild` at its final state (that repository's own README and
 `steps/`), which is preserved in `archive/`. The steps describe installing Ubuntu on this
-machine; the kernel work that follows is in `../00-from-the-beginning.md`.
+machine; the kernel work that follows is in the repository `README.md`.
 
 | Step | |
 |------|---|
@@ -20,5 +20,5 @@ machine; the kernel work that follows is in `../00-from-the-beginning.md`.
 `06-module-builds.md` describes the out-of-tree module work and is **retired** — see
 `../RETIRED-out-of-tree-drivers.md`. It is kept only as a record.
 
-Read `../00-from-the-beginning.md` first: it is the whole arc, including the hub requirements
+Read the repository `README.md` first: it is the whole arc, including the hub requirements
 and where the kernel comes from.
