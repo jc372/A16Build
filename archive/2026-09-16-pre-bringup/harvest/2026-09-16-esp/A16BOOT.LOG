@@ -1,0 +1,206 @@
+
+=== a16-finish-boot Tue Jul 28 12:51:33 UTC 2026  (live session 7.0.0-14-generic) ===
+cmdline: BOOT_IMAGE=/casper/vmlinuz clk_ignore_unused pd_ignore_unused arm64.nopauth --- quiet splash console=tty0
+
+=== 1. block devices ===
+NAME           SIZE FSTYPE    LABEL            PARTTYPENAME                 MOUNTPOINT
+nvme0n1      953.9G                                                         
+├─nvme0n1p1      1M                                                         
+├─nvme0n1p2     16M                                                         
+├─nvme0n1p3      1M                                                         
+├─nvme0n1p4      1M                                                         
+├─nvme0n1p5     70M                                                         
+├─nvme0n1p6    120M                                                         
+├─nvme0n1p7    120M                                                         
+├─nvme0n1p8      1M                                                         
+├─nvme0n1p9      1M                                                         
+├─nvme0n1p10     1M                                                         
+├─nvme0n1p11   512M                                                         
+├─nvme0n1p12   450M vfat      SYSTEM           EFI System                   /mnt
+├─nvme0n1p13    16M                            Microsoft reserved           
+├─nvme0n1p14 853.1G BitLocker ZEN OS 6/20/2026 Microsoft basic data         
+├─nvme0n1p15   1.6G ntfs      RECOVERY         Windows recovery environment 
+├─nvme0n1p16   260M vfat      MYASUS           Windows recovery environment 
+├─nvme0n1p17  95.7G ext4                       Linux filesystem             
+└─nvme0n1p18     2G swap                       Linux swap                   
+
+/dev/nvme0n1p12: LABEL_FATBOOT="SYSTEM" LABEL="SYSTEM" UUID="7E07-8CF1" BLOCK_SIZE="512" TYPE="vfat" PARTLABEL="EFI system partition" PARTUUID="ad99f7d9-6b1c-4059-ae1b-f9801f3bfbd7"
+/dev/nvme0n1p14: LABEL="ZEN OS 6/20/2026" UUID="5aa31917-beaa-4d7e-86f7-0d742f6bcc48" TYPE="BitLocker" PARTLABEL="Basic data partition" PARTUUID="7de381e7-731a-4c82-9867-b7a5b1c154a0"
+/dev/nvme0n1p15: LABEL="RECOVERY" BLOCK_SIZE="512" UUID="5204EC0E04EBF2C1" TYPE="ntfs" PARTLABEL="Basic data partition" PARTUUID="09152ba7-47d6-475f-861b-694db0edb957"
+/dev/nvme0n1p16: LABEL="MYASUS" UUID="A24F-79FA" BLOCK_SIZE="512" TYPE="vfat" PARTLABEL="Basic data partition" PARTUUID="86d55dd9-5f89-46df-9dc4-187ec5a0b52f"
+/dev/nvme0n1p17: UUID="f8e005e9-414c-4c8e-ad68-d1e9fdc208bc" BLOCK_SIZE="4096" TYPE="ext4" PARTUUID="21159cbf-6c7f-44a2-a5a8-a9c2ff3a634a"
+/dev/sdb1: BLOCK_SIZE="2048" UUID="2026-09-08-05-30-20-00" LABEL="Ubuntu 26.10 arm64" TYPE="iso9660" PARTLABEL="Gap0" PARTUUID="4089f044-9cd6-4e70-9780-4894f0745b5e"
+/dev/loop1: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/nvme0n1p18: UUID="a9b35305-8e54-4050-8fb5-d0e688822e5b" TYPE="swap" PARTUUID="e1786995-86b9-4d43-890a-3f3b42b1d47f"
+/dev/loop8: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/sdb4: LABEL="writable" UUID="3d3fc759-c625-472f-b39f-fb229f3700a2" BLOCK_SIZE="4096" TYPE="ext4" PARTUUID="533e0eb9-2da6-4ab9-a851-88ad478e5c20"
+/dev/sdb2: SEC_TYPE="msdos" LABEL_FATBOOT="ESP" LABEL="ESP" UUID="D647-AD70" BLOCK_SIZE="512" TYPE="vfat" PARTLABEL="Appended2" PARTUUID="4089f044-9cd6-4e70-9783-4894f0745b5e"
+/dev/loop15: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop6: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop13: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop4: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop11: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop2: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop0: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop9: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop7: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop14: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop5: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop12: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop3: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/loop10: BLOCK_SIZE="131072" TYPE="squashfs"
+/dev/nvme0n1p9: PARTLABEL="quantumfv" PARTUUID="d4eca95d-9eb8-4e1f-8428-c9102a395029"
+/dev/nvme0n1p11: PARTLABEL="logdump" PARTUUID="f0127728-695b-4f41-bb11-95c994c67427"
+/dev/nvme0n1p7: PARTLABEL="core_nhlos_a" PARTUUID="0a5ee77b-213e-4b2c-b610-89a3dbf18d9e"
+/dev/nvme0n1p5: PARTLABEL="UpdateCapsule" PARTUUID="a07bcd85-4432-4764-8bca-8e14ce249a29"
+/dev/nvme0n1p3: PARTLABEL="EnterpriseFV" PARTUUID="cae2ea05-e159-4289-890e-644570b25330"
+/dev/nvme0n1p1: PARTLABEL="ToolsFv" PARTUUID="2fb1a544-5613-48d1-89e4-da4961cdb37c"
+/dev/nvme0n1p8: PARTLABEL="quantumsdk" PARTUUID="611cb588-a24a-42b4-8ce1-1c183dc3a3ee"
+/dev/nvme0n1p10: PARTLABEL="catecontentfv" PARTUUID="f096efea-766b-4c9a-80a2-74b4e0a7a1b1"
+/dev/nvme0n1p6: PARTLABEL="NHLOS" PARTUUID="2387f1dd-2dff-4cf8-9f0c-94084f1139d3"
+/dev/nvme0n1p4: PARTLABEL="ToolsFv_BACKUP" PARTUUID="cb93027a-4275-4e45-8274-656a8b0c4edd"
+/dev/nvme0n1p2: PARTLABEL="LogFs" PARTUUID="faa21786-045a-44f3-8d52-6178111e5d4f"
+/dev/nvme0n1p13: PARTLABEL="Microsoft reserved partition" PARTUUID="2ac75c37-9456-47d0-98b0-d9d0914ce52c"
+/dev/sdb3: PARTLABEL="Gap1" PARTUUID="4089f044-9cd6-4e70-9782-4894f0745b5e"
+
+=== 2. EFI runtime / variables (this is what killed the installer) ===
+total 0
+dr-xr-xr-x 2 root root    0 Jan  1  1970 efivars
+drwxr-xr-x 3 root root    0 Jul 28 12:51 esrt
+-r--r--r-- 1 root root 4096 Jul 28 12:51 fw_platform_size
+drwxr-xr-x 2 root root    0 Jul 28 12:51 mok-variables
+-r-------- 1 root root 4096 Jul 28 12:51 systab
+efivars dir present, 0 variables visible
+--- efibootmgr -v ---
+/mnt/A16FIX.SH: line 55: efibootmgr: command not found
+efibootmgr exit=127
+
+=== 3. looking for the installed Ubuntu root ===
+--- /dev/nvme0n1p17 (ext4 ) ---
+PRETTY_NAME="Ubuntu Stonking Stingray (development branch)"
+NAME="Ubuntu"
+VERSION_ID="26.10"
+VERSION="26.10 (Stonking Stingray)"
+VERSION_CODENAME=stonking
+RELEASE_TYPE=development
+  /boot:
+total 89004
+-rw------- 1 root root  9840990 Aug 18  2026 System.map-7.2.0-5-generic
+-rw-r--r-- 1 root root   374438 Aug 18  2026 config-7.2.0-5-generic
+drwxr-xr-x 2 root root     4096 Sep 16  2026 efi
+drwxr-xr-x 2 root root     4096 Sep 16  2026 grub
+lrwxrwxrwx 1 root root       26 Sep 16  2026 initrd.img -> initrd.img-7.2.0-5-generic
+-rw------- 1 root root 57201537 Sep 16  2026 initrd.img-7.2.0-5-generic
+lrwxrwxrwx 1 root root       26 Sep 16  2026 initrd.img.old -> initrd.img-7.2.0-5-generic
+lrwxrwxrwx 1 root root       23 Sep 16  2026 vmlinuz -> vmlinuz-7.2.0-5-generic
+-rw------- 1 root root 23707016 Aug 18  2026 vmlinuz-7.2.0-5-generic
+lrwxrwxrwx 1 root root       23 Sep 16  2026 vmlinuz.old -> vmlinuz-7.2.0-5-generic
+  fstab: present
+  grub.cfg: MISSING
+  => using /dev/nvme0n1p17 as the installed root
+
+=== 4. mounting root rw + ESP ===
+ESP free space:
+Filesystem       Size  Used Avail Use% Mounted on
+/dev/nvme0n1p12  446M   43M  404M  10% /mnt/a16esp
+
+=== 5. kernel/initramfs sanity check (is the install complete enough to boot?) ===
+lrwxrwxrwx 1 root root       26 Sep 16  2026 /mnt/a16root/boot/initrd.img -> initrd.img-7.2.0-5-generic
+-rw------- 1 root root 57201537 Sep 16  2026 /mnt/a16root/boot/initrd.img-7.2.0-5-generic
+lrwxrwxrwx 1 root root       26 Sep 16  2026 /mnt/a16root/boot/initrd.img.old -> initrd.img-7.2.0-5-generic
+lrwxrwxrwx 1 root root       23 Sep 16  2026 /mnt/a16root/boot/vmlinuz -> vmlinuz-7.2.0-5-generic
+-rw------- 1 root root 23707016 Aug 18  2026 /mnt/a16root/boot/vmlinuz-7.2.0-5-generic
+lrwxrwxrwx 1 root root       23 Sep 16  2026 /mnt/a16root/boot/vmlinuz.old -> vmlinuz-7.2.0-5-generic
+
+=== 6. grub-install (inside the target chroot) --no-nvram, both layouts ===
+Installing for arm64-efi platform.
+Installation finished. No error reported.
+grub-install (EFI/ubuntu) exit=0
+Installing for arm64-efi platform.
+Installation finished. No error reported.
+grub-install (removable) exit=0
+/mnt/a16esp/EFI/BOOT/:
+total 5468
+-rwxr-xr-x 1 root root     110 Jul 28 12:51 BOOTAA64.CSV
+-rwxr-xr-x 1 root root  987440 Jul 28 12:51 BOOTAA64.EFI
+-rwxr-xr-x 1 root root  957640 Jun 17 05:14 MokManager.efi.sav
+-rwxr-xr-x 1 root root  125376 Jun 17 05:14 fallback.efi
+-rwxr-xr-x 1 root root   90184 Jul 28 12:51 fbaa64.efi
+-rwxr-xr-x 1 root root     117 Jul 28 12:51 grub.cfg
+-rwxr-xr-x 1 root root 2533256 Jul 28 12:51 grubaa64.efi
+-rwxr-xr-x 1 root root  884360 Jul 28 12:51 mmaa64.efi
+
+/mnt/a16esp/EFI/ubuntu/:
+total 4952
+-rwxr-xr-x 1 root root     110 Jul 28 12:51 BOOTAA64.CSV
+-rwxr-xr-x 1 root root     117 Jul 28 12:51 grub.cfg
+-rwxr-xr-x 1 root root 2967432 Jul 28 12:51 grubaa64.efi
+-rwxr-xr-x 1 root root  884360 Jul 28 12:51 mmaa64.efi
+-rwxr-xr-x 1 root root  987440 Jul 28 12:51 shimaa64.efi
+-rwxr-xr-x 1 root root  213176 Apr 15 18:35 x1e80100-asus-vivobook-s15.dtb
+
+=== 7. update-grub / initramfs ===
+Sourcing file `/etc/default/grub'
+Sourcing file `/etc/default/grub.d/kdump-tools.cfg'
+Generating grub configuration file ...
+Found linux image: /boot/vmlinuz-7.2.0-5-generic
+Found initrd image: /boot/initrd.img-7.2.0-5-generic
+Warning: os-prober will be executed to detect other bootable partitions.
+Its output will be used to detect bootable binaries on them and create new boot entries.
+Found Windows Boot Manager on /dev/nvme0n1p12@/EFI/Microsoft/Boot/bootmgfw.efi
+Adding boot menu entry for UEFI Firmware Settings ...
+done
+
+=== 8. fallback: hand-placed payload if grub-install did not deliver one ===
+
+=== 9. try a firmware boot entry (only works if EFI variables are real) ===
+/mnt/A16FIX.SH: line 143: efibootmgr: command not found
+/mnt/A16FIX.SH: line 144: efibootmgr: command not found
+
+=== 10. what is on the ESP now ===
+/mnt/a16esp/EFI:
+total 16
+drwxr-xr-x 2 root root 4096 Jul 28 12:51 Boot
+drwxr-xr-x 4 root root 4096 Sep 16  2026 Microsoft
+drwxr-xr-x 2 root root 4096 Jul 28 12:51 ubuntu
+drwxr-xr-x 2 root root 4096 Apr 15 18:34 ubuntu_snapdragon
+
+/mnt/a16esp/EFI/Boot:
+total 5468
+-rwxr-xr-x 1 root root     110 Jul 28 12:51 BOOTAA64.CSV
+-rwxr-xr-x 1 root root  987440 Jul 28 12:51 BOOTAA64.EFI
+-rwxr-xr-x 1 root root  957640 Jun 17 05:14 MokManager.efi.sav
+-rwxr-xr-x 1 root root  125376 Jun 17 05:14 fallback.efi
+-rwxr-xr-x 1 root root   90184 Jul 28 12:51 fbaa64.efi
+-rwxr-xr-x 1 root root     117 Jul 28 12:51 grub.cfg
+-rwxr-xr-x 1 root root 2533256 Jul 28 12:51 grubaa64.efi
+-rwxr-xr-x 1 root root  884360 Jul 28 12:51 mmaa64.efi
+
+/mnt/a16esp/EFI/Microsoft:
+total 12
+drwxr-xr-x 40 root root 8192 Sep 16  2026 Boot
+drwxr-xr-x  2 root root 4096 Mar 15 09:58 Recovery
+
+/mnt/a16esp/EFI/Microsoft/Boot:
+total 8308
+-rwxr-xr-x 1 root root   36864 Sep 16  2026 BCD
+-rwxr-xr-x 1 root root   65536 Mar 15 09:58 BCD.LOG
+-rwxr-xr-x 1 root root       0 Mar 15 09:58 BCD.LOG1
+-rwxr-xr-x 1 root root       0 Mar 15 09:58 BCD.LOG2
+-rwxr-xr-x 1 root root   65536 Sep 16  2026 BOOTSTAT.DAT
+drwxr-xr-x 3 root root    4096 Mar 15 09:58 CIPolicies
+drwxr-xr-x 2 root root    4096 Mar 15 09:58 Fonts
+drwxr-xr-x 5 root root    4096 Mar 15 09:58 Resources
+-rwxr-xr-x 1 root root  178672 Sep  8  2026 SecureBootRecovery.efi
+drwxr-xr-x 2 root root    4096 Mar 15 09:58 bg-BG
+-rwxr-xr-x 1 root root   12521 Jun 20 19:44 boot.pnd.stl
+-rwxr-xr-x 1 root root   12006 Jun 20 19:44 boot.stl
+-rwxr-xr-x 1 root root 3120480 Sep  8  2026 bootmgfw.efi
+-rwxr-xr-x 1 root root 3099128 Sep  8  2026 bootmgr.efi
+drwxr-xr-x 2 root root    4096 Mar 15 09:58 cs-CZ
+--- /mnt/a16esp/EFI/ubuntu/grub.cfg ---
+search.fs_uuid f8e005e9-414c-4c8e-ad68-d1e9fdc208bc root 
+set prefix=($root)'/boot/grub'
+configfile $prefix/grub.cfg
+
+=== 11. log ===

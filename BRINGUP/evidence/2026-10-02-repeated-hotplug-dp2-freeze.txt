@@ -1,0 +1,30 @@
+USB-C repeated hotplug capture: DP-2 detection, LTTPR1 failure, downstream training success, DPU timeout, reboot
+Date: 2026-10-02
+
+Operator report
+- The operator repeated the quick USB-C plug/unplug process. External display showed no picture. After roughly 3–4 cycles, the laptop froze.
+- The machine later came back in a different boot. The previous boot ID recorded by the watcher was `42967b08-f757-4e86-b128-936f6ae93c28`; current boot ID is `4d9da362-0252-4f40-a2ff-7fd41cdb8aad`. This confirms a reboot boundary after the capture, but not its initiator.
+
+Persistent capture
+- Connector/state log: `/home/jc/a16-payload/display-outputs-20261002-163318.log`
+- Live kernel sidecar: `/home/jc/a16-payload/display-outputs-20261002-163318.kernel.log`
+- Watcher began at 16:33:18 under prior boot `42967b08-f757-4e86-b128-936f6ae93c28`; loaded modules were QMP v5 `151CA3C3BDC39CA185C951B` and MSM `BBD010BD47287F02B65EE84`. The `dpdrive` PCS-refresh layer had already been reverted.
+- Connector sequence in the watcher: DP-2 changed to connected at 16:33:28, disconnected at 16:33:45, connected 16:33:49, disconnected 16:34:00, connected 16:34:04, disconnected 16:34:15, connected 16:34:21, disconnected 16:34:28. DP-1 and HDMI stayed disconnected. During connected snapshots DP-2 read enabled and advertised modes including 5120x1440 and 3840x1080, but that state did not mean video was visible.
+- The attached USB monitor hub/device enumerated. The controller selected 810000 kHz (8.1 Gbps), four lanes.
+
+Link/DPU sequence from live kernel sidecar
+- At about 16:33:24, LTTPR1 (`phy 1`) clock recovery (training phase #1) succeeded, but channel EQ (phase #2) failed `ret=-110`; main LTTPR training failed and DP prepare returned `rc=-104`.
+- A subsequent training sequence logged `phy 0` phases #1 and #2 successful, followed by `prepare_stream_on` at 810000 kHz/four lanes and stream enable configuration. Treat this as the downstream/sink-segment success recorded by the driver; it did not prove light reached the monitor.
+- DPU vblank/commit/frame-done timeouts began immediately after stream setup, followed by IRQ timeout and failed encoder disable. Another link attempt again passed LTTPR1 clock recovery, failed LTTPR1 EQ, and DP prepare failed. This is the clearest captured boundary so far: monitor detection and some downstream training progressed further than the prior simple failure, but the display engine/stream path timed out and no picture appeared.
+- The watcher sidecar continued through repeated DPU timeout messages until about 16:34:32. No panic/oops/watchdog/reset initiator is recorded in the available tail. A changed boot ID confirms a later reboot, but the reset cause remains unknown.
+
+Current verified state after reboot
+- Current boot ID `4d9da362-0252-4f40-a2ff-7fd41cdb8aad`, kernel `7.3.0-rc3-next-20260914`.
+- Loaded QMP v5 `151CA3C3BDC39CA185C951B`; loaded MSM `BBD010BD47287F02B65EE84`.
+- DP-1, DP-2, and HDMI currently report disconnected; `dpdrive` rollback state is absent. The previous QMP/MSM layered rollback state remains.
+- Watcher and dmesg-follow processes are no longer running. Do not infer Ctrl-C cleanup ran: the capture ended at abrupt reboot, so its EXIT trap may not have executed; the next boot has a fresh kernel debug setting.
+
+Assessment and safe next action
+- This is not evidence that repeating the quick replug is a safe recovery sequence: repeated toggles produced repeated connector transitions, failed LTTPR1 EQ, downstream training/stream attempts, DPU timeouts, and then a reboot boundary.
+- It is also not evidence of residual Snapdragon software state that needs manual clearing. The captured failure is now better localized to link-training / DPU stream setup and recovery; a platform/firmware or hardware interaction is still possible but unproven.
+- Stop further USB-C plug/unplug and Display Settings attempts for now. Preserve both raw logs unchanged. Analyze the DP-2 route (`af5c000` with `fde000.phy`) separately from the prior DP-1 route (`af54000` with `fd5000.phy`) before proposing the next experiment. No additional modules or PHY settings were changed or staged after this capture.

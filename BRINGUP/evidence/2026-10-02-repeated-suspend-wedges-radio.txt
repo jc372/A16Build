@@ -1,0 +1,63 @@
+# 2026-10-02 21:42-21:47 — repeated suspends wedge the radio; no hang, clean poweroff
+
+Boot `d92a3795-a1f8-4085-9c5d-69b0d87aa319`, kernel `7.3.0-rc3-next-20260914`, `msm`
+`F60D32C034D8487FB39FE42` (patches/0019+0020), `/etc/modprobe.d/a16-ath12k.conf` =
+`a16_skip_global_reset_on_resume=Y a16_keep_mhi_up=Y`, patched `xhci-plat-hcd` loaded.
+
+Operator's report: "it started to come up, then flashed, then tried again, then logs, then I
+eventually hit the power button, and it tried to shut down. I could not ssh, but the machine was
+responsive to some things."
+
+## Three suspends in one boot
+
+| # | requested | slept | resumed | radio after |
+|---|---|---|---|---|
+| 1 | 21:34:51 `systemctl` (the `sleep test 1` of the previous capture) | 7 s | 21:34:59 | **fine** — `NetworkManager: … Activation: successful, device activated` |
+| 2 | 21:42:47 `systemctl` (PID 36484 = `sleep test 2`, attempt 1) | 98 s | 21:44:22 | **wedge begins** — `failed to set ac override for ARP: -11`, `wmi command 16387 timeout` |
+| 3 | 21:44:25 `systemctl` (attempt 2) | 99 s | 21:46:04 (woken by the power key) | **dead** — the WMI timeout loop, no network, no SSH |
+
+The wedge, verbatim (resume 3):
+
+```
+21:46:04  ath12k_wifi7_pci 0004:01:00.0: A16: suspend -- keeping the MHI link and the device's firmware up
+21:46:04  ath12k_wifi7_pci 0004:01:00.0: A16: resume -- the device and the MHI link were left up; re-arming the interrupts
+21:46:04  qcom_mhi_qrtr mhi0_IPCR: failed to prepare for autoqueue transfer -5
+21:46:04  qcom_mhi_qrtr mhi0_IPCR: PM: dpm_run_callback(): qcom_mhi_qrtr_pm_resume_early [qrtr_mhi] returns -5
+21:46:04  qcom_mhi_qrtr mhi0_IPCR: PM: failed to resume early: error -5
+21:46:11  ath12k_wifi7_pci 0004:01:00.0: wmi command 16387 timeout
+…every ~13 s through 21:47:19, then repeated with failed to enable PMF QOS: -11,
+ fail to start mac operations in pdev idx 0 ret -11
+```
+
+`a16_keep_mhi_up=Y` did what it says (the two `A16:` lines are patches/0014's messages), and the
+radio still died. The MHI/QRTR device's resume-early failing with `-5` (EIO) is either the cause or
+the first symptom, and it is new information: the earlier, single-suspend resume in this same boot
+had no such line.
+
+## What the operator saw
+
+* **"flashed, then tried again"** — the resume hook restarted gdm twice (21:44:25 and again after
+  21:46:04; the installed copy was the 3-second single-check version). `gnome-shell` followed with
+  `shell_global_get: assertion 'the_object' failed` and friends at 21:46:08, i.e. the compositor was
+  being rebuilt while the resume was still settling.
+* **"then logs"** — 30 `ath12k` lines reached the console in the 90 s after 21:46:04, and with
+  `consoleblank=0` plus the DRM fb console those print **on the panel**. That is what the screen was
+  showing.
+* **no SSH** — the radio was dead, so there was no network to SSH to. The machine itself was fine:
+  the power key was seen at 21:46:04 (waking it) and again at 21:47:23, which logind turned into
+  `Powering off…` → clean `Shutting down` at 21:47:26. Nothing hung; nothing had to be forced.
+
+## What this changes
+
+1. **The failure is a partial resume, not a hang** — a different mode from the 2026-10-02 20:29 event
+   (journal ends at `PM: suspend entry`, hard reset). Both are now characterized; the display half of
+   a resume works, and the panel came back both times (via the hook).
+2. **The radio wedge tracks repeated suspends.** The first suspend of the boot resumed with the radio
+   intact and fully working; the second and third left it dead. That is the mirror image of the old
+   xhci "first sleeps, later aborts" pattern — and now that `patches/0010` lets those later suspends
+   through, their resume path is what needs work.
+3. **Next leads, in order:** the `qcom_mhi_qrtr_pm_resume_early … returns -5` failure (a driver-side
+   question: why the autoqueue transfer cannot be prepared after the second resume); whether the
+   `-5` also appears on a single-suspend workflow at all (the first one did not); and reducing the
+   resume churn — `sudo bash ~/a16.sh display hook` installs the two-check hook that tries the
+   session's own power-save switch before restarting gdm.

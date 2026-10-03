@@ -1,0 +1,54 @@
+# 2026-10-02 18:14 — the MSI comes up over HDMI (5120x1440), and the Gigabyte works on both USB-C ports
+
+## State that produced it
+
+    msm (live)        F60D32C034D8487FB39FE42  (patches 0019 rate cap + 0020 DPU stuck-flush drop)
+    sha256            c90b9d8e313d224b73238998ffb53fb8c152c25513ddc8c91bc296a896554328
+    a16_dp_max_rate   540000  (also written as a modprobe option, /etc/modprobe.d/a16-msm-dp-rate.conf)
+    boot id           cfa4f2ff-c099-4483-b966-b7c45f396319
+
+## What the watcher captured at 18:14:04 (current boot)
+
+    card1-DP-1     status=disconnected enabled=disabled modes=
+    card1-DP-2     status=disconnected enabled=disabled modes=
+    card1-eDP-1    status=connected    enabled=enabled modes=2880x1800 2880x1800
+    card1-HDMI-A-1 status=connected    enabled=enabled modes=5120x1440 3840x1080 5120x1440 5120x1440
+
+5120x1440 / 3840x1080 are the MSI's modes, so the MSI - the monitor whose DP
+repeater fails channel equalization on every USB-C attempt - came up on the A16's
+**HDMI** output, simultaneously with the internal panel, with:
+
+    DP training failures this boot        0
+    DP "prepare failed"                   0
+    DPU "vblank timeout"                  0
+    DPU "wait for commit done returned"   0
+
+The HDMI path does not go through the monitor's internal DP repeater: the A16's
+HDMI output is a display pipeline on the tertiary combo PHY (`phy@88e1000`, whose
+`com_aux` clock-domain fix from 2026-09-17 is in force - this boot logs no
+`com_aux`/`phy init failed` lines), so the failure mode that takes out USB-C DP
+on this monitor is simply not in the path.
+
+Note: at the time of this check the HDMI connector had gone back to
+`disconnected` (with `enabled` still set), so the monitor had been unplugged or
+the link dropped - the connect/enable above is recorded from the watcher's
+snapshot, not from the current instant. The user should confirm whether the
+picture was visible and stable.
+
+## USB-C DP, for comparison
+
+The Gigabyte trains fully at 5.4 Gbps on **either** USB-C port (LTTPR segment #1
+and #2 plus the sink segment all succeed) with the cap in force. Every failure in
+this machine's history is at 8.1 Gbps, or on the MSI's repeater at any rate.
+
+## Open items
+
+- Refresh rate the HDMI link actually runs (5120x1440 at 60 vs 30 Hz is not
+  visible through the watcher's snapshot; GNOME's display settings shows it).
+- Whether the HDMI link survives a hotplug cycle and a second monitor change.
+- Two `a16-display-outputs.sh watch` instances were running at the same time
+  (pids 9079 and 9091, each with its own `dmesg --follow-new` follower) - worth
+  stopping the duplicate.
+- Whether `a16_dp_max_rate` reached the module from the modprobe option at load
+  (the value is 540000 and the conf file exists; `lsinitramfs` could not be read
+  as the unprivileged user to confirm the image carries it).

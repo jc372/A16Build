@@ -1,0 +1,83 @@
+LTTPR segment training: next candidate built (TPS4 scoping + drive-level capability clamp)
+Date: 2026-10-02
+Status: BUILT, ABI-verified, NOT staged. No hardware trial yet.
+
+What the captures actually show (two independent runs, same pattern)
+- In both the DP-1 capture (`display-outputs-20261002-150232.kernel.log`) and the DP-2
+  capture (`display-outputs-20261002-163318.kernel.log`) the monitor's internal DisplayPort
+  repeater is trained using **TPS4**, and channel equalization never completes:
+    - `link training #1 on phy 1 successful`   (LTTPR1 clock recovery ok)
+    - `link training #2 on phy 1 failed. ret=-110`  (LTTPR1 channel EQ)
+    - repeater AUX status ramps pre-emphasis 1 -> 2 -> 3 and stays there
+      (`0xf0030` reads 0x88 -> 0xcc -> 0xcc), then clock recovery collapses (`0x44`),
+    - driver writes `0xf0011 <- 38 38 38 38` = voltage swing 0 / pre-emphasis 3 with
+      MAX_PRE_EMPHASIS_REACHED.
+- In the same captures, once the repeater falls off (its DPCD block reads all zero and
+  `drm_dp_lttpr_count()` returns 0), the driver trains only the sink and it succeeds at the
+  same rate:
+    - `link training #1 on phy 0 successful` / `#2 on phy 0 successful`,
+    - pattern used there is TPS3 (`0x23` on `0x00102`), i.e. `sink: pattern=3`.
+- Why TPS4 was used for the repeater: `msm_dp_ctrl_link_train_2()` picks the pattern from
+  `panel->dpcd`. In transparent mode the monitor reports `DPCD 0x003 = 0x81` (bit 7 set =
+  TPS4 "supported"), and that snapshot is what `msm_dp_panel_read_dpcd()` cached. Once the
+  LTTPRs are in non-transparent mode the same byte reads `0x01` (TPS4 not supported) and
+  the sink itself trains fine with TPS3. So the repeater segment was trained with a pattern
+  the receiver snapshot does not actually support.
+- Separately, `msm_dp_link_adjust_levels()` capped pre-emphasis only at level 3 and never
+  consulted the repeater's advertised capability (`DP_TRANSMITTER_CAPABILITY_PHY_REPEATER1`,
+  0xf0021), which msm never read at all. In the DP-2 capture clock recovery is lost exactly
+  when pre-emphasis 3 is driven into the repeater.
+
+Change built (BRINGUP/patches/0018-msm-dp-lttpr-segment-training.patch, 4 files)
+1. `dp_ctrl.c` — TPS4 is selected only for the sink segment (`dp_phy == DP_PHY_DPRX`).
+   LTTPR segments use TPS3/TPS2, which is what the receiver advertises once the LTTPRs are
+   active (and what the sink segment already trains with successfully).
+2. `dp_display.c` — read and store each LTTPR's PHY capabilities at LTTPR init
+   (`drm_dp_read_lttpr_phy_caps()`); a failed read leaves the entry zeroed, i.e. assumes no
+   level-3 support (the safe direction).
+3. `dp_link.c` — new `msm_dp_link_get_max_levels()` clamps the requested voltage-swing and
+   pre-emphasis levels to what the segment being trained advertises; `msm_dp_link_adjust_levels()`
+   takes the `dp_phy` being trained and applies that clamp.
+4. `dp_ctrl.c` — `msm_dp_ctrl_update_phy_vx_px()` signals MAX_SWING/MAX_PRE_EMPHASIS_REACHED at
+   the clamped maximum, and `msm_dp_ctrl_link_train_1()` uses the clamped voltage limit, so a
+   repeater asking for an unsupported level is answered instead of being pushed past its limit.
+
+Build and verification (native, on the A16)
+- Isolated tree `/home/jc/build/linux-next-1a1de54f7369-lttpr` (copy of the dpnext MSM tree).
+- Build log `/home/jc/a16-payload/msm-lttpr-build-20261002.log`; no compiler warnings.
+- Module: `/home/jc/build/linux-next-1a1de54f7369-lttpr/drivers/gpu/drm/msm/msm.ko`
+  srcversion `9480D61C3303C172B7EE756`, sha256
+  `babb50b869ee7278936f16a2866c6c315227912a73a811bb3a5e4f5b60051a26`,
+  vermagic `7.3.0-rc3-next-20260914 SMP preempt mod_unload modversions aarch64`.
+- ABI: all 805 imported-symbol CRCs of the currently installed/loaded msm.ko are unchanged;
+  the candidate adds exactly 3 imports, and their CRCs were cross-checked against an
+  independent in-tree module built for this kernel that already imports the same symbols
+  (`kernel/drivers/gpu/drm/xe/xe.ko`):
+    drm_dp_read_lttpr_phy_caps                    0x77688fc2  (xe.ko: 0x77688fc2)
+    drm_dp_lttpr_voltage_swing_level_3_supported  0x50d3ad0d  (xe.ko: 0x50d3ad0d)
+    drm_dp_lttpr_pre_emphasis_level_3_supported   0x50d3ad0d  (xe.ko: 0x50d3ad0d)
+  (`drm_display_helper` is a module on this boot and is what kallsyms names as the provider,
+  even though the tree's Module.symvers labels these vmlinux; genksyms CRCs depend on the
+  prototype, so the value is the same either way.)
+- `msm_dp_lttpr_count`/`DP_TRAINING_PATTERN_4` values confirmed against this tree
+  (`DP_TRAINING_PATTERN_4 = 7`, `enum drm_dp_phy { DP_PHY_DPRX = 0, DP_PHY_LTTPR1 = 1, ... }`),
+  which is why `phy 1` in the training logs is the repeater and `phy 0` is the sink.
+- Source patch applies forward to the dpnext tree and reverses cleanly from the candidate tree.
+
+Staging (not run)
+- `sudo bash ~/a16.sh msmlttpr` stages only msm.ko for the NEXT boot over the current dpnext
+  layer, with its own module+initrd backup under `/var/lib/a16-msmlttpr/<kernel>/`.
+- `sudo bash ~/a16.sh msmlttpr revert` restores the dpnext msm.ko and the byte-identical initrd.
+  Revert this layer before `dpnext revert`.
+- `bash ~/a16.sh msmlttpr dry-run` (non-root) passes and reports the ABI comparison.
+
+What would confirm or refute it
+- Confirm: the next watched hotplug shows `sink: pattern=3` (or 2) on the repeater segment, no
+  attempt to drive pre-emphasis above the repeater's advertised maximum, and LTTPR1 channel
+  equalization completing. That is the first time this link would get past EQ.
+- Refute: LTTPR1 EQ still times out with TPS3 and clamped levels -> the remaining candidates are
+  the RBR/HBR2-level drive tables and a deliberate lower link rate, not the pattern.
+- Unchanged risk: DPU vblank/frame-done timeouts were also present after a successful sink-segment
+  training in the DP-2 capture, so link training may not be the last blocker. Repeated hotplug was
+  followed by a freeze/hard reset (boot id changed from `42967b08-...` to `4d9da362-...`), so the
+  next hardware step still needs the watcher running first and should be a single connect.

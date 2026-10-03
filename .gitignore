@@ -1,0 +1,7 @@
+build/
+out/
+linux-next/
+*.mbx
+*.tar.zst
+.diag/
+firmware/ath12k-board-2-qcc2072-e14f/rebuilt/

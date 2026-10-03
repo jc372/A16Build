@@ -1,0 +1,122 @@
+# 2026-10-02 17:48 — first clean external-DP session: 5.4 Gbps link rate
+
+## Configuration that works
+
+    msm               91CB0186588825FBA8156C6   (dprate candidate, patches 0019)
+    sha256            ad78162b519eab87996055cf163e38df5a144f018c19d4d8fa800e068c1dfa01
+    a16_dp_max_rate   540000  (/sys/module/msm/parameters/a16_dp_max_rate)
+    monitor           Gigabyte, DP-1 (af54000 / fd5000.phy), modes 3440x1440 x3 + 2560x1440
+                      its hub presents a Realtek 0bda:0329 card reader; PD cord attached
+    boot id           9f0e8245-d5cf-4620-adb2-631c9b592bd3
+    capture           /home/jc/a16-payload/display-outputs-20261002-174756.log (+ .kernel.log)
+
+## The attach sequence (monotonic times, watcher kernel log)
+
+    [  195.170]  msm_dp_hpd_plug_handle type=10 (DisplayPort)
+    [  195.182]  msm_dp_panel_read_link_caps: max_lanes=4 max_link_rate=810000
+    [  195.182]  msm_dp_panel_read_link_caps: link_rate=540000          <- the cap applied
+    [  195.187]  msm_dp_panel_read_link_caps: link_rate_set=0
+    [  196.719]  msm_dp_ctrl_setup_main_link: using LINK_BW_SET: 0x14   <- HBR2 5.4 Gbps
+    [  196.727]  link training #1 on phy 1 successful                   <- LTTPR segment, CR
+    [  196.735]  link training #2 on phy 1 successful                   <- LTTPR segment, CHANNEL EQ
+    [  196.749]  link training #1 on phy 0 successful                   <- sink segment, CR
+    [  196.768]  link training #2 on phy 0 successful                   <- sink segment, EQ
+    [  196.769]  using LINK_BW_SET: 0x14   (second pass, same result)
+    [  196.775]  link training #1 on phy 1 successful
+    [  196.780]  link training #2 on phy 1 successful
+    [  196.797]  link training #1 on phy 0 successful
+    [  196.819]  link training #2 on phy 0 successful
+    [  196.864]  eDP (type=14) read_link_caps: link_rate=810000 rate_set=3
+    [  196.960]  using LINK_BW_SET: 0x1e   (eDP keeps HBR3 - the cap exempts eDP by design)
+    [  196.963]  link training #1 on phy 0 successful
+    [  197.050]  link training #2 on phy 0 successful
+
+`link training #2 on phy 1` is the LTTPR channel-equalization step that failed with
+`ret=-110` in every previous session, including at maximum pre-emphasis (see
+`2026-10-02-gigabyte-vs-msi-port-pattern.txt`). At 5.4 Gbps it converges.
+
+## Whole-boot tallies for this session
+
+    "link training #1 on phy 1 successful"   4
+    "link training #2 on phy 1 successful"   4
+    "link training #1 on phy 0 successful"   6
+    "link training #2 on phy 0 successful"   6
+    "LTTPR ... failed"                       0
+    "prepare failed"                         0
+    "vblank timeout"                         0
+    "commit done returned -110"               0
+    DPU errors                                0
+    card1-DP-1  status=connected  enabled=enabled  modes=3440x1440 3440x1440 3440x1440 2560x1440
+    card1-eDP-1 status=connected  enabled=enabled  modes=2880x1800 2880x1800
+
+The monitor was attached while the laptop end stayed plugged in (no repeated
+plug/unplug cycles), and the cap was in effect for the whole attach, so this shows
+that the sink's own advertised 5.4 Gbps is sufficient for the full LTTPR + sink
+training sequence - not just for the sink segment.
+
+## Still unknown / next
+
+- Hotplug at 5.4 Gbps (unplug/replug) has not been tested: every earlier hotplug
+  failure was at 8.1 Gbps.
+- The MSI (5120x1440) has not been tried at 5.4 Gbps. Its 60 Hz mode fits inside
+  HBR2 x4 (~10.6 Gbps raw vs 21.6 Gbps); 120 Hz would not.
+- The first boot after staging `dprate` came up to a black screen after login and
+  needed a second reboot. No kernel error was recorded for that boot (its journal
+  was truncated by the hard reset); treat it as open, not as explained.
+- Permanent form of the fix: either make the external-DP rate selection respect the
+  sink's basic `MAX_LINK_RATE` (DPCD 0x00001) instead of the extended receiver
+  capability block the kernel merges over it, or implement the missing fallback so
+  a failed LTTPR/sink channel equalization down-shifts the rate and retries. The
+  8.1 Gbps capability is real per the sinks' extended blocks; this platform simply
+  does not train it reliably, so the QMP/PHY side at HBR3 remains a separate open
+  question for upstream.
+## 17:54-17:55 — the MSI at 5.4 Gbps: its repeater still fails (boot 9f0e8245)
+
+The MSI was attached in the same boot that had the working Gigabyte session, so the
+cap (540000) was still in force - confirmed by the driver's own log:
+
+    [msm_dp_panel_read_link_caps] max_lanes=4 max_link_rate=810000
+    [msm_dp_panel_read_link_caps] link_rate=540000      <- cap active
+    [msm_dp_panel_read_link_caps] link_rate_set=0 use_rate_set=0
+
+It landed on **DP-2** (`card1-DP-2`, `af5c000`/`fde000.phy`) and failed anyway:
+
+    *ERROR* link training #2 on phy 1 failed. ret=-110          <- LTTPR channel EQ
+    *ERROR* link training of LTTPR(s) failed. ret=-110
+    *ERROR* Failed link training (rc=-104)
+    *ERROR* DP display prepare failed, rc=-104
+    [dpu error] vblank timeout: a1821300                        <- DPU storm
+    [dpu error] wait for commit done returned -110
+
+and then, on the way out:
+
+    [drm:dpu_encoder_phys_vid_disable] *ERROR* wait disable failed: id:38 intf:4 ret:-110
+
+The failed encoder cannot even be disabled, which is why the pipeline stays wedged
+and the desktop freezes rather than merely losing the external picture. The monitor's
+own USB side came up normally (VIA `2109:2211` hub, `1462:3fa4` MSI Gaming Controller,
+`MSI Optix Driver` mass storage), so its hub/PD is fine - it is the DP repeater
+segment that never equalizes.
+
+Summary of every MSI configuration tried on this machine: DP-1 at 8.1G (150232),
+DP-2 at 8.1G (163318), DP-2 at 5.4G (this one) - all fail the same way. The Gigabyte
+on DP-1 at 5.4G is the one working combination.
+
+## The "first boot after a freeze is black after login" pattern
+
+Observed twice: after a freeze caused by this failure, the first boot reaches the
+login screen, the user logs in, the screen refreshes once and never comes back; the
+second boot is normal.
+
+Likely mechanism, and it fits the driver logs: module parameters do not persist, so
+every boot starts with no cap (8.1G). If a failing monitor is attached at that boot,
+the same failure happens again - and GNOME applies its saved layout immediately after
+login, i.e. exactly when the broken external encoder is part of the atomic commit,
+so the commit waits on a vblank that never comes and the internal panel goes dark
+while the session stays alive. That is the documented dark-panel-after-login
+signature (`dp_aux_backlight` powered down, `card1-eDP-1 enabled=disabled`, session
+alive), whose known remedy is restarting gdm rather than rebooting. Booting with the
+monitor absent (or a working monitor with the cap in place) comes up normally.
+The journal of the first such boot is truncated by the hard reset, so it carries no
+direct evidence - the mechanism above is inference, not measurement.
+

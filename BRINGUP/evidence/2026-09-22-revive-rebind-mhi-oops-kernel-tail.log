@@ -1,0 +1,208 @@
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: authenticate with 58:d8:12:08:90:d9 (local address=3c:ef:a5:29:6a:61)
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: send auth to 58:d8:12:08:90:d9 (try 1/3)
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: authenticate with 58:d8:12:08:90:d9 (local address=3c:ef:a5:29:6a:61)
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: send auth to 58:d8:12:08:90:d9 (try 1/3)
+2026-09-22T11:32:57-04:00 jc kernel: regulator: Not disabling unused regulators
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: authenticated
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: associate with 58:d8:12:08:90:d9 (try 1/3)
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: RX ReassocResp from 58:d8:12:08:90:d9 (capab=0x1511 status=0 aid=3)
+2026-09-22T11:32:57-04:00 jc kernel: wlP4p1s0: associated
+2026-09-22T11:33:28-04:00 jc kernel: wlP4p1s0: Limiting TX power to 30 (30 - 0) dBm as advertised by 58:d8:12:08:90:d9
+2026-09-22T11:33:53-04:00 jc kernel: wlP4p1s0: deauthenticating from 58:d8:12:08:90:d9 by local choice (Reason: 3=DEAUTH_LEAVING)
+2026-09-22T11:33:54-04:00 jc kernel: PM: suspend entry (s2idle)
+2026-09-22T11:33:54-04:00 jc kernel: Filesystems sync: 0.008 seconds
+2026-09-22T11:36:55-04:00 jc kernel: Freezing user space processes
+2026-09-22T11:36:55-04:00 jc kernel: Freezing user space processes completed (elapsed 0.001 seconds)
+2026-09-22T11:36:55-04:00 jc kernel: OOM killer disabled.
+2026-09-22T11:36:55-04:00 jc kernel: Freezing remaining freezable tasks
+2026-09-22T11:36:55-04:00 jc kernel: Freezing remaining freezable tasks completed (elapsed 0.003 seconds)
+2026-09-22T11:36:55-04:00 jc kernel: printk: Suspending console(s) (use no_console_suspend to debug)
+2026-09-22T11:36:55-04:00 jc kernel: dwc3-qcom a800000.usb: port-1 HS-PHY not in L2
+2026-09-22T11:36:55-04:00 jc kernel: dwc3-qcom a600000.usb: port-1 HS-PHY not in L2
+2026-09-22T11:36:55-04:00 jc kernel: qcom-pcie 1bf0000.pcie: Timeout waiting for L2 entry! LTSSM: 0x11
+2026-09-22T11:36:55-04:00 jc kernel: qcom-pcie 1bf0000.pcie: PCIe Gen.3 x1 link up
+2026-09-22T11:36:55-04:00 jc kernel: qcom-pcie 1b40000.pcie: PCIe Gen.4 x4 link up
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: A16: resume -- not resetting the device (MHI state 0x0); the firmware should still be running
+2026-09-22T11:36:55-04:00 jc kernel: mhi mhi0: Requested to power ON
+2026-09-22T11:36:55-04:00 jc kernel: mhi mhi0: Power on setup success
+2026-09-22T11:36:55-04:00 jc kernel: mhi mhi0: Wait for device to enter SBL or Mission mode
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: A16: resume -- MHI state after power up: 0x2 (0x1 = M0, 0x2 = M1: either way the device is still in mission mode)
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: A16: resume -- device kept across the suspend; re-attaching the driver to it
+2026-09-22T11:36:55-04:00 jc kernel: nvme nvme0: D3 entry latency set to 10 seconds
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: qmi wlan config request failed, result: 1, err: 90
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: qmi failed to send wlan cfg:-22
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to send firmware start: -22
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to start firmware: -22
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to reconfigure driver on crash recovery
+2026-09-22T11:36:55-04:00 jc kernel: nvme nvme0: 16/0/0 default/read/poll queues
+2026-09-22T11:36:55-04:00 jc kernel: xhci-hcd xhci-hcd.1.auto: WARNING: Host System Error
+2026-09-22T11:36:55-04:00 jc kernel: arm-smmu 15000000.iommu: Unhandled context fault: fsr=0x402, iova=0xc63f084620, fsynr=0x310011, cbfrsynra=0xda0, cb=11
+2026-09-22T11:36:55-04:00 jc kernel: arm-smmu 15000000.iommu: FSR    = 00000402 [Format=2 TF], SID=0xda0
+2026-09-22T11:36:55-04:00 jc kernel: arm-smmu 15000000.iommu: FSYNR0 = 00310011 [S1CBNDX=49 WNR PLVL=1]
+2026-09-22T11:36:55-04:00 jc kernel: xhci-hcd xhci-hcd.1.auto: xHCI host not responding to stop endpoint command
+2026-09-22T11:36:55-04:00 jc kernel: xhci-hcd xhci-hcd.1.auto: xHCI host controller not responding, assume dead
+2026-09-22T11:36:55-04:00 jc kernel: xhci-hcd xhci-hcd.1.auto: HC died; cleaning up
+2026-09-22T11:36:55-04:00 jc kernel: xhci-hcd xhci-hcd.1.auto: Timeout while waiting for stop endpoint command
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: timeout while waiting for restart complete
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: A16: resume failed -- refusing to use the device (no WiFi until a reboot or 'sudo ~/a16.sh radiofix revive')
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: A16: resume timed out -- no firmware-ready event arrived after the resume
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to resume core: -110
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: PM: dpm_run_callback(): pci_pm_resume returns -110
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: PM: failed to resume async: error -110
+2026-09-22T11:36:55-04:00 jc kernel: OOM killer enabled.
+2026-09-22T11:36:55-04:00 jc kernel: Restarting tasks: Starting
+2026-09-22T11:36:55-04:00 jc kernel: Restarting tasks: Done
+2026-09-22T11:36:55-04:00 jc kernel: efivarfs: resyncing variable state
+2026-09-22T11:36:55-04:00 jc kernel: usb 2-2: USB disconnect, device number 2
+2026-09-22T11:36:55-04:00 jc kernel: efivarfs: finished resyncing variable state
+2026-09-22T11:36:55-04:00 jc kernel: random: crng reseeded on system resumption
+2026-09-22T11:36:55-04:00 jc kernel: PM: suspend exit
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to send WMI_PDEV_SET_PARAM cmd
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to enable PMF QOS: -108
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: fail to start mac operations in pdev idx 0 ret -108
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to send WMI_PDEV_SET_PARAM cmd
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to enable PMF QOS: -108
+2026-09-22T11:36:55-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: fail to start mac operations in pdev idx 0 ret -108
+2026-09-22T11:37:06-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to send WMI_PDEV_SET_PARAM cmd
+2026-09-22T11:37:06-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to enable PMF QOS: -108
+2026-09-22T11:37:06-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: fail to start mac operations in pdev idx 0 ret -108
+2026-09-22T11:37:16-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to send WMI_PDEV_SET_PARAM cmd
+2026-09-22T11:37:16-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: failed to enable PMF QOS: -108
+2026-09-22T11:37:16-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: fail to start mac operations in pdev idx 0 ret -108
+2026-09-22T11:37:21-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: BAR 0 [mem 0x78400000-0x785fffff 64bit]: assigned
+2026-09-22T11:37:21-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: Wi-Fi 7 Hardware name: qcc2072 hw1.0
+2026-09-22T11:37:21-04:00 jc kernel: ath12k_wifi7_pci 0004:01:00.0: MSI vectors: 16
+2026-09-22T11:37:21-04:00 jc kernel: Unable to handle kernel paging request at virtual address ffff80008aeb5e08
+2026-09-22T11:37:21-04:00 jc kernel: Mem abort info:
+2026-09-22T11:37:21-04:00 jc kernel:   ESR = 0x0000000096000007
+2026-09-22T11:37:21-04:00 jc kernel:   EC = 0x25: DABT (current EL), IL = 32 bits
+2026-09-22T11:37:21-04:00 jc kernel:   SET = 0, FnV = 0
+2026-09-22T11:37:21-04:00 jc kernel:   EA = 0, S1PTW = 0
+2026-09-22T11:37:21-04:00 jc kernel:   FSC = 0x07: level 3 translation fault
+2026-09-22T11:37:21-04:00 jc kernel: Data abort info:
+2026-09-22T11:37:21-04:00 jc kernel:   ISV = 0, ISS = 0x00000007, ISS2 = 0x00000000
+2026-09-22T11:37:22-04:00 jc kernel:   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+2026-09-22T11:37:22-04:00 jc kernel:   GCS = 0, Overlay = 0, DirtyBit = 0
+2026-09-22T11:37:22-04:00 jc kernel: swapper pgtable: 4k pages, 48-bit VAs, pgdp=000000891ebb7000
+2026-09-22T11:37:22-04:00 jc kernel: [ffff80008aeb5e08] pgd=1000000880855403, p4d=1000000880855403, pud=1000000880856403, pmd=1000000898409403, pte=0000000000000000
+2026-09-22T11:37:22-04:00 jc kernel: Internal error: Oops: 0000000096000007 [#1]  SMP
+2026-09-22T11:37:22-04:00 jc kernel: Modules linked in: reset_gpio(E) snd_soc_wsa884x(E) regmap_sdw(E) gpio_shared_proxy(E) q6apm_lpass_dais(E) q6prm_clocks(E) snd_q6dsp_common(E) q6apm_dai(E) q6prm(E) snd_seq_dummy(E) snd_hrtimer(E) rfcomm(E) algif_hash(E) algif_skcipher(E) af_alg(E) bnep(E) snd_soc_hdmi_codec(E) qrtr_mhi(E) snd_q6apm(E) apr(E) binfmt_misc(E) nls_iso8859_1(E) panel_samsung_atna33xc20(E) fastrpc(E) rpmsg_ctrl(E) qrtr_smd(E) rpmsg_char(E) qcom_pd_mapper(E) ath12k_wifi7(E) msm(OE) hci_uart(E) ath12k(OE) btqca(E) btrtl(E) btbcm(E) btintel(E) snd_soc_x1e80100(E) bluetooth(E) soundwire_qcom(E) snd_soc_qcom_sdw(E) slimbus(E) snd_soc_qcom_common(E) snd_soc_lpass_wsa_macro(E) snd_soc_lpass_va_macro(E) soundwire_bus(E) snd_soc_lpass_macro_common(E) pm8941_pwrkey(E) snd_soc_core(E) qcom_spmi_temp_alarm(E) snd_compress(E) ocmem(E) industrialio(E) ubwc_config(E) ac97_bus(E) snd_pcm_dmaengine(E) mac80211(E) gpu_sched(E) asus_glymur_ec(OE) snd_seq_midi(E) snd_pcm(E) qcom_q6v5_pas(E) drm_gpuvm(E) snd_seq_midi_event(E) qcom_pil_info(E)
+2026-09-22T11:37:22-04:00 jc kernel:  drm_exec(E) cfg80211(E) snd_rawmidi(E) qcom_tsens(E) qcom_q6v5(E) drm_dp_aux_bus(E) qcom_sysmon(E) snd_seq(E) drm_display_helper(E) mdt_loader(E) mhi(E) snd_seq_device(E) qcom_common(E) snd_timer(E) cec(E) qcom_glink_smem(E) qcom_glink(E) rc_core(E) snd(E) libarc4(E) gpucc_glymur(OE) soundcore(E) qcom_smd(E) qcomtee(E) display_connector(E) simple_bridge(E) tee(E) leds_gpio(E) input_leds(E) joydev(E) sch_fq_codel(E) efi_pstore(E) uas(E) usb_storage(E) hid_asus(E) usbhid(E) hid_multitouch(E) hid_generic(E) i2c_hid_of(E) xhci_plat_hcd(E) nvme(E) i2c_hid_acpi_prp0001(E) i2c_hid(E) hid(E) phy_nxp_ptn3222(E) nvme_core(E) nvme_keyring(E) nvme_auth(E) i2c_qcom_geni(E) rtc_pm8xxx(E) phy_qcom_eusb2_repeater(E) qcom_pon(E) reboot_mode(E) nvmem_qcom_spmi_sdam(E) pinctrl_spmi_gpio(E) qcom_spmi_pmic(E) regmap_spmi(E) pmic_glink_altmode(E) ucsi_glink(E) aux_hpd_bridge(E) qcom_battmgr(E) typec_ucsi(E) socinfo(E) phy_qcom_qmp_combo(E) dwc3_qcom(E) aux_bridge(E) dwc3(E) spmi_pmic_arb(E) typec(E) ulpi(E) spmi_devres(E)
+2026-09-22T11:37:22-04:00 jc kernel:  qcom_stats(E) pinctrl_glymur(E) spmi(E) phy_qcom_m31_eusb2(E) phy_qcom_qmp_usb(E) phy_qcom_edp(E) qcom_aoss(E) qrtr(E) dispcc_glymur(E) camcc_glymur(E) thunderbolt(E) pinctrl_sm8650_lpass_lpi(E) evacc_glymur(E) udc_core(E) qcom_rpmh_regulator(E) videocc_glymur(E) pmic_glink(E) pinctrl_lpass_lpi(E) gpi(E) llcc_qcom(E) nvmem_qfprom(E) gxclkctl_kaanapali(E) tcsrcc_glymur(E) bam_dma(E) pdr_interface(E) qcom_hwspinlock(E) phy_qcom_qmp_pcie(E) gcc_glymur(E) qcom_cpucp_mbox(E) icc_bwmon(E) aes_ce_blk(E) qcom_pdr_msg(E) pwrseq_pcie_m2(E) ghash_ce(E) qmi_helpers(E) gf128mul(E) rpmsg_core(E) sm4_ce_gcm(E) sm4_ce_ccm(E) sm4_ce(E) sm4_ce_cipher(E) sm4(E) gpio_keys(E) smp2p(E) qcom_smem(E) fixed(E) qnoc_glymur(E) dmi_sysfs(E) autofs4(E)
+2026-09-22T11:37:22-04:00 jc kernel: CPU: 1 UID: 0 PID: 1339 Comm: kworker/u72:3 Tainted: G           OE       7.3.0-rc3-next-20260914 #1 PREEMPT(lazy) 
+2026-09-22T11:37:22-04:00 jc kernel: Tainted: [O]=OOT_MODULE, [E]=UNSIGNED_MODULE
+2026-09-22T11:37:22-04:00 jc kernel: Hardware name: ASUS Zenbook A16 UX3607OA/UX3607OA, BIOS UX3607OA.312 07/12/2026
+2026-09-22T11:37:22-04:00 jc kernel: Workqueue: ath12k_qmi_driver_event ath12k_qmi_driver_event_work [ath12k]
+2026-09-22T11:37:22-04:00 jc kernel: pstate: 81400009 (Nzcv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+2026-09-22T11:37:22-04:00 jc kernel: pc : mhi_queue+0x40/0x1f0 [mhi]
+2026-09-22T11:37:22-04:00 jc kernel: lr : mhi_queue_skb+0x58/0xb0 [mhi]
+2026-09-22T11:37:22-04:00 jc kernel: sp : ffff80008a1f37c0
+2026-09-22T11:37:22-04:00 jc kernel: x29: ffff80008a1f37c0 x28: ffff000837140000 x27: dead000000000122
+2026-09-22T11:37:22-04:00 jc kernel: x26: ffff00084433e530 x25: 0000000000000000 x24: 0000000000000000
+2026-09-22T11:37:22-04:00 jc kernel: x23: ffff00084433e53c x22: 0000000000000001 x21: ffff80008aeb5d60
+2026-09-22T11:37:22-04:00 jc kernel: x20: ffff80008aeb5dc8 x19: ffff000801289800 x18: ffff800081bbb080
+2026-09-22T11:37:22-04:00 jc kernel: x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+2026-09-22T11:37:22-04:00 jc kernel: x14: ffffffffffffffff x13: 0000000000000038 x12: 0101010101010101
+2026-09-22T11:37:22-04:00 jc kernel: x11: 0000000000000000 x10: 0000000000000000 x9 : ffffc0fdf62d70a0
+2026-09-22T11:37:22-04:00 jc kernel: x8 : ffff0008258a1ba7 x7 : 0000000000000000 x6 : 0000000000000000
+2026-09-22T11:37:22-04:00 jc kernel: x5 : ffff0008258a1b80 x4 : ffff80008aeb5d60 x3 : 0000000000000002
+2026-09-22T11:37:22-04:00 jc kernel: x2 : 0000000000000001 x1 : ffff80008a1f3810 x0 : 0000000000000004
+2026-09-22T11:37:22-04:00 jc kernel: Call trace:
+2026-09-22T11:37:22-04:00 jc kernel:  mhi_queue+0x40/0x1f0 [mhi] (P)
+2026-09-22T11:37:22-04:00 jc kernel:  mhi_queue_skb+0x58/0xb0 [mhi]
+2026-09-22T11:37:22-04:00 jc kernel:  qcom_mhi_qrtr_send+0x70/0x1b0 [qrtr_mhi]
+2026-09-22T11:37:22-04:00 jc kernel:  qrtr_node_enqueue+0x104/0x508 [qrtr]
+2026-09-22T11:37:22-04:00 jc kernel:  qrtr_sendmsg+0x178/0x378 [qrtr]
+2026-09-22T11:37:22-04:00 jc kernel:  __sock_sendmsg+0x78/0x100
+2026-09-22T11:37:22-04:00 jc kernel:  sock_sendmsg+0x80/0xf0
+2026-09-22T11:37:22-04:00 jc kernel:  kernel_sendmsg+0x3c/0x70
+2026-09-22T11:37:22-04:00 jc kernel:  qmi_send_message.isra.0+0xd4/0x178 [qmi_helpers]
+2026-09-22T11:37:22-04:00 jc kernel:  qmi_send_request+0x34/0x70 [qmi_helpers]
+2026-09-22T11:37:22-04:00 jc kernel:  ath12k_qmi_phy_cap_send+0x84/0x180 [ath12k]
+2026-09-22T11:37:22-04:00 jc kernel:  ath12k_qmi_event_server_arrive+0x50/0x448 [ath12k]
+2026-09-22T11:37:22-04:00 jc kernel:  ath12k_qmi_driver_event_work+0xd4/0x418 [ath12k]
+2026-09-22T11:37:22-04:00 jc kernel:  process_one_work+0x1c4/0x598
+2026-09-22T11:37:22-04:00 jc kernel:  worker_thread+0x19c/0x338
+2026-09-22T11:37:22-04:00 jc kernel:  kthread+0x138/0x150
+2026-09-22T11:37:22-04:00 jc kernel:  ret_from_fork+0x10/0x20
+2026-09-22T11:37:22-04:00 jc kernel: Code: 9a8412b5 7101fc1f 54000ac8 9101a2b4 (f9402285) 
+2026-09-22T11:37:22-04:00 jc kernel: ---[ end trace 0000000000000000 ]---
+2026-09-22T11:37:22-04:00 jc kernel: mhi mhi0: Requested to power ON
+2026-09-22T11:37:22-04:00 jc kernel: mhi mhi0: Power on setup success
+2026-09-22T11:37:22-04:00 jc kernel: mhi mhi0: Wait for device to enter SBL or Mission mode
+2026-09-22T11:37:22-04:00 jc kernel: sysfs: cannot create duplicate filename '/bus/mhi/devices/mhi0_IPCR'
+2026-09-22T11:37:22-04:00 jc kernel: CPU: 16 UID: 0 PID: 182 Comm: kworker/u76:0 Tainted: G      D    OE       7.3.0-rc3-next-20260914 #1 PREEMPT(lazy) 
+2026-09-22T11:37:22-04:00 jc kernel: Tainted: [D]=DIE, [O]=OOT_MODULE, [E]=UNSIGNED_MODULE
+2026-09-22T11:37:22-04:00 jc kernel: Hardware name: ASUS Zenbook A16 UX3607OA/UX3607OA, BIOS UX3607OA.312 07/12/2026
+2026-09-22T11:37:22-04:00 jc kernel: Workqueue: mhi_hiprio_wq mhi_pm_st_worker [mhi]
+2026-09-22T11:37:22-04:00 jc kernel: Call trace:
+2026-09-22T11:37:22-04:00 jc kernel:  show_stack+0x24/0x50 (C)
+2026-09-22T11:37:22-04:00 jc kernel:  dump_stack_lvl+0x8c/0xd8
+2026-09-22T11:37:22-04:00 jc kernel:  dump_stack+0x1c/0x44
+2026-09-22T11:37:22-04:00 jc kernel:  sysfs_warn_dup+0xa8/0xf0
+2026-09-22T11:37:22-04:00 jc kernel:  sysfs_do_create_link_sd+0x140/0x150
+2026-09-22T11:37:22-04:00 jc kernel:  sysfs_create_link+0x2c/0x80
+2026-09-22T11:37:22-04:00 jc kernel:  bus_add_device+0xa0/0x2b0
+2026-09-22T11:37:22-04:00 jc kernel:  device_add+0x3ac/0x940
+2026-09-22T11:37:22-04:00 jc kernel:  mhi_create_devices+0x170/0x2f0 [mhi]
+2026-09-22T11:37:22-04:00 jc kernel:  mhi_pm_st_worker+0x8a0/0xc00 [mhi]
+2026-09-22T11:37:22-04:00 jc kernel:  process_one_work+0x1c4/0x598
+2026-09-22T11:37:22-04:00 jc kernel:  worker_thread+0x19c/0x338
+2026-09-22T11:37:22-04:00 jc kernel:  kthread+0x138/0x150
+2026-09-22T11:37:22-04:00 jc kernel:  ret_from_fork+0x10/0x20
+2026-09-22T11:38:31-04:00 jc kernel: rcu: INFO: rcu_preempt detected stalls on CPUs/tasks:
+2026-09-22T11:38:31-04:00 jc kernel: rcu:         1-...0: (2 ticks this GP) idle=2cb4/1/0x4000000000000000 softirq=5929/5929 fqs=14016
+2026-09-22T11:38:31-04:00 jc kernel: rcu:                  hardirqs   softirqs   csw/system
+2026-09-22T11:38:31-04:00 jc kernel: rcu:          number:        0          0            0
+2026-09-22T11:38:31-04:00 jc kernel: rcu:         cputime:        0          0            0   ==> 30000(ms)
+2026-09-22T11:38:31-04:00 jc kernel: rcu:         (detected by 14, t=60002 jiffies, g=26517, q=5870 ncpus=18)
+2026-09-22T11:38:31-04:00 jc kernel: Sending NMI from CPU 14 to CPUs 1:
+2026-09-22T11:38:31-04:00 jc kernel: rcu: INFO: rcu_preempt detected expedited stalls on CPUs/tasks: {
+2026-09-22T11:38:31-04:00 jc kernel: After 10 seconds, these CPUS still haven't responded to the NMI: 1
+2026-09-22T11:38:31-04:00 jc kernel: rcu: rcu_preempt kthread timer wakeup didn't happen for 9998 jiffies! g26517 f0x0 RCU_GP_WAIT_FQS(5) ->state=I
+2026-09-22T11:38:31-04:00 jc kernel: rcu:         Possible timer handling issue on cpu=14 timer-softirq=12233
+2026-09-22T11:38:31-04:00 jc kernel: rcu: rcu_preempt kthread starved for 10001 jiffies! g26517 f0x0 RCU_GP_WAIT_FQS(5) ->state=I ->cpu=14
+2026-09-22T11:38:31-04:00 jc kernel: rcu:         Unless rcu_preempt kthread gets sufficient CPU time, OOM is now expected behavior.
+2026-09-22T11:38:31-04:00 jc kernel: rcu: RCU grace-period kthread stack dump:
+2026-09-22T11:38:31-04:00 jc kernel: task:rcu_preempt     state:I
+2026-09-22T11:38:31-04:00 jc kernel:  1-...D
+2026-09-22T11:38:31-04:00 jc kernel:  stack:0     pid:15    tgid:15    ppid:2      task_flags:0x208040 flags:0x00000010
+2026-09-22T11:38:31-04:00 jc kernel:  } 62810 jiffies s: 1941 root: 0x1/.
+2026-09-22T11:38:31-04:00 jc kernel: Call trace:
+2026-09-22T11:38:31-04:00 jc kernel: rcu: blocking rcu_node structures (internal RCU debug): l=1:0-8:0x2/.
+2026-09-22T11:38:31-04:00 jc kernel: Sending NMI from CPU 10 to CPUs 1:
+2026-09-22T11:38:31-04:00 jc kernel:  __switch_to+0x17c/0x428 (T)
+2026-09-22T11:38:31-04:00 jc kernel:  __schedule+0x440/0x1a78
+2026-09-22T11:38:31-04:00 jc kernel:  schedule+0x40/0x110
+2026-09-22T11:38:31-04:00 jc kernel:  schedule_timeout+0x8c/0x148
+2026-09-22T11:38:31-04:00 jc kernel:  rcu_gp_fqs_loop+0x120/0x490
+2026-09-22T11:38:31-04:00 jc kernel:  rcu_gp_kthread+0x120/0x180
+2026-09-22T11:38:31-04:00 jc kernel:  kthread+0x138/0x150
+2026-09-22T11:38:31-04:00 jc kernel:  ret_from_fork+0x10/0x20
+2026-09-22T11:38:31-04:00 jc kernel: rcu: Stack dump where RCU GP kthread last ran:
+2026-09-22T11:38:31-04:00 jc kernel: CPU: 14 UID: 0 PID: 0 Comm: swapper/14 Tainted: G      D    OE       7.3.0-rc3-next-20260914 #1 PREEMPT(lazy) 
+2026-09-22T11:38:31-04:00 jc kernel: Tainted: [D]=DIE, [O]=OOT_MODULE, [E]=UNSIGNED_MODULE
+2026-09-22T11:38:31-04:00 jc kernel: Hardware name: ASUS Zenbook A16 UX3607OA/UX3607OA, BIOS UX3607OA.312 07/12/2026
+2026-09-22T11:38:31-04:00 jc kernel: pstate: 61400009 (nZCv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+2026-09-22T11:38:31-04:00 jc kernel: pc : cpuidle_enter_state+0xd0/0x970
+2026-09-22T11:38:31-04:00 jc kernel: lr : cpuidle_enter_state+0xc4/0x970
+2026-09-22T11:38:31-04:00 jc kernel: sp : ffff800080203d70
+2026-09-22T11:38:31-04:00 jc kernel: x29: ffff800080203d70 x28: 0000000000000000 x27: 0000000000000000
+2026-09-22T11:38:31-04:00 jc kernel: x26: 0000002d362e62cf x25: 0000000000000000 x24: 0000002d361f2c5c
+2026-09-22T11:38:31-04:00 jc kernel: x23: 0000000000000000 x22: ffff0008082fa880 x21: ffff008af9f2c9f8
+2026-09-22T11:38:31-04:00 jc kernel: x20: 0000000000000000 x19: ffff0008082fa898 x18: ffff8000801a5030
+2026-09-22T11:38:31-04:00 jc kernel: x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+2026-09-22T11:38:31-04:00 jc kernel: x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
+2026-09-22T11:38:31-04:00 jc kernel: x11: 00000000000000c0 x10: a2504959abf04124 x9 : ffffc0fe1d2cf014
+2026-09-22T11:38:31-04:00 jc kernel: x8 : 0000000000000000 x7 : 0000000000000000 x6 : 0000000000000000
+2026-09-22T11:38:31-04:00 jc kernel: x5 : 0000000000000000 x4 : 0000000000000000 x3 : 0000000000000000
+2026-09-22T11:38:31-04:00 jc kernel: x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000000
+2026-09-22T11:38:31-04:00 jc kernel: Call trace:
+2026-09-22T11:38:31-04:00 jc kernel:  cpuidle_enter_state+0xd0/0x970 (P)
+2026-09-22T11:38:31-04:00 jc kernel:  cpuidle_enter+0x40/0x70
+2026-09-22T11:38:31-04:00 jc kernel:  call_cpuidle+0x28/0xa0
+2026-09-22T11:38:31-04:00 jc kernel:  do_idle+0x2c8/0x3c8
+2026-09-22T11:38:31-04:00 jc kernel:  cpu_startup_entry+0x44/0x50
+2026-09-22T11:38:31-04:00 jc kernel:  secondary_start_kernel+0x130/0x170
+2026-09-22T11:38:31-04:00 jc kernel:  __secondary_switched+0xc8/0xd0
+2026-09-22T11:38:41-04:00 jc kernel: After 10 seconds, these CPUS still haven't responded to the NMI: 1

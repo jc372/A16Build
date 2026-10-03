@@ -1,0 +1,91 @@
+name: Build openSUSE Tumbleweed ARM64 A16 live USB image
+
+on:
+  workflow_call:
+    inputs:
+      use_current_run_kernel:
+        description: Download the kernel artifact produced earlier in this workflow run
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      kernel_run_id:
+        description: Optional successful kernel run ID; blank uses the newest one
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reclaim runner disk for the raw USB image
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h
+      - name: Install image tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd rpm2cpio cpio xorriso mtools
+      - name: Download kernel bundle from this workflow run
+        if: inputs.use_current_run_kernel
+        uses: actions/download-artifact@v4
+        with:
+          pattern: zenbook-a16-linux-next-*
+          path: kernel-artifact
+          merge-multiple: true
+      - name: Download existing kernel bundle
+        if: ${{ !inputs.use_current_run_kernel }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RUN: ${{ inputs.kernel_run_id }}
+        run: |
+          run_id="$REQUESTED_RUN"
+          if [ -z "$run_id" ]; then
+            run_id=$(gh run list --repo "$GITHUB_REPOSITORY" \
+              --workflow "Nightly ASUS Zenbook A16 kernel" --status success --limit 1 \
+              --json databaseId --jq '.[0].databaseId')
+          fi
+          test -n "$run_id" && test "$run_id" != "null"
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --dir kernel-artifact
+      - name: Find current openSUSE Tumbleweed ARM64 DVD snapshot
+        id: tumbleweed
+        run: |
+          base=https://download.opensuse.org/ports/aarch64/tumbleweed/iso
+          image=$(curl -fsSL "$base/" | grep -oE 'openSUSE-Tumbleweed-DVD-aarch64-Current\.iso' | sort -u | head -n1)
+          test -n "$image"
+          # Resolve the Current symlink to the concrete snapshot for a stable URL/checksum.
+          resolved=$(curl -fsSI "$base/$image" | awk -F': ' 'tolower($1)=="location"{print $2}' | tr -d '\r')
+          test -n "$resolved"
+          if [[ "$resolved" != /* ]]; then resolved="$base/$resolved"; fi
+          resolved_name=$(basename "$resolved")
+          sha256=$(curl -fsSL "$base/${resolved_name}.sha256" | awk '{print $1; exit}')
+          test -n "$sha256"
+          echo "url=$resolved" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+      - name: Create openSUSE Tumbleweed A16 live USB ISO
+        run: |
+          bundle=$(find kernel-artifact -name 'zenbook-a16-*.tar.zst' -print -quit)
+          SPLIT_SIZE=1900m BASE_IMAGE_SHA256="${{ steps.tumbleweed.outputs.sha256 }}" \
+            bash scripts/make-opensuse-tumbleweed-usb-iso.sh "$bundle" "${{ steps.tumbleweed.outputs.url }}"
+      # The split ISO parts are the final USB image, not build intermediates.
+      # Keep them transient and let image creation succeed when Actions storage is unavailable.
+      - name: Upload split GUI USB ISO
+        id: upload-gui-image
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: opensuse-tumbleweed-a16-usb-${{ github.run_number }}
+          path: |
+            out/opensuse-tumbleweed-a16-*.iso.*
+          if-no-files-found: error
+          retention-days: 1
+      - name: Report skipped GUI image upload
+        if: steps.upload-gui-image.outcome == 'failure'
+        run: |
+          echo "::warning::GUI USB image was created, but its transient artifact could not be uploaded (for example, Actions artifact storage may be full)."

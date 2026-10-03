@@ -1,0 +1,53 @@
+--- /home/jc/build/linux-next-1a1de54f7369/drivers/gpu/drm/msm/dp/dp_panel.c	2026-10-02 14:27:40.379516205 -0400
++++ /home/jc/build/linux-next-1a1de54f7369-dprate/drivers/gpu/drm/msm/dp/dp_panel.c	2026-10-02 17:39:27.832223466 -0400
+@@ -85,6 +85,41 @@
+ 	}
+ }
+ 
++/*
++ * A16 experiment (2026-10-02): the basic receiver capability block of both tested
++ * monitors advertises HBR2 (5.4G, DPCD 0x00001 = 0x14) while their DPRX extended
++ * receiver capability block advertises HBR3 (8.1G, DPCD 0x02200 byte1 = 0x1e), and
++ * the LTTPR advertises 8.1G too.  drm_dp_read_dpcd_caps() merges the extended block
++ * over the basic one, so the driver trains the external link at 8.1G x4 on a link
++ * that is only guaranteed at 5.4G.  Every observed failure is the LTTPR segment's
++ * channel equalization timing out with pre-emphasis already at maximum
++ * (ret=-110 -> rc=-104), after which the DPU's commits never complete and the
++ * desktop freezes.  This parameter caps the external DP link rate so the rate can be
++ * swept at runtime (write to /sys/module/msm/parameters/a16_dp_max_rate, then
++ * re-plug) without another kernel build.  0 = no cap, eDP is never touched.
++ */
++static uint a16_dp_max_rate;
++module_param(a16_dp_max_rate, uint, 0644);
++MODULE_PARM_DESC(a16_dp_max_rate, "A16: cap external DP link rate in kHz (0 = no cap)");
++
++static u32 a16_dp_cap_external_rate(struct msm_dp_panel *msm_dp_panel, u32 rate)
++{
++	static const u32 a16_rates[] = { 162000, 270000, 540000, 810000 };
++	u32 cap = a16_dp_max_rate;
++	int i;
++
++	if (!cap || rate <= cap)
++		return rate;
++	if (msm_dp_panel->connector->connector_type == DRM_MODE_CONNECTOR_eDP)
++		return rate;
++	for (i = ARRAY_SIZE(a16_rates) - 1; i >= 0; i--)
++		if (a16_rates[i] <= cap)
++			return a16_rates[i];
++	return rate;
++}
++
++
++
+ static int msm_dp_panel_read_dpcd(struct msm_dp_panel *msm_dp_panel)
+ {
+ 	int rc, max_lttpr_lanes, max_lttpr_rate;
+@@ -203,6 +238,8 @@
+ 		link_info->rate_set = 3;   /* 0x1E in the eDP supported-link-rates table */
+ 	}
+ 
++	link_info->rate = a16_dp_cap_external_rate(msm_dp_panel, link_info->rate);
++
+ 	link_info->num_lanes = drm_dp_max_lane_count(dpcd);
+ 
+ 	/* Limit data lanes from data-lanes of endpoint property of dtsi */

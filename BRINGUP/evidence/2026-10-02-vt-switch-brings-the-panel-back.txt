@@ -1,0 +1,47 @@
+# 2026-10-02 21:56 — the panel came back with a VT switch, and the session survived
+
+Boot `54a36cfe646b466d90830d6c16d7ded8`, kernel `7.3.0-rc3-next-20260914`.
+
+Operator, after a suspend: "I could go to a terminal ctrl-alt-f3 and then back, and the screen was
+there. That is a good workaround that I can live with if needed."
+
+## The suspend
+
+```
+21:56:19  kernel: PM: suspend entry (s2idle)
+21:56:26  kernel: PM: suspend exit
+```
+
+7 seconds, and **no `a16-display-wake` entry** — the hook ran and found nothing to do, because the
+panel did not read as dark. Yet the operator's screen was showing nothing. That is a case the hook's
+test cannot see: `bl_power=0` and `card1-eDP-1 enabled=enabled` are both "fine" while the picture is
+missing. The earlier dark-panel resumes all had `bl_power=4` and the output `disabled`, which is why
+the hook caught those and not this one.
+
+## The recovery that worked
+
+```
+21:57:46  systemd[1]: Started getty@tty3.service - Getty on tty3.        <- ctrl-alt-f3
+21:59:10  [drm:dpu_crtc_commit_kickoff [msm]] crtc110 first commit       <- back to tty2
+21:59:10  [drm:_dpu_crtc_blend_setup [msm]] lm 0, op_mode 0x2, ctl 0
+21:59:10  [drm:dpu_core_perf_crtc_update [msm]] crtc:110 enabled:1 core_clk:696729600
+```
+
+Switching the VT away deactivates the DRM session and switching back reactivates it, and the
+compositor answers a reactivation with a **full modeset** — the `first commit` on crtc 110 above — which
+re-enables the output the resume left behind. Session 3 (user `jc`, tty2) was never lost: it was
+backgrounded for the two seconds spent on tty3. Panel state afterwards: `eDP=enabled`,
+`bl_power=0`, `dpms=On`.
+
+## What it changes
+
+1. **There is a keyboard-only, session-preserving recovery**: Ctrl+Alt+F3, then Ctrl+Alt+F2 (the
+   session's VT is tty2 on this machine). No SSH, no gdm restart, no reboot.
+2. **The resume hook now does exactly that as its first rung** (`a16-display-wake` rung 0), and keeps
+   the PowerSaveMode nudge and the gdm restart as rungs 1 and 2 for the cases a VT cycle cannot fix.
+3. **The detection gap is real.** A resume can leave the panel enabled-but-blank, which the
+   `bl_power`/`enabled` test reads as "fine". For that case the hook has an unconditional mode —
+   `sudo bash ~/a16.sh display hook always` writes `/etc/a16-display-wake.conf` with `A16_ALWAYS=1`,
+   so the VT cycle runs after every resume (cost: two seconds of console).
+4. The clean fix is still in `msm`'s eDP resume path (why the output is left disabled at all), but this
+   makes the resume usable today without losing the session.

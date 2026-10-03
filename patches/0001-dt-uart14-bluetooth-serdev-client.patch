@@ -1,0 +1,88 @@
+--- a/glymur-asus-zenbook-a16-ux3607oa.dts
++++ b/glymur-a16-bt-test.dts
+@@ -1468,6 +1468,17 @@
+ 						phandle = <0x1be>;
+ 					};
+ 				};
++
++				bluetooth {
++					compatible = "qcom,wcn7850-bt";
++					max-speed = <0x30d400>;
++					vddio-supply = <0x1bf>;
++					vddaon-supply = <0x1c0>;
++					vdddig-supply = <0x1c1>;
++					vddrfa0p8-supply = <0x1c2>;
++					vddrfa1p2-supply = <0x1c3>;
++					vddrfa1p9-supply = <0x1c4>;
++				};
+ 			};
+ 
+ 			i2c@a9c000 {
+@@ -9700,7 +9711,7 @@
+ 		vpcie3v3-supply = <0x1bb>;
+ 		vpcie1v8-supply = <0x9c>;
+ 		w-disable1-gpios = <0x58 0x75 0x01>;
+-		w-disable2-gpios = <0x58 0x74 0x01>;
++		w-disable2-gpios = <0x58 0x74 0x00>;
+ 		pinctrl-0 = <0x1bc>;
+ 		pinctrl-names = "default";
+ 
+@@ -9733,4 +9744,58 @@
+ 			};
+ 		};
+ 	};
++
++	regulator-bt-vddio {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDIO";
++		regulator-min-microvolt = <0x1b7740>;
++		regulator-max-microvolt = <0x1b7740>;
++		regulator-always-on;
++		phandle = <0x1bf>;
++	};
++
++	regulator-bt-vddaon {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDAON";
++		regulator-min-microvolt = <0x927c0>;
++		regulator-max-microvolt = <0x927c0>;
++		regulator-always-on;
++		phandle = <0x1c0>;
++	};
++
++	regulator-bt-vdddig {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDDIG";
++		regulator-min-microvolt = <0xcf850>;
++		regulator-max-microvolt = <0xcf850>;
++		regulator-always-on;
++		phandle = <0x1c1>;
++	};
++
++	regulator-bt-vddrfa0p8 {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDRFA0P8";
++		regulator-min-microvolt = "", "\f5";
++		regulator-max-microvolt = "", "\f5";
++		regulator-always-on;
++		phandle = <0x1c2>;
++	};
++
++	regulator-bt-vddrfa1p2 {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDRFA1P2";
++		regulator-min-microvolt = <0x124f80>;
++		regulator-max-microvolt = <0x124f80>;
++		regulator-always-on;
++		phandle = <0x1c3>;
++	};
++
++	regulator-bt-vddrfa1p9 {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDRFA1P9";
++		regulator-min-microvolt = <0x1cfde0>;
++		regulator-max-microvolt = <0x1cfde0>;
++		regulator-always-on;
++		phandle = <0x1c4>;
++	};
+ };

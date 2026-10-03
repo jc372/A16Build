@@ -1,0 +1,24 @@
+--- a/grub.cfg
++++ b/grub.cfg
+@@ -219,4 +219,20 @@
+     echo "  kernel files missing"
+     sleep 20
+     configfile $prefix/grub.cfg
++}
++menuentry "[8] A16: 7.3 + glymur DTB + Bluetooth serdev test (wcn7850-bt, stubbed rails)" {
++    echo "  prefix=$prefix  cmdpath=$cmdpath"
++    echo "  serdev bluetooth client for uart14; the six module rails are stubbed always-on"
++    search --no-floppy --fs-uuid --set=root f8e005e9-414c-4c8e-ad68-d1e9fdc208bc
++    if [ -f /boot/vmlinuz-7.3.0-rc3-next-20260914 -a -f /boot/initrd.img-7.3.0-rc3-next-20260914 ]; then
++        insmod fdt
++        insmod gzio
++        linux /boot/vmlinuz-7.3.0-rc3-next-20260914 root=UUID=f8e005e9-414c-4c8e-ad68-d1e9fdc208bc  ro  acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused module_blacklist=msm,dispcc_glymur,gpucc_glymur,videocc_glymur,phy_qcom_edp,panel_samsung_atna33xc20 modprobe.blacklist=msm console=tty0 keep_bootcon loglevel=7 crashkernel=2G-4G:320M,4G-32G:512M,32G-64G:1024M,64G-128G:2048M,128G-:4096M
++        devicetree /boot/glymur-a16-bt-test.dtb
++        initrd /boot/initrd.img-7.3.0-rc3-next-20260914
++        boot
++    fi
++    echo "  kernel files missing"
++    sleep 20
++    configfile $prefix/grub.cfg
+ }
+\ No newline at end of file

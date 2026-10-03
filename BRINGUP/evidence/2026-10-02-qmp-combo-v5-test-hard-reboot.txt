@@ -1,0 +1,19 @@
+USB-C DisplayPort test with staged QMP combo-PHY candidate
+Date: 2026-10-02 (EDT)
+
+Result
+- The candidate was staged and loaded. `qmpdp status` at 14:00:43 reported the override selected by modprobe and the loaded module with srcversion `151CA3C3BDC39CA185C951B`; SHA-256 `444b792b2f336d03e210dad95322160c86ca8138a90827ea2cbab1507dca7a31`.
+- Test-boot ID: `59da62cfce544ea0aac595dbba11204a`. Current boot ID after the reported hard reboot: `e9c830c27efb417eb752281ec060b9c9`.
+- Watcher files: `/home/jc/a16-payload/display-outputs-20261002-135042.log` and `/home/jc/a16-payload/display-outputs-20261002-135042.kernel.log`.
+
+Observed DP failure
+- Kernel log at 72.472 s: `link training #2 on phy 1 failed. ret=-110`. Correction from code review: `phy 1` is DisplayPort `DP_PHY_LTTPR1` (first repeater), not the second physical QMP PHY.
+- At 72.477 s: `link training of LTTPR(s) failed. ret=-110`.
+- At 72.493 s: `Failed link training (rc=-104)` and `DP display prepare failed, rc=-104`; an unexpected DP AUX IRQ followed.
+- The display snapshot kept external output disabled. In this capture the earlier `disp_cc_mdss_dptx0_link_clk ... stuck at 'off'` / `ctrl_link` `-16` errors were not logged; the attempt reached link training. This is evidence of progress past the earlier failure point, not proof the PHY change fixed the clock path or that the candidate caused the subsequent reset.
+
+Restart evidence and limits
+- `journalctl -b -1 -k` ends at the DP AUX IRQ immediately after the link-training errors. The next boot has a different boot ID. No panic, watchdog, thermal shutdown, or reset initiator appears in the saved final kernel records.
+- The operator reports another hard reboot. The temporal sequence is captured; cause and causality are not established.
+- Reboot verification at 14:16:55 EDT: boot ID `38c5503b-be6e-4970-9d4e-5a40366ec0ed`; loaded module srcversion is stock `63A1B2708C9E05A81BA565D`; resolver selects `/lib/modules/7.3.0-rc3-next-20260914/kernel/drivers/phy/qualcomm/phy-qcom-qmp-combo.ko`; override absent and rollback state cleared. Candidate is no longer loaded. Keep the monitor unplugged; no further DP test is planned until the training failure is analyzed.
+- Keep the monitor unplugged. Revert was confirmed at 14:04:34 EDT and the next boot loaded stock. Later analysis and a new not-yet-staged candidate: `2026-10-02-dp-next-candidate.txt`.

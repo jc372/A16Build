@@ -1,0 +1,33 @@
+[a16-bt-arm] === a16-bt-arm arm 20260916-163138 ===  (root=yes)
+
+== pick the patched DTB and prove it is the one we think ==
+[a16-bt-arm] source: /boot/glymur-a16-bt-test.dtb
+[a16-bt-arm] size  : 163093 bytes   sha256 d8fe1c623d65f5ad... (expected)
+[a16-bt-arm] expect: from /boot/glymur-a16-bt-test.dtb.sha256
+[a16-bt-arm] parsed: dtc decompiles it and finds compatible = qcom,wcn7850-bt
+
+== arm each path the entries load (backup once, never overwrite a backup) ==
+[a16-bt-arm] backup  : /boot/glymur-asus-zenbook-a16-ux3607oa.dtb.a16stock already exists -- left alone
+[a16-bt-arm] ARMED   : /boot/glymur-asus-zenbook-a16-ux3607oa.dtb  e9692e4d25b3451f... -> d8fe1c623d65f5ad...
+[a16-bt-arm] backup  : /boot/efi/a16boot/glymur-asus-zenbook-a16-ux3607oa.dtb.a16stock already exists -- left alone
+[a16-bt-arm] ARMED   : /boot/efi/a16boot/glymur-asus-zenbook-a16-ux3607oa.dtb  e9692e4d25b3451f... -> d8fe1c623d65f5ad...
+[a16-bt-arm] 2 file(s) armed.
+
+== now reboot ==
+[a16-bt-arm] Any of the DT rows ([1] [2] [3] [4]) now loads the Bluetooth test DTB, so the
+[a16-bt-arm] next boot gets it whether or not the menu is touched.  After it comes up:
+
+    bash /home/jc/a16-payload/a16-bt-setup.sh status
+
+[a16-bt-arm] Expect, in that output:
+    serdev client: PRESENT, stub rails: 6 of 6
+    then either a controller under /sys/class/bluetooth (hci0 -- Bluetooth is up), or the
+    qca firmware lines in the kernel log naming the file it wanted.  Both are real datums;
+    'MISSING /dev/ttyHS1' is expected and harmless -- serdev means there is no tty.
+
+[a16-bt-arm] To go back to the stock DTB:  sudo bash /home/jc/a16-payload/a16-bt-arm.sh revert
+[a16-bt-arm] If the machine will not come up at all: pick the [0] row (ACPI, no devicetree
+[a16-bt-arm] line, so it is immune to this), then run the revert above.  From Windows, the
+[a16-bt-arm] ESP's a16boot\glymur-asus-zenbook-a16-ux3607oa.dtb.a16stock copied back over
+[a16-bt-arm] glymur-asus-zenbook-a16-ux3607oa.dtb also restores it.
+[a16-bt-arm] log: /home/jc/a16-payload/A16BTARM-20260916-163138.log

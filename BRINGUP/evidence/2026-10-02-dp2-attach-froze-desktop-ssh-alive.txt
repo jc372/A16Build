@@ -1,0 +1,83 @@
+# 2026-10-02 20:53 — a failed DP-2 attach froze the desktop; SSH stayed alive; the fix is to evict the output
+
+Boot `d92a3795-a1f8-4085-9c5d-69b0d87aa319`, kernel `7.3.0-rc3-next-20260914`.
+Display module in force: `msm` srcversion `F60D32C034D8487FB39FE42` = the `dprate2` candidate
+(`patches/0019` + `patches/0020`), with `a16_dp_max_rate=540000` (5.4 Gbps cap) active.
+Capture: `~/a16-payload/display-outputs-20261002-204241.log` (connector transitions) and
+`…-204241.kernel.log` (184 MB, `drm.debug=0x1fe`).
+
+## What the operator saw
+
+Plugged into a monitor, left it (the built-in screen went dark), could not get the laptop screen back
+with a key, so SSHD in from the Windows box. The external monitor came back. Then switching to
+"external only" froze the desktop — but SSH still worked, so the machine was alive the whole time.
+Unplugging the external and restarting gdm brought it back.
+
+## What the logs say
+
+No suspend happened in this boot (`PM: suspend entry` count: 0) — the dark panel was the idle blank, not
+a sleep, so the resume hook never ran. The freeze was a **failed DP-2 attach**:
+
+```
+20:53:54  msm_dp_ctrl_link_train_1_2      *ERROR* link training #2 on phy 1 failed. ret=-110
+20:53:54  msm_dp_ctrl_setup_main_link     *ERROR* link training of LTTPR(s) failed. ret=-110
+20:53:54  msm_dp_display_atomic_enable    *ERROR* Failed link training (rc=-104)
+20:53:54  msm_dp_display_atomic_enable    *ERROR* DP display prepare failed, rc=-104
+20:53:54  msm_dp_aux_isr                  *ERROR* Unexpected DP AUX IRQ 0x01000000 when not busy
+20:53:55  dpu_encoder_helper_report_irq_timeout  id=38, intf_mode=INTF_MODE_VIDEO intf=4   (twice)
+20:53:55  dpu_encoder_phys_vid_disable    *ERROR* wait disable failed: id:38 intf:4 ret:-110
+```
+
+and then the storm that makes the desktop stop updating — **41** occurrences each of
+`dpu_encoder_wait_for_commit_done` and `vblank timeout` for the CRTC that carries the dead output.
+
+The watcher's connector line names the output and its mode list:
+
+```
+20:53:54  connectors changed: card1-DP-1=disconnected card1-DP-2=connected card1-HDMI-A-1=disconnected
+          card1-DP-2  status=connected enabled=enabled modes=3440x1440 3440x1440 3440x1440 2560x1440 …
+```
+
+`3440x1440` is the Gigabyte's mode list. The second failure, at 21:00:12, is the "external only" commit
+itself — one atomic commit that links **both** `CONNECTOR:39:DP-2` to `CRTC:111` and `CONNECTOR:43:eDP-1`
+to `CRTC:110`; DP-2's enable failed again (this time on the sink segment, `phy 0`, `ret=-110`), so the
+commit that would have moved the desktop to the external output never completed.
+
+Recovery, as it appears in the journal: `21:01:48` DP-2 disconnected (the unplug), `21:02:06` SSH login
+from 192.168.60.163, `21:02:30` gdm restart → desktop back.
+
+## Why `patches/0020` was not enough
+
+`0020` fires in the vblank-wait path (`clear_pending_flush` + `trigger_flush`, then `-ETIMEDOUT`), and it
+did: the timeouts are reported, not blocked. But it only unsticks the *pending* flush. Every later atomic
+commit still **contains** the dead output, so it times out again — 41 times in this boot — and because one
+commit covers both CRTCs, the built-in panel's updates stop with it. Clearing the flush keeps the pipeline
+breathing; it does not remove the bad output from the commit.
+
+**The thing that actually clears this state is removing the output from the compositor's view** — which is
+what unplugging does. As of this capture that is now a command:
+
+```
+sudo bash ~/a16.sh display evict     # force the wedged connector off (present state, then after)
+sudo bash ~/a16.sh display recover   # rebuild the desktop (it can proceed once nothing is connected)
+```
+
+`evict` writes `off` to the connector's `status`, so DRM reports it disconnected and the compositor drops
+it from subsequent commits. `echo detect > …/status` restores automatic detection.
+
+## Open questions this raises
+
+1. **The attach failed with the cap active, on a monitor/port that worked earlier the same evening.**
+   At ~18:00 "gigabyte is working in either port" was measured at `0x14` (5.4 Gbps); at 20:53 the same
+   resolution failed on DP-2. The difference in this boot: the machine had been left idle with the screen
+   off, and the attach happened out of that state. Hypothesis (untested): attaching while the source is
+   blanked, or the sink is in standby, is what fails. Test: attach with both awake, and compare.
+2. **The eDP disable path is still a hazard.** `dpu_encoder_phys_vid_disable` waits for a tx-complete that
+   cannot arrive on a clockless interface (`wait disable failed … ret:-110`). It returns rather than hangs,
+   which is why the commit loop continues, but the desktop never recovers while the dead output is in the
+   commit. A driver-side follow-up to `0020` would be to mark a failed-enable encoder so later commits skip
+   it.
+3. **The watcher does not survive the session it runs in.** This capture died with the gdm restart at
+   21:02 (it lived in session 3). Anything that must outlive a session restart needs `systemd-run`.
+   `drm.debug=0x1fe` also grew the log to 184 MB in ~20 minutes; `0x116` drops the vblank spam and keeps
+   driver/KMS/atomic/DP.

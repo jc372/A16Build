@@ -1,0 +1,94 @@
+# 2026-10-02 evening — two monitors, four sessions: what worked, what failed, what froze
+
+## The four sessions, in order
+
+| # | capture | connector shown | monitor (from modes) | LTTPR EQ | prepare | vblank/commit timeouts | result |
+|---|---|---|---|---|---|---|---|
+| 1 | `172324` | **DP-1** | Gigabyte (3440x1440) | ok | none | **0** | video worked, plug/unplug tolerated |
+| 2 | `172523` | **DP-2** | MSI (5120x1440) | fails `ret=-110` | `rc=-104` x3 | 65 + 6 irq | no picture, then freeze |
+| 3 | `173032` | **DP-2** | Gigabyte (3440x1440) | fails `ret=-110` | `rc=-104` x1 | 27 | no picture, then freeze |
+| 4 | `150232` (earlier) | DP-1 | MSI (5120x1440) | fails `ret=-110` | `rc=-104` x2 | 27 | failed |
+| 5 | `163318` (earlier) | DP-2 | MSI (5120x1440) | fails `ret=-110` | `rc=-104` x2 | 79 | failed, froze |
+
+So the monitor is not the deciding factor and the port is not either:
+**only the combination Gigabyte-on-DP-1 worked.** Both monitors fail on DP-2; the
+MSI also fails on DP-1. The same monitor (Gigabyte) switched from working to
+failing simply by moving to the other port, which rules out "this monitor is bad".
+
+Everything ran at the same settings: `LINK_BW_SET 0x1e` (8.1 Gbps) x 4 lanes.
+
+## The failure sequence (MSI on DP-2, t=305.9, from the raw AUX trace)
+
+    0x00101 <- 84        LANE_COUNT_SET: 4 lanes, enhanced framing
+    0x00100 <- 1e        LINK_BW_SET: HBR3 / 8.1 Gbps
+    0xf0010 <- 21        LTTPR: training pattern TPS1
+    0xf0030 -> 11 11 80 00 00    LTTPR lane status: clock recovery done
+    -> "link training #1 on phy 1 successful"      (LTTPR segment, CR+EQ phase 1)
+    0xf0010 <- 23        LTTPR: training pattern TPS3 (channel equalization)
+    0xf0030 -> 55 11 00 44 44
+    0xf0011 <- 08 08 08 08      voltage 0 / pre-emphasis 1
+    0xf0030 -> 55 11 00 88 88
+    0xf0011 <- 10 10 10 10      voltage 0 / pre-emphasis 2
+    0xf0030 -> 55 11 00 cc cc
+    0xf0011 <- 38 38 38 38      voltage 0 / pre-emphasis 3  ("max. pre-emphasis level reached 3")
+    0xf0030 -> 44 00 80 cc cc   LTTPR still not equalized
+    0xf0030 -> 44 00 00 cc cc
+    *ERROR* link training #2 on phy 1 failed. ret=-110
+    *ERROR* link training of LTTPR(s) failed. ret=-110      (msm_dp_ctrl_setup_main_link)
+    *ERROR* Failed link training (rc=-104)
+    *ERROR* DP display prepare failed, rc=-104              (msm_dp_display_atomic_enable)
+
+The LTTPR segment's channel equalization never converges even with
+pre-emphasis at the maximum; the driver then gives up. **No link-rate down-shift
+is attempted**: only `LINK_BW_SET 0x1e` appears anywhere in any session (16
+writes in the MSI capture, zero writes of `0x14`), although the retry loop has
+`msm_dp_ctrl_link_rate_down_shift()` and `msm_dp_ctrl_link_lane_down_shift()`.
+
+## Why the driver keeps choosing 8.1 Gbps
+
+The sink's *basic* capability block says HBR2 and its *extended* block says HBR3:
+
+    DPCD 0x00000 -> 12 14 c4 81 ...      byte1 = 0x14 = HBR2 5.4 Gbps
+    DPCD 0x02200 -> 14 1e c4 81 ...      byte1 = 0x1e = HBR3 8.1 Gbps
+    DPCD 0xf0000 -> 20 1e 80 55 ...      LTTPR max link rate = 0x1e
+
+`drm_dp_read_dpcd_caps()` merges the DPRX extended receiver capability block over
+the basic one, so `drm_dp_max_link_rate()` returns 810000 and
+`msm_dp_panel_read_link_caps()` (dp_panel.c:178-188) then clamps 810000 only to
+the DT maximum (810000) and to the LTTPR maximum (810000) - both of which are
+also 8.1 Gbps. Nothing in the path ever considers the sink's own 5.4 Gbps
+advertisement, and the local HBR3 workaround that forces 810000 is correctly
+scoped to eDP (dp_panel.c:200-204), so it is not the cause.
+
+Result: the external link asks for 8.1 Gbps x4 on a link that both monitors only
+guarantee at 5.4 Gbps, and it is marginal - it passes for the easiest sink/port
+pair (Gigabyte on DP-1) and fails for the rest. Every failure is followed by DPU
+`vblank timeout: a0821300` / `wait for commit done returned -110` storms, the
+desktop freezes and the internal panel does not come back without reboots. The
+internal panel is retrained and enabled successfully (`type=14 Done`) during the
+same atomic enable, so the panel's own link is fine; the freeze comes from the
+failed external encoder leaving the commit path stuck.
+
+## Boots around those sessions
+
+    -5  ended 17:18:28   blacklist entry (no msm loaded), the aborted msmlttpr run
+    -4  ended 17:20:05   built-driver boot, msmlttpr staged at 17:19:13
+    -3  ended 17:28:04   candidate boot: sessions 1 and 2, ended in the freeze
+    -2  lasted ~7 s      an aborted boot (no usable log) - one of the two reboots
+    -1  ended 17:31:32   candidate boot: session 3, ended in the freeze
+     0  current          candidate boot, started 17:31
+
+## Next candidate (not yet tested)
+
+Cap the external DP link rate and sweep it, without another kernel build:
+a module parameter applied only to non-eDP connectors, writable at runtime through
+`/sys/module/msm/parameters/`, so 540000 / 270000 can be tried by re-plugging.
+Both monitors' 60 Hz modes fit inside HBR2 x4 (3440x1440@60 ~6.2 Gbps,
+5120x1440@60 ~10.6 Gbps raw vs 21.6 Gbps of HBR2 x4).
+
+Note on state: the LTTPR candidate (`msm 9480D61C3303C172B7EE756`, sha
+`79bd07cc…`) is currently staged and live, and this data shows it is
+**insufficient rather than harmful**: the LTTPR equalization fails exactly as it
+did before the patch, with the same `ret=-110`, so nothing about the patch
+changed the outcome. `sudo bash ~/a16.sh msmlttpr revert` must be run before a
+new layer is staged over the dpnext parent.

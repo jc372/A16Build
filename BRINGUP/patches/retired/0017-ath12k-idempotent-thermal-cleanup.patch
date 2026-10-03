@@ -1,0 +1,75 @@
+PATCH 0017 -- ath12k: make the thermal cleanup idempotent (the freeze when the driver is unbound)
+
+The kernel's hwmon_device_unregister() has no NULL check -- it calls dev_name() straight on the pointer
+it is given:
+
+    void hwmon_device_unregister(struct device *dev)
+    {
+        if (likely(sscanf(dev_name(dev), HWMON_ID_FORMAT, &id) == 1)) {   <- dev deref
+
+ath12k_thermal_cleanup_radio() calls it unconditionally and only then clears the pointer, and
+ath12k_thermal_unregister() is called from two places: ath12k_core_reconfigure_on_crash() (core.c:1448,
+the failed re-attach after a resume) and ath12k_core_hw_group_stop() (core.c:937, the remove path).
+So on a radio whose resume already failed, taking the driver off the device -- 'sudo ~/a16.sh radiofix
+revive' (unbind+bind), rmmod, or a shutdown -- unregisters the thermal device a second time with NULL:
+
+    pc : hwmon_device_unregister+0x38/0x100
+    lr : ath12k_thermal_cleanup_radio+0x6c/0x120 [ath12k]
+    ath12k_thermal_unregister+0x3c/0x90 [ath12k]
+    ath12k_core_hw_group_stop+0x9c/0x160 [ath12k]
+    ath12k_core_hw_group_cleanup+0x4c/0x138 [ath12k]
+    ath12k_pci_remove+0x7c/0x340 [ath12k]
+    pci_device_remove -> device_remove -> device_release_driver_internal -> unbind_store
+    (measured 2026-09-22 11:16 -- kernel-tail.log in BRINGUP/evidence/)
+
+CPU 6 never came back out of it, RCU stalled, and the machine froze with no keyboard or touchpad.
+Unregister only what is still registered.  thermal_cooling_device_unregister() already tolerates NULL;
+the guard on it is for symmetry.
+
+--- a/drivers/net/wireless/ath/ath12k/thermal.c
++++ b/drivers/net/wireless/ath/ath12k/thermal.c
+--- a/drivers/net/wireless/ath/ath12k/thermal.c	2026-09-22 11:29:56.120066176 -0400
++++ b/drivers/net/wireless/ath/ath12k/thermal.c	2026-09-22 11:29:31.746909796 -0400
+@@ -260,16 +260,37 @@
+ 	if (!ar)
+ 		return;
+ 
+-	hwmon_device_unregister(ar->thermal.hwmon_dev);
+-	ar->thermal.hwmon_dev = NULL;
++	/* A16: hwmon_device_unregister() calls dev_name() on the pointer it is given and has no NULL
++	 * check of its own, so calling it a second time on a radio whose thermal device is already
++	 * unregistered dereferences NULL.  That is not hypothetical here: ath12k_core_reconfigure_on_crash()
++	 * unregisters the thermal device when a resume or crash re-attach fails (core.c:1448) and the
++	 * remove path unregisters it again (ath12k_core_hw_group_stop -> core.c:937), which is exactly
++	 * what "sudo ~/a16.sh radiofix revive" (unbind + bind) triggers on a radio whose resume already
++	 * failed --
++	 *
++	 *     pc : hwmon_device_unregister+0x38/0x100
++	 *     lr : ath12k_thermal_cleanup_radio+0x6c/0x120 [ath12k]
++	 *     ath12k_thermal_unregister -> ath12k_core_hw_group_stop -> ath12k_core_hw_group_cleanup
++	 *       -> ath12k_pci_remove -> pci_device_remove -> unbind_store
++	 *
++	 * (measured 2026-09-22 11:16, see BRINGUP/evidence/) -- CPU 6 died, RCU stalled and the machine
++	 * froze with no keyboard or touchpad, the second freeze of the day from this one path.
++	 *
++	 * Unregister only what is still registered, so the cleanup is idempotent.
++	 */
++	if (ar->thermal.hwmon_dev) {
++		hwmon_device_unregister(ar->thermal.hwmon_dev);
++		ar->thermal.hwmon_dev = NULL;
++	}
+ 
+ 	scnprintf(pdev_name, sizeof(pdev_name), "cooling_device%u",
+ 		  ar->hw_link_id);
+ 	sysfs_remove_link(&ar->ah->hw->wiphy->dev.kobj, pdev_name);
+ 
+-	thermal_cooling_device_unregister(ar->thermal.cdev);
+-	ar->thermal.cdev = NULL;
+-}
++	if (ar->thermal.cdev) {
++		thermal_cooling_device_unregister(ar->thermal.cdev);
++		ar->thermal.cdev = NULL;
++	}
+ }
+ 
+ int ath12k_thermal_register(struct ath12k_base *ab)

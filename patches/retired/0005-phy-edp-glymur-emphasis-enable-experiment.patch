@@ -1,0 +1,28 @@
+--- a/drivers/phy/qualcomm/phy-qcom-edp.c
++++ b/drivers/phy/qualcomm/phy-qcom-edp.c
+@@ -1127,14 +1127,23 @@
+ 	writel(0x03, edp->tx0 + TXn_TRANSCEIVER_BIAS_EN);
+ 	writel(0x0f, edp->tx0 + TXn_CLKBUF_ENABLE);
+ 	writel(0x03, edp->tx0 + TXn_RESET_TSYNC_EN);
+-	writel(0x01, edp->tx0 + TXn_TRAN_DRVR_EMP_EN);
++	/*
++	 * A16 experiment (2026-09-16): the sibling V8 driver (phy-qcom-qmp-combo,
++	 * QSERDES_V8_LALB_TRAN_DRVR_EMP_EN) programs 0x5f here, while this shared function has
++	 * always written 0x01 -- inherited from v3/v4 hardware whose drivers use 0x03/0x0f.
++	 * Symptom that pointed here: the panel's link status reports CR done on all four lanes
++	 * but never EQ_DONE, while its adjust requests keep asking for pre-emphasis (DPCD 0x206
++	 * = 0x44, i.e. swing 0 / pre-emphasis 1) -- an emphasis the PHY may not be able to apply
++	 * with only one tap enabled.
++	 */
++	writel(0x5f, edp->tx0 + TXn_TRAN_DRVR_EMP_EN);
+ 	writel(0x04, edp->tx0 + TXn_TX_BAND);
+ 
+ 	/* TX-1 register configuration */
+ 	writel(0x03, edp->tx1 + TXn_TRANSCEIVER_BIAS_EN);
+ 	writel(0x0f, edp->tx1 + TXn_CLKBUF_ENABLE);
+ 	writel(0x03, edp->tx1 + TXn_RESET_TSYNC_EN);
+-	writel(0x01, edp->tx1 + TXn_TRAN_DRVR_EMP_EN);
++	writel(0x5f, edp->tx1 + TXn_TRAN_DRVR_EMP_EN);   /* A16 experiment: as above, for lanes 2-3 */
+ 	writel(0x04, edp->tx1 + TXn_TX_BAND);
+ 
+ 	ret = qcom_edp_set_vco_div(edp, &pixel_freq);

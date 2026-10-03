@@ -1,0 +1,197 @@
+# 2026-09-17 — the lid, the suspend loop, and the Wi-Fi wedge
+
+Two findings reported from the console on 2026-09-17 evening, and the log evidence for both. Commands
+were run on the machine (kernel `7.3.0-rc3-next-20260914`, boot id `e090779e`), reading the two boots
+before it.
+
+## 1. Closing the lid does not sleep the machine
+
+### The lid is real, and logind sees it
+
+    $ grep -A6 switch-lid /proc/device-tree/gpio-keys   # (via dtc -I fs /proc/device-tree)
+        switch-lid {
+            wakeup-source;
+            label = "lid";
+            linux,input-type = <0x05>;      # EV_SW
+            linux,code = <0x00>;            # SW_LID
+            wakeup-event-action = <0x02>;
+            gpios = <0x58 0x5c 0x01>;
+        };
+
+    $ cat /sys/class/input/event0/device/capabilities/sw
+    1                                   # bit 0 = SW_LID, on gpio-keys (event0)
+    $ cat /sys/class/input/event0/device/name
+    gpio-keys
+
+    systemd-logind[1971]: Watching system buttons on /dev/input/event0 (gpio-keys)
+    systemd-logind[1971]: Lid closed.        (14:08:20, 14:11:55, ...)
+    systemd-logind[1971]: Lid opened.        (14:11:49, 14:47:35)
+
+So the "lid does nothing" symptom is not a missing switch and not a missing event: `HandleLidSwitch`
+is `suspend` (systemd default; there is no `/etc/systemd/logind.conf.d/`), and logind acts on it.
+
+### What logind's suspend actually does — boot `3a63a313` (the one that ends in a reboot)
+
+    kernel: PM: suspend entry (deep)          12:33:19      <- the first suspend of the boot
+    ... 88 minutes with no kernel line at all ...
+    kernel: Freezing user space processes     14:01:29      <- resume
+    kernel: ath12k_wifi7_pci 0004:01:00.0: PM: dpm_run_callback(): pci_pm_resume returns -110
+    kernel: ath12k_wifi7_pci 0004:01:00.0: PM: failed to resume async: error -110
+    kernel: PM: suspend exit
+    kernel: PM: suspend entry (s2idle)
+    kernel: xhci-hcd xhci-hcd.1.auto: PM: dpm_run_callback(): platform_pm_suspend returns -22
+    kernel: xhci-hcd xhci-hcd.1.auto: PM: failed to suspend async: error -22
+    kernel: PM: Some devices failed to suspend, or early wake event detected
+    kernel: PM: suspend exit
+
+The first suspend sleeps (88 minutes; 19 minutes in the previous boot `20167034`, which resumes the
+same way). **Every suspend after that fails within a second**, on the same device:
+
+    $ journalctl -b -1 -u systemd-logind | grep -E "Suspending|finished" | head
+    14:01:30  Operation 'suspend' finished.
+    14:08:10  Operation 'suspend' finished.
+    14:08:40  Suspending...        14:08:43  Operation 'suspend' finished.
+    14:09:13  Suspending...        14:09:16  Operation 'suspend' finished.
+    14:09:46  Suspending...        14:09:49  Operation 'suspend' finished.
+    ...  (every 33 s, for as long as the lid stayed shut -- 14:08:40 through 14:47:10)
+
+    $ journalctl -b -1 -k | grep -E 'suspend entry|failed to suspend|xhci'
+    ... every attempt: "PM: suspend entry (deep)" and then the xhci -22 abort, then the same as s2idle ...
+
+`-22` is `-EINVAL` returned by `xhci_suspend()` (`drivers/usb/host/xhci.c`, in the tree we build from):
+
+    if (hcd->state != HC_STATE_SUSPENDED ||
+        (xhci->shared_hcd && xhci->shared_hcd->state != HC_STATE_SUSPENDED))
+            return -EINVAL;
+
+i.e. at platform-suspend time the USB core has not left the HCD in the state that callback expects.
+It is true on the first attempt of a boot and false on every attempt after a resume. Which controller:
+
+    xhci-hcd xhci-hcd.1.auto: irq 194, io mem 0x0a400000        (= usb@a400000)
+    $ lsusb -t
+    Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/2p, 10000M
+        |__ Port 002: Dev 002, If 0, Class=Mass Storage, Driver=usb-storage, 5000M   (0bda:0329)
+
+Net effect, as reported: lid shut -> logind retries a suspend that cannot happen every 33 s -> the
+machine stays awake with the fans on, ~6-7 W idle (10 %/h of a 66.6 Wh pack).
+
+## 2. A lid close / long idle kills Wi-Fi until reboot
+
+The same boot, after that one suspend that did sleep:
+
+    kernel: ath12k_wifi7_pci 0004:01:00.0: timeout while waiting for restart complete
+    kernel: ath12k_wifi7_pci 0004:01:00.0: failed to resume core: -110
+    kernel: ath12k_wifi7_pci 0004:01:00.0: PM: failed to resume async: error -110
+
+and from then on the firmware channel is dead for the rest of the boot:
+
+    kernel: ath12k_wifi7_pci 0004:01:00.0: wmi command 16387 timeout            (repeating)
+    kernel: ath12k_wifi7_pci 0004:01:00.0: failed to send WMI_PDEV_SET_PARAM cmd
+    kernel: ath12k_wifi7_pci 0004:01:00.0: fail to start mac operations in pdev idx 0 ret -11
+    wpa_supplicant: wlP4p1s0: Could not set interface 'wlP4p1s0' UP: Resource temporarily unavailable
+    wpa_supplicant: wlP4p1s0: Failed to initialize driver interface
+    NetworkManager: device (wlP4p1s0): Couldn't initialize supplicant interface
+    NetworkManager: device (wlP4p1s0): re-acquiring supplicant interface (#1..#5)
+    NetworkManager: device (wlP4p1s0): supplicant interface keeps failing, giving up
+
+`-11` is `EAGAIN` relayed from the firmware channel, not a permissions or profile problem: the radio is
+present (Settings lists it) but cannot be brought up, so no scan finds anything. The same sequence is
+in boot `20167034` (resume at 12:03:06) — two boots, same failure, always on resume.
+
+Also in that boot, before the wedge: `NetworkManager: manager: sleep: sleep requested` /
+`NetworkManager state is now DISABLED (ASLEEP)` / `wake requested` — the desktop layer following the
+same suspend.
+
+## What this rules out
+
+- a missing or misdescribed lid switch (see 1: SW_LID on gpio-keys, logind logs both transitions);
+- `powersave` on the wireless interface (`nmcli` shows it off, and the failure is a firmware timeout);
+- board data / firmware files (`/lib/firmware/ath12k/*/hw2.0/` complete, the radio works until the
+  suspend);
+- a NetworkManager-only problem (`wpa_supplicant` cannot even put the interface up, and the kernel
+  timeout is in the WMI channel before userspace is involved);
+- "the log says nothing" — the earlier note in `docs/wifi.md` was written before the failure repeated
+  and was mis-scoped: the evidence is the suspend/resume pair, not idle time as such.
+
+## Tools added
+
+    reload_wifi --help              # the command for the radio, and every mode
+    sudo reload_wifi                # diagnose, then climb the ladder until the radio is back
+    reload_wifi status              # read-only, no root
+    lid_sleep --help                # the command for the lid and suspend
+    sudo lid_sleep                  # what the lid does, can this machine suspend, what stops it
+    sudo lid_sleep test 2           # suspend twice: the first sleeps, the second aborts (this evidence)
+
+Logs: `~/a16-payload/wifi-recover-<stamp>.log`, `~/a16-payload/sleep-test-<stamp>.log`.
+
+## Same day, later: the ladder was run on a real wedge, and the driver teardown hangs the machine
+
+Both findings were then exercised from the console. Boot `e090779e`.
+
+**The lid sequence repeated, a third boot in a row** (from `~/a16-payload/sleep-test-20260917-150856.log`,
+read from the live journal at 15:08:56):
+
+    logind: Lid closed.                                      15:07:35
+    logind: Suspending...                                    15:07:35
+    kernel: ath12k_wifi7_pci 0004:01:00.0: timeout while waiting for restart complete   15:07:58
+    kernel: ath12k_wifi7_pci 0004:01:00.0: failed to resume core: -110                  15:07:58
+    logind: Operation 'suspend' finished.                    15:07:59   (the first suspend really slept)
+    logind: Suspending... 15:08:07 -> finished 15:08:08       (abort: xhci -22, 1 s)
+    logind: Suspending... 15:08:37 -> finished 15:08:38       (abort: xhci -22, 1 s)
+    logind: Lid opened.                                      15:08:50
+
+**Then the recovery ladder ran (`sudo reload_wifi`, 15:09:49–15:12,
+`~/a16-payload/wifi-recover-20260917-150949.log`):**
+
+| rung | what happened |
+|---|---|
+| 1 restart NetworkManager | 45 s of `state=unavailable`, no association |
+| 2 restart wpa_supplicant + NetworkManager | 45 s of `state=unavailable`, no association |
+| 3 unbind / bind `ath12k_wifi7_pci` | the unbind succeeds and the netdev disappears (`present=no`); the bind does **not** bring it back — 45 s, no netdev, no probe log.  The wedge-line counter stopped rising here (46), i.e. the driver's retries stopped with it. |
+| 4 `modprobe -r ath12k_wifi7 ath12k` | **the machine froze here** — the log's last line is that command, written at 15:12.  A hard reset was the only way out. |
+
+The three takeaways:
+
+1. Nothing above the driver helps, and the driver cannot be torn down on this kernel in this state:
+   the wedge is not recoverable from software.  A wedged radio means a reboot.
+2. Prevention is the lever until the resume path is fixed: the wedge lands on the resume of the one
+   suspend per boot that completes, so `sudo lid_sleep lid ignore` (a closed lid is inert) keeps the
+   radio alive.  The cost is that the machine then never sleeps — one suspend per boot was all it had.
+3. The journal is not durable across a hard reset: the wedge lines the ladder read at 15:09 (26 → 46 of
+   them) are no longer in that boot's on-disk journal (`journalctl -b -1 | grep -c 'wmi command'` = 0),
+   and after that resume the whole boot's log is stamped with the pre-NTP clock (2026-07-28 08:49),
+   because `timedatectl` reports no RTC (`RTC time: n/a`).  The tools' own log files are the record that
+   survives both.
+
+## Same day, third step: the fix staged for the suspend abort (`patches/0010`)
+
+`xhci_plat_hcd.ko` is the only loadable module on the failing path (`CONFIG_USB_XHCI_HCD=y`,
+`CONFIG_USB_XHCI_PLATFORM=m`), so the change is there:
+
+* suspend: when `xhci_suspend()` returns `-EINVAL` and `hcd->state != HC_STATE_SUSPENDED`, log the
+  states and leave the controller running (return 0) rather than failing the whole system suspend;
+* resume: skip the matching `xhci_resume()` (the controller never stopped);
+* at every transition: log `hcd->state`, `hcd->flags`, the primary and shared root hubs' `udev->state`,
+  `device_may_wakeup()` and `xhci->quirks`;
+* both halves behind module parameters (`a16_skip_unsuspended_hcd`, `a16_state_log`), so a boot can be
+  compared with and without them.
+
+Built natively from `~/build/linux-next-1a1de54f7369` (the tree the running kernel came from) and
+verified before installation:
+
+    vermagic   7.3.0-rc3-next-20260914 SMP preempt mod_unload modversions aarch64   (= the kernel's)
+    imports    62, every symbol the stock module imports identical (module_layout 0xe6658f7b)
+    strings    "A16: the USB core left this HCD unsuspended (state=%d, shared=%d)"  present
+
+Install: `sudo bash ~/a16.sh suspendfix` (checks all three again, copies into
+`/lib/modules/<ver>/updates/a16/`, runs `depmod`; `suspendfix revert` and `suspendfix status` too).
+
+**Not yet verified on the machine**: it needs a reboot to be the loaded module, and
+`sudo lid_sleep test 2` to prove both attempts sleep. Until then the honest state is "staged".
+
+Why the reading matters (`notes/2026-09-17-xhci-second-suspend.md` has the code paths): the logged
+root-hub state distinguishes the three candidate causes — a root hub left `SUSPENDED` (the core skips
+its suspend, so `hcd_bus_suspend()` never runs), a root hub skipped as "offloaded" (Qualcomm USB-audio
+offload, not in play here), or `hcd_bus_suspend()` having failed and `hcd_bus_resume()` returning early
+via `HCD_RH_RUNNING()`. The first is a USB-core/driver state bug and its fix belongs in a rebuilt
+kernel; the workaround only stops it from taking the system suspend down with it.

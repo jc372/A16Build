@@ -1,0 +1,33 @@
+A16 external DP next-step hypothesis and built candidate — 2026-10-02
+
+Ranking from the captured failure (not proof of the reset cause):
+1. The A16's internal-panel rate experiment was incorrectly applied to every DP connector. `dp_panel.c` unconditionally set `link_info->rate=810000` and `rate_set=3` whenever the DT allowed HBR3. The live DT allows HBR3 on DP0, DP1, HDMI bridge, and eDP. That bypasses the sink/LTTPR rate cap computed immediately above it. The 13:50 USB-C capture reached LTTPR channel-equalization and timed out; the exact attempted rate was not logged (`drm.debug=0`), so this is a strong code defect and a plausible cause, not a confirmed on-wire rate.
+2. A failure-path safety issue could explain the abrupt reset. `msm_dp_display_atomic_enable()` returned on `rc=-104` with `power_on=false`; `msm_dp_display_atomic_disable()` nevertheless unconditionally pushed idle. A posted A16-tested patch in `patches/0008-drm-msm-dp-skip-push-idle-when-link-never-enabled.patch` avoids a reproducible silent reset after failed eDP enable. This external-DP reset was not traced to that path; guard it to prevent a known machine-specific hazard, not to claim causality.
+3. The v5 Glymur combo-PHY candidate may still have stale PCS LN0/LN1 drive-level settings during retraining. Keep this for a later experiment; changing it now would obscure whether restoring the sink's negotiated rate helped.
+4. HDMI goes through the tert PHY and DP-to-HDMI bridge, a distinct path without a recent successful training attempt. Prioritize USB-C DP-1 because it has repeatable EDID and the most precise failure capture.
+
+Important correction: `link training #2 on phy 1` means channel-equalization phase on DP_PHY_LTTPR1 (the first DisplayPort link-training repeater). It is NOT the system's second physical QMP PHY; `enum drm_dp_phy` assigns DPRX=0, LTTPR1=1. The signal path was DP-1 through `af54000` and `fd5000.phy`.
+
+Candidate delta
+- Restrict the A16 HBR3 override to the internal eDP connector. External DP/HDMI now uses the rate selected from DPCD and capped by LTTPR capabilities. The internal eDP workaround stays unchanged for this panel.
+- Skip PUSH_IDLE if `power_on` is false; change matches the behavior of the posted A16-tested guard.
+- Reuse the previously built Glymur QMP v5 candidate unchanged because it reached training where stock earlier failed at DPTX0 clock enable. This is not proof that the QMP candidate fixed that clock failure.
+- Source patch: `BRINGUP/patches/0016-dp-external-rate-and-failed-enable-guard.patch` (forward applies to pre-change source; reverse applies to built candidate source).
+- Built msm module: `/home/jc/build/linux-next-1a1de54f7369/drivers/gpu/drm/msm/msm.ko`; build log `/home/jc/a16-payload/dp-next-msm-build-20261002.log`.
+- Candidate msm SHA-256 `2c9655130d981b5ca50155850630822d303ee57002f19548951443b54f8b83a7`, srcversion `BBD010BD47287F02B65EE84`; running kernel's vermagic matches. All 805 imported-symbol CRCs match both the loaded-version file and stock, including module_layout `0xe6658f7b`.
+- Reusable QMP candidate SHA-256 `444b792b2f336d03e210dad95322160c86ca8138a90827ea2cbab1507dca7a31`; its 81 imports matched stock in the prior build.
+- `bash ~/a16.sh dpnext dry-run` at 14:34:09 succeeded without changing modules, initrd or boot files. At that time stock QMP and prior MSM were loaded and neither candidate was installed. The later staging is recorded below; hardware behavior and root-only rollback have not yet been exercised.
+
+- Stage completed 2026-10-02 14:52–14:53 EDT: `/home/jc/a16-payload/dpnext-20261002-145213.log` and `/home/jc/a16-payload/qmpdp-20261002-145242.log` show both candidates installed, initrd regenerated twice, final MSM/QMP initrd entries verified, and `STAGED`. Non-root readback confirms installed hashes `2c9655130d981b5ca50155850630822d303ee57002f19548951443b54f8b83a7` (MSM) and `444b792b2f336d03e210dad95322160c86ca8138a90827ea2cbab1507dca7a31` (QMP), both resolver paths, and two 0700 root-only rollback state directories. The old modules are still loaded this boot. `update-initramfs` emitted dracut `loginctl` symlink and version warnings but exited successfully and its module entries were verified.
+
+- Reboot verification 2026-10-02 15:00 EDT: boot ID `dde44d2c-f6c8-4de3-8ec0-de35e0e8c131`; loaded `msm` srcversion `BBD010BD47287F02B65EE84`, loaded QMP srcversion `151CA3C3BDC39CA185C951B`, both resolver paths point to the staged overrides, and both 0700 root-only rollback directories remain. `card1-eDP-1` is connected/enabled; DP-1/DP-2/HDMI are disconnected/disabled. No hotplug has been done with this pair yet.
+
+Operator trial (only after reboot)
+- Staging has been completed; do not repeat `sudo bash ~/a16.sh dpnext` unless the trial has first been reverted. Its script saved prior MSM and initrd backups and QMP rollback state. No live modules were unloaded or hotplugged.
+- When the script reports STAGED, keep monitor unplugged and reboot. Run `bash ~/a16.sh dpnext status` to verify both loaded srcversions before hotplug. Start `sudo bash ~/a16.sh display watch dp` in an interactive terminal: it temporarily enables DP-only DRM debug (0x100), saves kernel messages independently, and restores the prior debug value on Ctrl-C. Then connect the USB-C monitor once.
+- If DP-1 becomes enabled and picture appears: success; still capture link rate and mode before declaring stable.
+- If link training still fails but machine stays up: the reset guard may be helping, while the next issue is likely physical TX drive levels, LTTPR mode, or selected rate. Preserve both watcher files; do not immediately try another kernel patch.
+- If the machine hard-reboots: don't hotplug again; after boot use `sudo bash ~/a16.sh dpnext revert`, then reboot and verify stock. The watcher sidecar may give one more clue, but a missing panic trace does not prove the cause.
+- Any rollback also requires reboot to replace code already loaded into RAM.
+
+Upstream source for the guard: `patches/0008-drm-msm-dp-skip-push-idle-when-link-never-enabled.patch` (the posted patch cites a prior A16 reproducible eDP reset). This test does not claim external USB-C resets share that initiator.

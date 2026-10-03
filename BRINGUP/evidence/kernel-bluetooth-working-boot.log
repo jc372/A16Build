@@ -1,0 +1,15 @@
+Jul 28 08:48:56 jc kernel: Bluetooth: HCI UART protocol QCA registered
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: setting up wcn7850
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA Product ID   :0x00000020
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA SOC Version  :0x40292100
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA ROM Version  :0x00000101
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA Patch Version:0x00007b40
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA controller version 0x21000101
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA Downloading qca/hmtbtfw11.tlv
+Jul 28 08:48:56 jc kernel: bluetooth hci0: Direct firmware load for qca/hmtbtfw11.tlv failed with error -2
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA Failed to request file: qca/hmtbtfw11.tlv (-2)
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: QCA Failed to request file: qca/hmtbtfw11.tlv (-2)
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: HFP non-HCI data transport is supported
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: AOSP extensions version v1.03
+Jul 28 08:48:56 jc kernel: Bluetooth: hci0: AOSP quality report is supported
+Jul 28 08:48:57 jc kernel: ath12k_wifi7_pci 0004:01:00.0: fw_version 0x100581de fw_build_timestamp 2024-09-11 23:52 fw_build_id QC_IMAGE_VERSION_STRING=WLAN.COL.1.0.c2-00277-QCACOLSWPL_V1_TO_SILICONZ-1
