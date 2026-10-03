@@ -10,7 +10,8 @@
 #   sudo bash a16-port.sh               # fetch + verify + build + install beside the others
 #   sudo bash a16-port.sh --install TREE   # install a tree that is already built
 #
-# Options: --work DIR (default ~/a16-port)  --jobs N  --no-install
+# Options: --work DIR (default ~/a16-port)  --jobs N  --no-install  --tarball PATH
+# Put the linux-next tarball on the stick beside this script and the build needs no network.
 set -u
 
 # ---------------------------------------------------------------- what we build against
@@ -22,7 +23,7 @@ PATCH_DIR="$HERE/patches"
 WORK="${HOME}/a16-port"
 JOBS="$(nproc 2>/dev/null || echo 4)"
 
-MODE=full; DO_INSTALL=1; PREBUILT=""
+MODE=full; DO_INSTALL=1; PREBUILT=""; LOCAL_TARBALL=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--fetch)   MODE=fetch ;;
@@ -31,6 +32,7 @@ while [ $# -gt 0 ]; do
 		--work)    WORK="$2"; shift ;;
 		--jobs)    JOBS="$2"; shift ;;
 		--install) MODE=install; PREBUILT="$2"; shift ;;
+		--tarball) LOCAL_TARBALL="$2"; shift ;;
 		-h|--help) sed -n '2,14p' "$0"; exit 0 ;;
 		*) echo "unknown option: $1"; exit 2 ;;
 	esac
@@ -69,11 +71,23 @@ cd "$WORK" || die "cannot enter $WORK"
 
 # ---------------------------------------------------------------- fetch + verify the snapshot
 step "linux-next snapshot"
-if [ -s "$TARBALL" ]; then
+# Prefer a snapshot that travelled on the stick (or an explicit --tarball): the whole build
+# then needs no network at all, which matters because Wi-Fi is the last thing to work on a
+# fresh install -- the machine would otherwise need wired ethernet purely to fetch the kernel
+# that makes it wireless.
+CARRIED=""
+for c in "$LOCAL_TARBALL" "$HERE/$TARBALL" "$HERE"/linux-next-*.tar.gz; do
+	[ -n "$c" ] && [ -s "$c" ] && { CARRIED="$c"; break; }
+done
+if [ -n "$CARRIED" ]; then
+	say "using the snapshot that came with the stick: $(basename "$CARRIED")"
+	[ "$(readlink -f "$CARRIED")" = "$(readlink -f "$WORK/$TARBALL" 2>/dev/null)" ] || cp -f "$CARRIED" "$WORK/$TARBALL"
+elif [ -s "$TARBALL" ]; then
 	say "already downloaded: $TARBALL"
 else
+	say "no snapshot on the stick and none downloaded -- fetching from the network"
 	say "downloading $URL"
-	wget -q --show-progress -O "$TARBALL" "$URL" || die "download failed"
+	wget -q --show-progress -O "$TARBALL" "$URL" || die "download failed (if this machine has no network, carry the snapshot on the stick: see the README)"
 fi
 SUM="$(sha256sum "$TARBALL" | cut -d' ' -f1)"
 say "sha256 : $SUM"
