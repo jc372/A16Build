@@ -69,9 +69,8 @@ Your stick now holds everything needed to build the kernel.
    before updating anything.
 
 Once Ubuntu is installed, **the Ubuntu installer will fail if you run it again** for a repair
-or reinstall. Firmware, BIOS and boot-menu changes are done from Windows instead —
-**[step-by-step for the EFI partition and the boot menu](docs/efi-on-windows.md)**, including the
-Secure Boot rule (off for Linux, back on for Windows, every time).
+or reinstall. Firmware, BIOS and boot-menu changes are done from Windows instead — see
+**Step 4a** below.
 
 ---
 
@@ -90,6 +89,47 @@ on your stick is the one this port was tested against.
 The build takes a while (a full kernel). Everything it does is logged to `~/a16-port/`.
 
 ---
+
+## Step 4a — The boot entry, from Windows
+
+The new kernel needs a menu entry, and the menu is a **file on the EFI partition**, so this part
+is done from Windows. The short version is below; [the full page](docs/efi-on-windows.md) covers
+mounting, what else is on the partition, and what to check when nothing starts.
+
+1. **Secure Boot: off for Linux, on for Windows — every time you switch.** Press **Esc** at
+   power-on to reach firmware setup.
+
+2. **Mount the EFI partition.** Command Prompt, as Administrator, either:
+
+   ```
+   mountvol S: /s
+   ```
+
+   or with `diskpart`: `list volume`, `select volume N` (the ~100–300 MB FAT32 volume with no
+   letter), `assign letter=S`, `exit`.
+
+   Check you picked the right one: `S:\` should contain `EFI\` and nothing recognisable as
+   Windows or Ubuntu itself.
+
+3. **Edit the menu** — `S:\EFI\ubuntu_snapdragon\grub.cfg`. Copy an entry that already works
+   and change the three filenames:
+
+   ```
+   menuentry "[10] A16: next <release>" {
+       if [ -f /boot/vmlinuz-<release> ]; then
+           linux /boot/vmlinuz-<release> root=UUID=<your-root-uuid> ro acpi=off console=tty0 loglevel=7
+           devicetree /boot/glymur-a16-<release>.dtb
+           initrd /boot/initrd.img-<release>
+       fi
+   }
+   ```
+
+   Leave `root=UUID=` and `acpi=off` alone — `acpi=off` is not optional on this machine. Keep
+   titles unique: duplicates pile up and one of them boots a kernel you have replaced.
+
+4. **Save, keep a copy, and start the machine.** The menu is drawn by the firmware, so a bad
+   entry costs you a menu trip, not the machine. If the entry does nothing when picked, the
+   kernel file it names is missing — mount the partition again and check the filenames.
 
 ## Step 5 — Start it up
 
