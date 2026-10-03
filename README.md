@@ -14,6 +14,7 @@ How to take a stock **ASUS Zenbook A16 (UX3607OA)** from "Windows only" to a wor
 | 3 | [Ubuntu nightly install](#3-ubuntu-nightly-install) | The base OS, onto the free space | Yes |
 | 4 | [Windows EFI updates](#4-windows-efi-updates) | Firmware/boot updates, done from Windows | Ongoing — see note |
 | 5 | [linux-next retrieval](#5-linux-next-retrieval) | The kernel source this project builds | Yes |
+| 5a | [linux-next from Windows](#5a-getting-linux-next-from-windows-so-the-install-needs-no-network) | Carry the snapshot so the build needs no network | — |
 | 6 | [The patch set](#6-the-patch-set) | 11 patches, and what each one buys | Yes |
 | 7 | [Build and install](#7-build-and-install) | `build.sh`, install beside, pick at the menu | Yes |
 | 8 | [What works, what does not](#8-what-works-what-does-not) | Honest current state | — |
@@ -116,6 +117,53 @@ half-applied. Deleting it costs a 261 MB download at the worst moment.
 
 linux-next is a moving target: a patch that applies cleanly today may not tomorrow, which is
 why the port pins the release above and records the patch set below.
+
+---
+
+## 5a. Getting linux-next from Windows (so the install needs no network)
+
+**Carry the snapshot on the USB stick and the entire build happens offline.** This matters
+because of the order things come up: Wi-Fi is the *last* thing to work on a fresh install, so a
+machine that has to download the kernel over the network needs wired ethernet purely to fetch
+the driver that makes it wireless. Fetching the snapshot from Windows first breaks that circle.
+
+On the Windows side, in PowerShell:
+
+```powershell
+$u = "https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/snapshot/linux-next-next-20261002.tar.gz"
+Invoke-WebRequest -Uri $u -OutFile "$env:USERPROFILE\Downloads\linux-next-7.3.0-rc5-next-20261002.tar.gz"
+
+# and hash it, so you are not trusting the download
+Get-FileHash "$env:USERPROFILE\Downloads\linux-next-7.3.0-rc5-next-20261002.tar.gz" -Algorithm SHA256
+```
+
+`curl.exe` works the same way (`curl.exe -L -o <file> <url>`) and is present on Windows 10 and
+later. The file is ~261 MB, well inside FAT32's limits.
+
+Compare the hash against `BRINGUP/port-2026-10-03/MANIFEST.sha256`. **If that line still reads
+`#<sha256>`, the hash has not been recorded yet** — the script will say so rather than pretending
+it checked. Once it is recorded, a mismatch means stop: the tree is not the one this port was
+verified against.
+
+**What goes on the stick** (a few hundred KB, plus the 261 MB snapshot):
+
+| File | Purpose |
+|------|---------|
+| `a16-port.sh` | fetches, verifies, patches, builds, installs |
+| `patches/` | the eleven patches, applied in name order |
+| `config-seed` | the kernel config |
+| `MANIFEST.sha256` | what every artifact hashes to |
+| `linux-next-7.3.0-rc5-next-20261002.tar.gz` | the snapshot, fetched on Windows |
+
+Run it on the freshly installed machine:
+
+```
+bash a16-port.sh --verify      # patch and hash, build nothing -- checks the payload first
+sudo -S -p '' bash a16-port.sh          # fetch (from the stick), verify, build, install
+```
+
+*The linux-next snapshot itself* is still needed — but it is fetched once, on Windows, where
+there is a working network, and travels with you.
 
 ---
 
