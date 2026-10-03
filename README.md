@@ -1,79 +1,202 @@
-# A16Build — bringing up the ASUS Zenbook A16 (UX3607OA) on Linux
+# A16Build — from the beginning
 
-Hardware: **ASUS Zenbook A16 UX3607OA**, Qualcomm **Snapdragon X2 Elite "Glymur"** (SoC 8480),
-47.6 GB RAM, internal NVMe, OLED eDP panel (2880x1800, 30–120 Hz, 10 bpc), Wi-Fi (`ath12k`),
-Bluetooth on the WCN7850-class combo, USB4/USB-C, WSA884x speakers.
+How to take a stock **ASUS Zenbook A16 (UX3607OA)** from "Windows only" to a working
+**linux-next** install, on one machine, without a second computer.
 
-Target OS: **Ubuntu 26.10** on the internal disk, kernel **7.3.0-rc3-next-20260914**, built from
-linux-next commit `1a1de54f7369cd2b5bac0f265910e60ad3a6b4c3`.
+This is the front door. Every section below is a step that has been done on this hardware;
+anything still open is marked as open rather than written as if it works.
 
-This repository is a bring-up log and a reproducible kit. For each component it records what the
-hardware needs, what the kernel provides today, what had to change, and how to reproduce it — with the patches included, in the form they are applied.
+---
 
-## Components
+## 0. At a glance
 
-| Component | State | Guide | Patch(es) |
-|---|---|---|---|
-| Internal eDP panel — display, brightness, refresh | **working** | [docs/display-edp.md](docs/display-edp.md) | `patches/0009` (ours), `patches/0006`+`0007` (posted upstream series) |
-| GPU (adreno gen8) and its clock controller | device works; userspace support missing | [docs/gpu-adreno.md](docs/gpu-adreno.md) | none — a build-config fix, see [docs/build.md](docs/build.md) |
-| Bluetooth | **working** | [docs/bluetooth.md](docs/bluetooth.md) | `patches/0001` (device tree) |
-| Wi-Fi | **working** | [docs/wifi.md](docs/wifi.md) | none |
-| Keyboard, touchpad, touchscreen, stylus | **working** | [docs/input.md](docs/input.md) | none |
-| Battery, charge control, power key | **working** | [docs/power-battery.md](docs/power-battery.md) | none |
-| External display over USB-C / DP alt-mode | **working** — requires the link rate to be capped at the sink's own 5.4 Gbps; one tested monitor (MSI) has an internal DP repeater that never equalizes | [docs/display-outputs.md](docs/display-outputs.md) | `patches/0019` + `0020` (ours), `patches/0008` (posted upstream) |
-| External display over HDMI | **working** — 5120x1440 on the tertiary PHY into `hdmi-bridge` | [docs/display-outputs.md](docs/display-outputs.md) | none of its own — the tertiary PHY's clock-domain fix (machine DTS) plus `patches/0019` |
-| Speakers / audio | not working | [docs/audio.md](docs/audio.md) | needs a machine ACPI topology (upstream work) |
-| Suspend / resume | not implemented | [docs/suspend.md](docs/suspend.md) | none yet |
-| Boot-time behaviour options | — | [docs/boot-options.md](docs/boot-options.md) | `patches/0003` (historical) |
+| # | Section | What it does | Blocking? |
+|---|---------|--------------|-----------|
+| 1 | [Hardware setup](#1-hardware-setup) | The hub, and why it is not optional | Yes — you cannot install without it |
+| 2 | [Windows: partition the drive](#2-windows-partition-the-drive) | Makes room; BitLocker off first | Yes |
+| 3 | [Ubuntu nightly install](#3-ubuntu-nightly-install) | The base OS, onto the free space | Yes |
+| 4 | [Windows EFI updates](#4-windows-efi-updates) | Firmware/boot updates, done from Windows | Ongoing — see note |
+| 5 | [linux-next retrieval](#5-linux-next-retrieval) | The kernel source this project builds | Yes |
+| 6 | [The patch set](#6-the-patch-set) | 11 patches, and what each one buys | Yes |
+| 7 | [Build and install](#7-build-and-install) | `build.sh`, install beside, pick at the menu | Yes |
+| 8 | [What works, what does not](#8-what-works-what-does-not) | Honest current state | — |
+| 9 | [Install steps](docs/install/) | The detailed Windows→Ubuntu steps, step by step | — |
+| 10 | [Retired: out-of-tree drivers](docs/RETIRED-out-of-tree-drivers.md) | Why the old module overlay is gone | — |
 
-## Start here
+---
 
-    docs/index.md            how this repository is organised, and how to read a component page
-    docs/build.md            build toolchain, the config/ABI requirement, and the checks
-    scripts/a16-bootstrap.sh from a fresh Ubuntu install to the current state
+## 1. Hardware setup
 
-    sudo bash scripts/a16-bootstrap.sh --check     # report what is present and missing
-    sudo bash scripts/a16-bootstrap.sh --all       # do everything (idempotent, logged to ~/a16-payload/)
+**You need a hub, and it has to have a USB-A port.** The A16 has no USB-A, and a plain
+USB-C dongle will not do: the machine's USB-A-side support is part of what you are bringing
+up, and having real USB-A ports on the hub is what makes the install keyboard-and-mouse
+possible.
 
-    STATUS.md                the pick-up sheet: what was last done, what is next
-    BRINGUP/NEXT-STEPS.md    the work list, one item at a time, with the evidence behind each
+Until the Wi-Fi section below is satisfied, the hub must also provide:
 
-## Two ways to run the display
+| Needed | Why |
+|--------|-----|
+| **Wired keyboard** | The internal keyboard is not available in the installer or a fresh linux-next boot |
+| **Wired mouse** | Same — internal touchpad is a HID-over-I2C device that needs the same bring-up |
+| **Wired ethernet** | **Wi-Fi does not work until you are running the latest linux-next with the board data.** This is the whole reason for the wired requirement |
 
-Both are legitimate, and the machine selects between them with kernel command-line options, so
-nothing has to be reinstalled to switch. See [docs/boot-options.md](docs/boot-options.md).
+So the working arrangement is: hub → USB-A keyboard, USB-A mouse, USB-A/USB-C ethernet, and
+the machine powered from its own supply.
 
-- **firmware framebuffer** — the display drivers are not loaded (`msm` and the Glymur display
-  clocks, the eDP PHY and the panel are all blacklisted on the command line), so the panel is
-  driven by the firmware's framebuffer at one fixed mode. Nothing to maintain; no brightness, no
-  refresh choice, no GPU device. This is also what a stock Ubuntu install does on this machine.
-- **built display driver** — `msm` plus the Glymur display clock controllers, the eDP PHY and the
-  panel driver are loaded. Real modesetting (120 Hz available), working backlight, GPU present.
-  This is the state the machine is normally kept in here.
+> **Wi-Fi note.** Wi-Fi is the last thing to come up, not the first. Plan for a wired
+> connection through the entire install, and keep it until you have booted the linux-next
+> kernel from section 5 with the patches from section 6. Only then is wireless on the table.
 
-## Layout
+---
 
-    docs/          per-component bring-up guides (start at docs/index.md)
-    patches/       every change we carry: ours, and the upstream series we depend on
-    patches/retired/  things we tried that made no difference (kept so nobody repeats them)
-    notes/         dated findings, including negative results
-    evidence/      captured traces, logs and opsses backing the notes
-    scripts/       bootstrap, build and helper scripts
-    BRINGUP/       the older step-by-step kit (still valid; docs/ is the readable version)
-    firmware/      the machine's own firmware, extracted from its Windows install
-    archive/       the pre-bring-up era (ISO builders, WSL build, ESP staging, harvests, old plans)
+## 2. Windows: partition the drive
 
-## How work happens here
+Do this from Windows, before Ubuntu exists on the machine.
 
-Everything is done *on the A16 itself*: a Hermes agent runs on the machine, `sudo` steps are handed
-over as single `sudo bash <script>` commands, and every script writes a timestamped log to
-`~/a16-payload/`. That replaced the earlier loop of building an ISO on WSL, flashing a stick,
-booting it and photographing the screen — which is why the ISO-era tooling is archived rather than
-deleted.
+1. **Turn BitLocker off** and let it finish decrypting. Resizing an encrypted volume is how
+   you lose the Windows install.
+2. Shrink the Windows volume from Windows itself (Disk Management, or `diskpart`) to leave
+   unallocated space for Ubuntu. Windows shrink is the reliable path; the Linux side is not
+   the one to make room.
+3. Leave the unallocated space **unformatted**. The Ubuntu installer will use it.
 
-## Branches
+The EFI system partition is the part that matters later — see section 4.
 
-`main` carries this layout. It was fast-forwarded from the bring-up branch on 2026-09-16 (47
-commits, no divergence) and again on 2026-10-02 from `bringup-2026-09-16` for the external-display
-work (32 commits, no divergence). The earlier era's history is on
-`feature/tumbleweed-a16-live-iso`, and its files are in `archive/2026-09-16-pre-bringup/`.
+---
+
+## 3. Ubuntu nightly install
+
+*Write the latest nightly Ubuntu image to a USB stick and install to the space from section 2.*
+
+The daily/nightly image matters: the stock released images do not carry the arm64 support
+this machine needs to boot usefully.
+
+- Write the image to the stick, boot the A16 from it (the hub gets you keyboard, mouse and
+  network during the installer).
+- Install onto the unallocated space, **alongside** Windows — do not let it erase the disk.
+- Let it use the existing EFI system partition.
+
+**Known trap:** once Ubuntu is installed, **the Ubuntu installer will fail** if you try to
+run it again for a reinstall or repair. Anything that needs the installer a second time is
+done from Windows instead — see below.
+
+---
+
+## 4. Windows EFI updates
+
+**Expect to keep doing EFI and firmware updates from Windows.** With Ubuntu already
+installed, the installer path fails, so firmware updates, the EFI system partition, and the
+GRUB boot config are maintained from the Windows side.
+
+Practical consequences for this project:
+
+| Thing | Where it is edited | Note |
+|-------|-------------------|------|
+| Firmware / BIOS | Windows | `UX3607OA.312` is the version this project was developed against |
+| EFI system partition | Windows | The `grub.cfg` the boot menu comes from lives here |
+| Boot entries | Windows, unless the machine is already booted | Entries are edited by the install tooling once Ubuntu is up |
+
+Record the boot menu state before changing anything, and keep a copy of the EFI config: the
+menu entries are the only way back if a kernel comes up with no display.
+
+---
+
+## 5. linux-next retrieval
+
+This project tracks **linux-next**, not a released kernel. The tree we build is:
+
+| | |
+|---|---|
+| **Release** | `7.3.0-rc5-next-20261002` |
+| **Source** | `https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/snapshot/linux-next-next-20261002.tar.gz` |
+| **Size** | ~261 MB tarball, ~1.8 GB extracted |
+
+Get the snapshot (the tarball is the practical route — no clone of the full history), extract
+it, and keep **the pristine extraction** somewhere permanent. It is the reference copy used
+to check whether a change is already upstream, and to restore a file when a patch has been
+half-applied. Deleting it costs a 261 MB download at the worst moment.
+
+linux-next is a moving target: a patch that applies cleanly today may not tomorrow, which is
+why the port pins the release above and records the patch set below.
+
+---
+
+## 6. The patch set
+
+**The rule this project runs on: carry a change only if this kernel is missing it.** Test
+each patch against a *pristine* extraction, never against a tree that already has patches in
+it (that reports your own work back to you as "already upstream").
+
+Eleven patches, in the order they apply:
+
+| Patch | Area | What it buys | Why it is still needed |
+|-------|------|--------------|------------------------|
+| `0001-phy-qcom-edp-v8-sequence` | PHY | eDP v8 power-on sequence | Panel bring-up path |
+| `0002-dts-ec-node` | DT | EC node at i2c `9-0076` | Pairs with `0004` |
+| `0004-ec-driver` | driver | `asus-glymur-ec` (fans, temps, kbd backlight, wakeup) | Fans keep running through suspend without it |
+| `0005-dts-bt-serdev-node` | DT | Bluetooth serdev node | `hci0` does not exist |
+| `0006-dts-bt-enable-gpio` | DT | `bt-enable-gpios` on TLMM 116, ACTIVE_HIGH | Radio never powers up |
+| `0007-xhci-plat-a16-skip-unsuspended-hcd` | USB | Do not fail system suspend when the HCD is left unsuspended | **Without it, every suspend aborts** (`error -22`) |
+| `0008-qmp-combo-glymur-v5` | PHY | Combo PHY init tables for Glymur | Panel **and** external display |
+| `0010-qmp-v8-refresh-pcs-drive-on-training` | PHY | PCS drive-level refresh at training | Link training |
+| `0011-msm-dp-lttpr-segment-training` | DRM | LTTPR segment scoping | External display training |
+| `0012-dp-external-rate-cap` | DRM | Cap the external DP rate | External displays at the right rate |
+| `0013-dpu-drop-stuck-flush` | DRM | Drop the stuck flush after a vblank timeout | Prevents the frozen-desktop failure when an external link fails |
+
+**Deliberately not applied** — kept in `patches/not-used/` with the reasons:
+
+| Patch | Why not |
+|-------|---------|
+| `0003-dp-panel-hbr3` | Retired by test: the panel comes up without it |
+| `0009-dp-external-rate-and-failed-enable-guard` | Conflicts with `0012` (same region of `dp_panel.c`) and is not needed with it |
+
+**No out-of-tree drivers.** Earlier work loaded a set of hand-built modules (an overlay of
+`ath12k`, `msm`, the PHY drivers, `gpucc-glymur`) beside a stock kernel. On this linux-next
+that is gone: everything the machine needs is in-tree, and the build produces it. The only
+hold-out is the 3D GPU, which is an upstream `GMU firmware initialization timed out` and has
+no local patch.
+
+---
+
+## 7. Build and install
+
+```
+BRINGUP/port-2026-10-03/build.sh      # applies patches/*.patch and builds
+BRINGUP/port-2026-10-03/patches/      # the patch set -- this directory IS the set
+BRINGUP/port-2026-10-03/readme.md     # the decision record: what was tried, what was dropped
+BRINGUP/tools/a16-install-stock-next.sh   # install the built kernel beside the existing ones
+```
+
+`build.sh` applies `patches/*.patch` by glob, so **the directory listing is the patch set** —
+nothing can drift out of sync with what builds. The installer adds a menu entry and installs
+beside the existing kernels; it refuses to overwrite the running kernel.
+
+Two rules learned the hard way:
+
+- **Never `make clean` the tree you are working on.** Reclaim disk by deleting *other* build
+  trees. One build per tree, one log per run: a shared log makes failures unreadable.
+- **`gawk`, `flex` and `bison` are required**, or the build dies at the last link step.
+
+---
+
+## 8. What works, what does not
+
+Verified on `7.3.0-rc5-next-20261002` with the eleven patches above:
+
+| Component | State |
+|-----------|-------|
+| Internal panel (2880x1800) | **Works** |
+| External monitor | **Works** (USB-C DP and HDMI) |
+| Bluetooth | **Works** |
+| Wi-Fi | **Works** with the machine's board data; reliability across suspend is not established |
+| Suspend / resume | **Works** — measured by frozen monotonic time, not by the fans |
+| Fans on suspend | **Spin down**, via the EC driver |
+| EC (fans, temps, keyboard backlight, wakeup) | **Works**, bound at i2c `9-0076` |
+| 3D GPU | **Does not work** — upstream `GMU firmware initialization timed out`; software rendering only |
+| Internal speakers | **Silent** |
+| Dock USB/ethernet after resume | Open |
+
+**How to read "did it suspend":** use `CLOCK_BOOTTIME - CLOCK_MONOTONIC` — it grows only
+while suspended. Do **not** judge it by the fans or the keyboard backlight: both are EC
+outputs, and with no EC driver they say nothing about whether the SoC slept. That mistake
+cost a night.
