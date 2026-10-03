@@ -69,7 +69,9 @@ Your stick now holds everything needed to build the kernel.
    before updating anything.
 
 Once Ubuntu is installed, **the Ubuntu installer will fail if you run it again** for a repair
-or reinstall. Firmware, BIOS and boot-menu changes are done from Windows instead.
+or reinstall. Firmware, BIOS and boot-menu changes are done from Windows instead —
+**[step-by-step for the EFI partition and the boot menu](docs/efi-on-windows.md)**, including the
+Secure Boot rule (off for Linux, back on for Windows, every time).
 
 ---
 
@@ -117,4 +119,5 @@ The boot menu is edited from Windows if you ever need to change it.
 |---|---|
 | [`docs/from-the-beginning.md`](docs/from-the-beginning.md) | The same journey with the reasoning: why each step, the full patch table, the verification story |
 | [`docs/install/`](docs/install/) | The install steps in full, including the traps |
+| [`docs/efi-on-windows.md`](docs/efi-on-windows.md) | Editing the boot menu and the EFI partition from Windows |
 | [`BRINGUP/port-2026-10-03/readme.md`](BRINGUP/port-2026-10-03/readme.md) | The decision record: what was tried, what was dropped, and why |
