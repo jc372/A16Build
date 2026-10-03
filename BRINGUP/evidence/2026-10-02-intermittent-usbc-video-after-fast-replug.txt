@@ -1,0 +1,23 @@
+Intermittent USB-C external-display success after reverting PCS-drive trial
+Date: 2026-10-02
+
+Verified configuration/state
+- `dpdrive` rollback ran at 16:10:15 EDT and logged: “REVERTED: previous QMP v5 module and byte-identical initrd restored.” The training-time PCS-refresh candidate was not loaded after the subsequent reboot.
+- At 16:25 EDT, loaded QMP srcversion was `151CA3C3BDC39CA185C951B` (prior Glymur v5), and loaded MSM was `BBD010BD47287F02B65EE84` (DP rate-scope/failed-enable candidate). `dpdrive` rollback state was absent; underlying `dpnext`/QMP rollback state remained. Current boot ID `42967b08-f757-4e86-b128-936f6ae93c28`; DP-1/DP-2/HDMI read disconnected at inspection (monitor unplugged).
+- The earlier hard-reset boot had QMP `37880928124460B5D4B8E91` and the `0x02→0x12→0x16→0x1a` PCS marker sequence, but LTTPR1 EQ still failed. After reverting and rebooting, the running candidate is QMP v5, not that training-time refresh.
+
+New operator report (not independently captured)
+- After several reboots, the operator connected USB-C and then unplugged/reconnected quickly, before the laptop panel had flashed/resized. On that attempt the external monitor displayed video (“boom, I had the monitor on”). This is the first reported external picture.
+- The success could not be reproduced. Subsequent attempts/reboots included hard reset when retrying, or a black internal display during boot.
+- No dedicated `display watch dp` capture was running, and no success was recorded in a durable log; exact boot, connector, negotiated rate, link-training sequence, and mode are unknown.
+- The current QMP v5 state and the confirmed 16:10 dpdrive revert establish that the training-time PCS-refresh candidate was removed before the latest observed boot. The exact boot on which the brief success occurred is uncertain; do not assert causal credit to either QMP variant based only on timing.
+
+Interpretation / limits
+- The quick-replug timing before internal-panel modeset/resize is a useful clue: hotplug/alt-mode sequencing or a race during the internal-panel transition may matter. This remains a hypothesis, not root cause.
+- Repeated fresh Linux boots do not, by themselves, prove whether every external Type-C/PD controller or platform-firmware state was fully power-cycled. There is no evidence in these records that an additional Snapdragon-specific software cleanup is required. The prior boot journal did log UCSI firmware warnings about duplicate partner altmode SVID `0xff01`; this is a separate observation and has not been tied to either successful video or the crashes.
+- Kernel journals from boots following the dpdrive revert still show repeated LTTPR1 training timeouts and DPU frame/vblank timeouts on failed attempts. They do not capture the reported brief successful output or establish why later resets/black boots occurred. Reset initiator remains unknown.
+
+Next handling
+- Preserve current usable boot; do not intentionally provoke another hard reset while the success is uninstrumented.
+- Before another connection attempt, ensure display capture is already running and prepared to capture both connector state and kernel DP logs; record boot ID, loaded module srcversions, exact physical port/cable/monitor, and whether the internal panel begins resizing. A repeat should be deliberately limited and stopped at first DPU timeout/black-screen or instability; no repeated display-settings toggling.
+- Treat this as a major positive observation (external video occurred once), but not yet a reproducible fix. Do not change PHY drive levels, rates, or LTTPR code until a capture of a successful sequence can distinguish the path from the failed ones.

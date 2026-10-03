@@ -1,0 +1,22 @@
+{
+  "format_version": "1.0.0",
+  "change_version": "1",
+  "change_date": "2023-06-08 01:25:03",
+  "source": "2.0.5.0",
+  "import": "operator_settings_asus_proart.json",
+  "settings": {
+    "capture_stream": {
+      "condition": "voip",
+      "capture_stream_detection_enable": false,
+      "applications": [
+        "skype.exe",
+        "skypehost.exe",
+        "lync.exe",
+        "skypeapp.exe",
+        "skype4life.exe",
+        "teams.exe",
+        "msteams.exe"
+      ]
+    }
+  }
+}

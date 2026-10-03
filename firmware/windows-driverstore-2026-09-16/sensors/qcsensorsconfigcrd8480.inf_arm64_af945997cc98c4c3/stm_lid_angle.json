@@ -1,0 +1,45 @@
+{
+  "config":{
+    "hw_platform": ["IDP", "QCB", "CRD", "MTP", "Surf", "RCM"],
+    "platform_family": ["161", "168"]
+  },
+  "hingeangle_0_platform":{
+    "owner": "hingeangle",
+    ".hingeangle":{
+      "owner": "hingeangle",
+      ".config":{
+        "owner": "hingeangle",
+        "gpio_high_angle":{ "type": "flt", "ver": "0",
+            "data": "190.0"
+        },
+        "gpio_low_angle":{ "type": "flt", "ver": "0",
+            "data": "170.0"
+        },
+        "gpio":{ "type": "int", "ver": "0",
+            "data": "0"
+        },
+        "key_board_idx":{ "type": "int", "ver": "0",
+            "data": "1"
+        },
+        "orient":{ "type": "int", "ver": "0",
+            "data": "0"
+        },
+        "st_imu_idx":{ "type": "int", "ver": "0",
+            "data": "2"
+        },
+        "run_6x":{ "type": "int", "ver": "0",
+            "data": "1"
+        },
+        "stream_data":{ "type": "int", "ver": "0",
+            "data": "1"
+        },
+        "resolution":{ "type": "flt", "ver": "0",
+            "data": "5.0"
+        },
+		"use_hinge_angle_lp":{ "type": "int", "ver": "0",
+            "data": "1"
+        }
+      }
+    }
+  }
+}

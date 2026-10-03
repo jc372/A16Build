@@ -1,0 +1,27 @@
+QMP combo-PHY v5-derived candidate build
+Date: 2026-10-02
+
+Goal
+- Investigate the captured USB-C DP failure: DPTX0 link clock stuck off, `ctrl_link` enable `-16`, DP prepare failure, followed by DPU timeouts. The following boot was automatic; these logs do not identify the reset initiator or prove DP caused it.
+
+Source and patch
+- Base source snapshot: `/home/jc/build/linux-next-1a1de54f7369` (kernel source commit `1a1de54f7369cd2b5bac0f265910e60ad3a6b4c3`).
+- Isolated candidate: `/home/jc/build/linux-next-1a1de54f7369-qmp-v5`.
+- Applied the 11-message Glymur/QMP combo-PHY v5 series in order: 00690, 00757, 00683, 00663, 00765, 00699, 00719, 00650, 00652, 00653, 00678.
+- The LKML HTML extraction omitted one context line in patch 00719; its hunk count was adjusted to the six context lines present. Two config-field insertions were placed at their corresponding local struct position because the local snapshot's struct layout differs from the series base.
+- Exact combined source delta: `BRINGUP/patches/0015-qmp-combo-glymur-v5-for-next-20260914.patch`. `git apply --check` passes against the untouched base source snapshot.
+
+Build and ABI checks
+- Running kernel: `7.3.0-rc3-next-20260914` (arm64).
+- Candidate `.config` was refreshed from `/boot/config-7.3.0-rc3-next-20260914` and `olddefconfig` completed. The local `pahole` package was extracted under the Hermes scratch directory; no system package installation was done.
+- `make modules_prepare` and `make ARCH=arm64 -j$(nproc) M=drivers/phy/qualcomm modules KBUILD_MODPOST_WARN=1` completed successfully. Full output: `/home/jc/a16-payload/qmp-combo-v5-build-20261002.log`.
+- Artifact: `/home/jc/build/linux-next-1a1de54f7369-qmp-v5/drivers/phy/qualcomm/phy-qcom-qmp-combo.ko` (1,451,128 bytes).
+- `vermagic`: `7.3.0-rc3-next-20260914 SMP preempt mod_unload modversions aarch64`.
+- `srcversion`: `151CA3C3BDC39CA185C951B`.
+- SHA-256: `444b792b2f336d03e210dad95322160c86ca8138a90827ea2cbab1507dca7a31`.
+- `modprobe --dump-modversions`: 81 candidate imports, 81 stock imports, all 81 CRCs match, no candidate-only or stock-only imports; `module_layout` CRC matches.
+- Candidate is not installed. `modinfo` still resolves the stock module, and the loaded module remains the stock `srcversion` `63A1B2708C9E05A81BA565D`.
+
+Remaining risk / next step
+- Code inspection shows the Glymur LN0/LN1 drive-level table is programmed in `qmp_v8_configure_dp_clocks()`. Later `set_voltages` updates go through `qmp_v4_configure_dp_tx()`, which does not refresh those LN0/LN1 registers. This is a separate possible link-training limitation; the candidate may clear the clock-enable failure yet still fail training. An upstream review also flagged this distinction; the candidate does not claim proven video output.
+- Stage safely with `sudo bash ~/a16.sh qmpdp`. This does not live-unload/load the PHY module; it backs up any existing override and updates the initramfs only if that initramfs contains the module. After the script confirms `STAGED`, reboot, start `sudo bash ~/a16.sh display watch`, and connect the USB-C monitor once. A reboot/reset remains possible. Revert with `sudo bash ~/a16.sh qmpdp revert`.

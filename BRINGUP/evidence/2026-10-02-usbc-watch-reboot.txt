@@ -1,0 +1,44 @@
+USB-C monitor hotplug with improved display watcher; abrupt reboot
+2026-10-02 — ASUS Zenbook A16 UX3607OA
+
+Watcher log: /home/jc/a16-payload/display-outputs-20261002-113915.log
+Previous boot ID: dcf59317585a433b94f6c159177ab133
+Next boot ID: 4a9e59ac9be949d888a224e27e591210
+
+Observed
+--------
+- `display watch` started at 11:39:15 with `dmesg --follow-new --time-format=raw`.
+- On the monitor connection, USB hub `2109:2211` and the monitor's MSI Gaming
+  Controller (`1462:3fa4`) enumerated. Its USB storage interface repeatedly failed
+  reads; these errors alone do not establish the reboot cause.
+- At 11:39:24, `card1-DP-1` changed to connected and exposed modes including
+  5120x1440, while `enabled=disabled`. DP-2 and HDMI-A-1 remained disconnected.
+  This is the connector result for this attempt; the earlier attempt was DP-2.
+- The watcher recorded no DP link-training / DPTX / DPU commit errors in the
+  available text. The saved file ends after the connector-change snapshot and has
+  3,018 trailing NUL bytes; the post-snapshot watcher/message stream is missing.
+- The previous boot's last journal entry is at monotonic 1064.405 s (11:39:24),
+  during the monitor's USB-storage probe. The next boot began at 11:39:54. The
+  journal has no panic/oops/watchdog or orderly-shutdown record establishing the
+  reset mechanism.
+- After reboot, boot ID is `4a9e59ac9be949d888a224e27e591210`; all external DRM
+  connectors currently report disconnected/disabled. `/sys/fs/pstore` exists but
+  its contents were not readable without root in this session, so pstore status
+  is unknown.
+
+Conclusion
+----------
+The operator confirmed the reboot happened on its own, not by manual shutdown/reboot.
+The monitor was detected on DP-1 and EDID modes were read, but no active image was
+confirmed. The machine rebooted at 11:39:54 after the hotplug. The trigger is still
+unproven: no saved panic trace or final DP failure sequence was recovered. Treat
+this as a second USB-C hotplug followed by an automatic reboot, distinct from the
+prior DP-2 attempt.
+
+Next
+----
+The watcher now writes the live kernel stream directly to a companion file ending
+in `.kernel.log`, independently of the synchronous snapshots, and a separate
+sync loop flushes it every two seconds. A synthetic regression test passed with the
+snapshot deliberately blocked. Hardware retest is pending; the companion log path is
+printed at startup. Preserve the known-good boot/display configuration.

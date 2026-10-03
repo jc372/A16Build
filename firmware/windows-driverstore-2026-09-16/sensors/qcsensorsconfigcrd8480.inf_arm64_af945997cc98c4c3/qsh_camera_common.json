@@ -1,0 +1,327 @@
+{
+    "config": {
+      "hw_platform": ["CRD", "QCB", "RCM", "CDPS", "MTP", "IDP"],
+      "platform_family": ["161", "168"]
+    },
+    "qsh_camera":{
+      "owner": "qsh_camera",
+      ".dbg_flags":{
+        "comments": "Flags for changing debug params",
+        "owner": "qsh_camera",
+        "main_sensor.enable":{"type": "int", "ver": "0",
+          "data": "1",
+          "comments": "Used to enable the main qsh_camera sensor as part of SNS framework"
+        },
+        "main_sensor.disable_after_n_runs":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "If non-zero, will disable main sensor after n complete runs, ie, rebooting n times"
+        },
+        "test_sensor.enable":{"type": "int", "ver": "0",
+          "data": "1",
+          "comments": "Used to enable the test sensor for Q6 test as part of SNS framework"
+        },
+        "test_sensor.disable_after_n_runs":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "If non-zero, will disable Q6 test sensor after n runs, ie, rebooting n times"
+        },
+        "test_sensor_wait_to_start":{"type": "int", "ver": "0",
+          "data": "1",
+          "comments": "To run the Q6 test using the test sensor at boot-up"
+        },
+        "test_sensor_start_delay_ms":{"type": "int", "ver": "0",
+          "data": "5000",
+          "comments": "Delay before starting/restarting the Q6 test"
+        },
+        "test_sensor_restart_cnt":{"type": "int", "ver": "0",
+          "data": "500",
+          "comments": "Number of times to restart the Q6 test"
+        },
+        "test_sensor_out_file_en":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "If enabled, Q6 test activities are logged to /mnt/vendor/persist/sensors/out_cam_test.txt"
+        },
+        "mem_pool_name_tcm":{"type": "str", "ver": "0",
+          "data": "CAM_ISLAND_LPASS_TCM_POOL",
+          "comments": "To get the pool name used for TCM"
+        },
+        "mem_pool_name_llc":{"type": "str", "ver": "0",
+          "data": "CAM_LLCC_ISLAND1_POOL",
+          "comments": "To get the pool name used for LLC memory"
+        },
+        "mem_pool_name_island":{"type": "str", "ver": "0",
+          "data": "CAM_LLCC_ISLAND1_POOL",
+          "comments": "To denote which pool is to be used primarily as island memory, allocations for CAM_HEAP_ISLAND done here"
+        },
+        "dump_reg_cnt":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "Max files with dumped register values to be saved; circular overwriting once cnt hit"
+        },
+        "dump_frame_cnt":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "Max dumped frames (streamed from sensor for running use-case) to be saved; overwrites similarly"
+        },
+        "use_fake_frame_client":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "Creates a fake frame client internally, and subscribes for FD use case using the same. Enabled only in kailua"
+        },
+        "use_aec_output":{"type": "int", "ver": "0",
+          "data": "1",
+          "comments": "Used to make use of previous AEC values in the next AEC run"
+        },
+        "previous_aec_expiration_time_ms":{"type": "int", "ver": "0",
+          "data": "1000",
+          "comments": "To recompute AEC only if previous AEC is expired, ie, if provided time has passed since last computation, during start of stage 2. Also restricts use of expired face roi during frame ready"
+        },
+        "force_fd_result":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "Set value as 1 to force face detected; 2 to force face not detected; 3 to alternate face detected/not detected"
+        },
+        "force_settle_count":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "Overwrite the PHY settle time value (in nanosec), can be used for faster HW timeout"
+        },
+        "soft_landing_num_step":{"type": "int", "ver": "0",
+          "data": "4",
+          "comments": "Provide the number of steps to soft land the actuator. This flag is used when the params to park lens are missing from the Sensor actuator pb file"
+        },
+        "soft_landing_delay_ms":{"type": "int", "ver": "0",
+          "data": "10",
+          "comments": "Provide the delay between each step to soft land the actuator. This flag is used when the params to park lens are missing from the Sensor actuator pb file"
+        },
+        "enable_fd_cadl":{"type": "int", "ver": "0",
+          "data": "1",
+          "comments": "To enable/disable support for CADL based solution for FD in CADL-supported chips"
+        },
+        "use_egpio_workaround":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "To be enabled when an RFC use-case is to be subscribed (Temporary workaround until official support from bus team)"
+        },
+        "allow_set_prop_without_stream":{"type": "int", "ver": "0",
+          "data": "1",
+          "comments": "To enable setting the dynamic (while use-case running) parameters - AEC ROI and frame rate"
+        },
+        "force_isp_index":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "To use particular ISP index, either 0 or 1"
+        },
+        "frame_injection_count":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "Number of injected frames (mono files) to run our model and post-proc on, before capturing frames streamed by the sensor."
+        },
+        "override_exposure_time":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "To override the sensor exposure time (in microseconds) which is used to compute the line count for AEC"
+        }
+      },
+      ".tuning_params":{
+        "comments": "Parameters to tune model outputs for each feature",
+        "owner": "qsh_camera",
+        "fd_threshold":{"type": "int", "ver": "0",
+          "data": "344",
+          "comments": "CADL-based FD confidence threshold (0-511); lower threshold => higher chance of face to be detected, also increases false positives"
+        },
+        "fd_false_positive_threshold_sq":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "CADL-based FD face radius-squared threshold; additional threshold control (besides confidence) to reduce false positives"
+        },
+        "max_stg2_entries_per_unit_time":{"type": "int", "ver": "0",
+          "data": "0",
+          "comments": "Does rate-limiting if non-zero; it restricts the max number of times stage 2 can be entered per unit time (unit time defined in next param)"
+        },
+        "rate_limit_unit_time_in_secs":{"type": "int", "ver": "0",
+          "data": "1",
+          "comments": "Unit time for above rate-limiting, defined in seconds"
+        },
+        ".nms_fd_qqvga":{
+          "comments": "NMS params for tuning QQVGA FD",
+          "owner": "qsh_camera",
+          "confidence_threshold": {"type": "flt", "ver": "0",
+            "data": "-17.0",
+            "comments": "FD confidence threshold (-128 to 127); each candidate face selected if its confidence > threshold; lower threshold => higher detection chance, also increases false positives"
+          },
+          "iou_threshold": {"type": "flt", "ver": "0",
+            "data": "0.1",
+            "comments": "A bounding box is considered valid, if it doesn't have high IoU value wrt a higher confidence bounding box; Higher IoU threshold => More bounding boxes selected"
+          },
+          "max_num_output_faces": {"type": "int", "ver": "0",
+            "data": "10",
+            "comments": "Maximum number of faces output in FD Pro detections"
+          },
+          "max_proposals": {"type": "int", "ver": "0",
+            "data": "50",
+            "comments": "Max number of candidate faces to be selected during NMS process, good heuristic value is (5 * max_num_output_faces) ceiled to higher multiple of 10"
+          },
+          "border_margin": {"type": "int", "ver": "0",
+            "data": "3",
+            "comments": "Border margin indicates percentage of image width/length to be considered the boundary (Range 0-10)"
+          },
+          "landmarks_fs_fraction": {"type": "int", "ver": "0",
+            "data": "15",
+            "comments": "Threshold of the ratio between landmark-estimated face-size and bounding-box-estimated face size. Useful to reject faces where landmarks are clumped in small area. Range 3-44"
+          },
+          "is_island":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not this FD model is expected to run in island mode"
+          },
+          "is_used":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not this FD model will be used. If not, FW optimizes memory usage by avoiding model registration, context creations, etc"
+          }
+        },
+        ".nms_fd_qvga":{
+          "comments": "NMS params for tuning QVGA FD",
+          "owner": "qsh_camera",
+          "confidence_threshold": {"type": "flt", "ver": "0",
+            "data": "0.0",
+            "comments": "FD confidence threshold (-128 to 127); each candidate face selected if its confidence > threshold; lower threshold => higher detection chance, also increases false positives"
+          },
+          "iou_threshold": {"type": "flt", "ver": "0",
+            "data": "0.1",
+            "comments": "A bounding box is considered valid, if it doesn't have high IoU value wrt a higher confidence bounding box; Higher IoU threshold => More bounding boxes selected"
+          },
+          "max_num_output_faces": {"type": "int", "ver": "0",
+            "data": "10",
+            "comments": "Maximum number of faces output in FD Pro detections"
+          },
+          "max_proposals": {"type": "int", "ver": "0",
+            "data": "50",
+            "comments": "Max number of candidate faces to be selected during NMS process, good heuristic value is (5 * max_num_output_faces) ceiled to higher multiple of 10"
+          },
+          "border_margin": {"type": "int", "ver": "0",
+            "data": "3",
+            "comments": "Border margin indicates percentage of image width/length to be considered the boundary (Range 0-10)"
+          },
+          "landmarks_fs_fraction": {"type": "int", "ver": "0",
+            "data": "15",
+            "comments": "Threshold of the ratio between landmark-estimated face-size and bounding-box-estimated face size. Useful to reject faces where landmarks are clumped in small area. Range 3-44"
+          },
+          "is_island":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not this FD model is expected to run in island mode"
+          },
+          "is_used":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not this FD model will be used. If not, FW optimizes memory usage by avoiding model registration, context creations, etc"
+          }
+        },
+        ".nms_fd_360p":{
+          "comments": "NMS params for tuning 360p FD",
+          "owner": "qsh_camera",
+          "confidence_threshold": {"type": "flt", "ver": "0",
+            "data": "6.0",
+            "comments": "FD confidence threshold (-128 to 127); each candidate face selected if its confidence > threshold; lower threshold => higher detection chance, also increases false positives"
+          },
+          "iou_threshold": {"type": "flt", "ver": "0",
+            "data": "0.1",
+            "comments": "A bounding box is considered valid, if it doesn't have high IoU value wrt a higher confidence bounding box; Higher IoU threshold => More bounding boxes selected"
+          },
+          "max_num_output_faces": {"type": "int", "ver": "0",
+            "data": "10",
+            "comments": "Maximum number of faces output in FD Pro detections"
+          },
+          "max_proposals": {"type": "int", "ver": "0",
+            "data": "50",
+            "comments": "Max number of candidate faces to be selected during NMS process, good heuristic value is (5 * max_num_output_faces) ceiled to higher multiple of 10"
+          },
+          "border_margin": {"type": "int", "ver": "0",
+            "data": "3",
+            "comments": "Border margin indicates percentage of image width/length to be considered the boundary (Range 0-10)"
+          },
+          "landmarks_fs_fraction": {"type": "int", "ver": "0",
+            "data": "15",
+            "comments": "Threshold of the ratio between landmark-estimated face-size and bounding-box-estimated face size. Useful to reject faces where landmarks are clumped in small area. Range 3-44"
+          },
+          "is_island":{"type": "int", "ver": "0",
+            "data": "0",
+            "comments": "Whether or not this FD model is expected to run in island mode"
+          },
+          "is_used":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not this FD model will be used. If not, FW optimizes memory usage by avoiding model registration, context creations, etc"
+          }
+        },
+        ".nms_qrcode":{
+          "comments": "NMS params for tuning QR/Barcode detection performance (one model is used for both)",
+          "owner": "qsh_camera",
+          "confidence_threshold_qr":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "QR code detection pre-sigmoid threshold; detected if confidence > threshold; lower threshold => higher detection chance, also increases false positives"
+          },
+          "confidence_threshold_bar":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Barcode detection pre-sigmoid threshold; detected if confidence > threshold; ; lower threshold => higher detection chance, also increases false positives"
+          },
+          "is_island":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not the QR/Barcode model is expected to run in island mode"
+          },
+          "is_used":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not QR model will be used. If not, FW optimizes memory usage by avoiding model registration, context creations, etc"
+          }
+        },
+        ".nms_eod":{
+          "comments": "NMS params for tuning Eyes-on-display",
+          "owner": "qsh_camera",
+          "conf_thresh_eod":{"type": "int", "ver": "0",
+            "data": "40",
+            "comments": "EOD eyes false vs true confidence threshold (0 to 100); checked if EOC is detected open (ie, eyes are open). Detects EOD true (ie, gaze on display) if confidence > threshold; lower threshold => higher chance to detect gaze, also increases false positives"
+          },
+          "conf_thresh_eoc":{"type": "int", "ver": "0",
+            "data": "50",
+            "comments": "EOC (used for EOD) eyes open vs close confidence threshold (0 to 100). Detects EYES_CLOSED if confidence > threshold; lower threshold => higher chance to mark closed eyes, also increases false positives"
+          },
+          "is_island":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not the EOD model is expected to run in island mode"
+          },
+          "is_used":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not EOD model will be used. If not, FW optimizes memory usage by avoiding model registration, context creations, etc"
+          }
+        },
+        ".nms_hd":{
+          "comments": "NMS params for tuning Hand detection",
+          "owner": "qsh_camera",
+          "confidence_threshold": {"type": "flt", "ver": "0",
+            "data": "10.0",
+            "comments": "Hand detection confidence threshold (TBD to TBD); each candidate hand selected if its confidence > threshold; ; lower threshold => higher detection chance, also increases false positives"
+          },
+          "iou_threshold": {"type": "flt", "ver": "0",
+            "data": "0.5",
+            "comments": "A bounding box is considered valid, if it doesn't have high IoU value wrt a higher confidence bounding box; Higher IoU threshold => More bounding boxes selected"
+          },
+          "max_num_output_hands": {"type": "int", "ver": "0",
+            "data": "4",
+            "comments": "Maximum number of hands output in HD model detections"
+          },
+          "max_proposals": {"type": "int", "ver": "0",
+            "data": "50",
+            "comments": "Max number of candidate hands to be selected during NMS process, good heuristic value is ?? TBD"
+          },
+          "is_island":{"type": "int", "ver": "0",
+            "data": "0",
+            "comments": "Whether or not the HD model is expected to run in island mode"
+          },
+          "is_used":{"type": "int", "ver": "0",
+            "data": "1",
+            "comments": "Whether or not HD model will be used. If not, FW optimizes memory usage by avoiding model registration, context creations, etc"
+            }
+        }
+      },
+  
+      ".chip_info_override":{
+        "comments": "To override chip info params for internal PC test only",
+        "owner": "qsh_camera",
+        "isp_max_supported_input_width":{"type": "int", "ver": "0",
+          "data": "1920",
+          "comments": "To override maximum input frame width supported by ISP, for internal PC test only"
+        },
+        "isp_max_supported_input_height":{"type": "int", "ver": "0",
+          "data": "1080",
+          "comments": "To override maximum input frame height supported by ISP, for internal PC test only"
+        }
+      }
+    }
+  }
+  

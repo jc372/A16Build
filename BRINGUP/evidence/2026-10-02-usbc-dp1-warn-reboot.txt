@@ -1,0 +1,46 @@
+USB-C DP-1 hotplug: kernel clock warning, DPU timeouts, subsequent boot
+2026-10-02 — ASUS Zenbook A16 UX3607OA
+
+Capture
+-------
+State log: /home/jc/a16-payload/display-outputs-20261002-115639.log
+Kernel sidecar: /home/jc/a16-payload/display-outputs-20261002-115639.kernel.log
+Watcher boot ID: 4a9e59ac9be949d888a224e27e591210
+Next boot ID: eb8e0c03047440a784915233da595044
+
+Observed
+--------
+- The monitor's USB hub (VIA Labs 2109:2211) and MSI USB function (1462:3fa4)
+  enumerated. UCSI reported repeated duplicate DP alt-mode SVID 0xff01 entries
+  on con1.
+- At 11:56:51, `card1-DP-1` changed to connected and exposed modes through
+  5120x1440. It remained `enabled=disabled`; DP-2 and HDMI-A-1 were disconnected.
+- At kernel monotonic time 1017.930763, the log records
+  `disp_cc_mdss_dptx0_link_clk status stuck at 'off'`, followed by a
+  `clk_branch_toggle` WARN from the KMS thread. The call trace goes through
+  `msm_dp_ctrl_enable_mainlink_clocks` and `msm_dp_display_atomic_enable`.
+- The driver then reports `Failed to enable clk 'ctrl_link': -16`,
+  `Unable to start link clocks`, `Failed link training (rc=-16)`, and
+  `DP display prepare failed, rc=-16`.
+- DPU commit/vblank and frame-done timeouts follow; later messages include
+  `psi_avgs_work hogged CPU` warnings and qcom-battmgr property timeouts.
+- The kernel sidecar is intact (22,830 bytes, no trailing NUL padding) and
+  contains the error sequence. The previous boot's journal ends at 11:56:56; the
+  next boot began at 11:57:21. The operator confirmed this was an automatic
+  reboot. The logs do not establish what initiated it or whether the DP failure
+  caused it. The `clk_branch_toggle` message is a WARN, not by itself proof of a
+  kernel panic.
+
+Conclusion
+----------
+The improved capture worked: this USB-C DP-1 attempt reached monitor detection,
+then failed while enabling the DPTX0 link clock. No external picture was active.
+The operator confirmed the subsequent boot was an automatic reboot, but the logs
+do not establish whether the DP/DPU failure caused it or what initiated the reset.
+
+Next
+----
+Preserve both logs and do not repeat the hotplug until the DPTX0 clock/PHY failure
+is analyzed. Keep the known-good boot and display configuration unchanged. The
+external-output issue now has a directly captured kernel warning and call trace,
+which is more actionable than the prior connector-only logs.

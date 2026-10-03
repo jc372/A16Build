@@ -1,0 +1,84 @@
+{
+  "Version":  1,
+  "Camera": {
+		"StillResolution": [
+		  {
+            "width": 1920,
+            "height": 1080,
+            "type": "NV12",
+			"aspectX": 16,
+			"aspectY": 9,
+			"minfps": 1,
+			"maxfps": 8
+          },
+		  {
+            "width": 1280,
+            "height": 720,
+            "type": "NV12",
+			"aspectX": 16,
+			"aspectY": 9,
+			"minfps": 1,
+			"maxfps": 8
+          },
+		  {
+            "width": 640,
+            "height": 480,
+            "type": "NV12",
+			"aspectX": 4,
+			"aspectY": 3,
+			"minfps": 1,
+			"maxfps": 8
+          },
+		  {
+            "width": 640,
+            "height": 360,
+            "type": "NV12",
+			"aspectX": 16,
+			"aspectY": 9,
+			"minfps": 1,
+			"maxfps": 8
+          }
+
+        ],
+
+		"VideoResolution": [
+		  {
+            "width": 1920,
+            "height": 1080,
+            "type": "NV12",
+			"aspectX": 16,
+			"aspectY": 9,
+			"minfps": 1,
+			"maxfps": 30
+          },
+		  {
+            "width": 1280,
+            "height": 720,
+            "type": "NV12",
+			"aspectX": 16,
+			"aspectY": 9,
+			"minfps": 1,
+			"maxfps": 30
+          },
+		  {
+            "width": 640,
+            "height": 480,
+            "type": "NV12",
+			"aspectX": 4,
+			"aspectY": 3,
+			"minfps": 1,
+			"maxfps": 30
+          },
+		  {
+            "width": 640,
+            "height": 360,
+            "type": "NV12",
+			"aspectX": 16,
+			"aspectY": 9,
+			"minfps": 1,
+			"maxfps": 30
+          }
+
+        ]
+    }
+}

@@ -1,0 +1,25 @@
+name: Full build - kernel and Ubuntu ARM64 A16 live USB image
+
+on:
+  workflow_dispatch:
+    inputs:
+      linux_next_ref:
+        description: linux-next branch/tag/commit; blank uses the pinned known-good revision
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  kernel:
+    uses: ./.github/workflows/nightly.yml
+    with:
+      linux_next_ref: ${{ inputs.linux_next_ref }}
+
+  image:
+    needs: kernel
+    uses: ./.github/workflows/gui-usb.yml
+    with:
+      use_current_run_kernel: true

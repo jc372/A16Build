@@ -1,0 +1,71 @@
+2026-10-02 23:24-23:29, boot 01bd23bd-c2fc-4b41-9972-d0f758c4b14c
+ASUS Zenbook A16 UX3607OA, kernel 7.3.0-rc3-next-20260914
+
+Configuration in force (all set by the operator beforehand):
+  /sys/power/mem_sleep = [s2idle] deep        (persisted via /etc/tmpfiles.d/a16-mem-sleep.conf)
+  /etc/modprobe.d/a16-ath12k.conf: options ath12k a16_skip_global_reset_on_resume=Y
+      -> a16_keep_mhi_up unset (N): the resume path that re-attaches MHI and queues the
+         firmware-crash recovery (ath12k_core_reconfigure_on_crash -> qmi_firmware_ready ->
+         ath12k_core_start) instead of the "keep the MHI link up and touch nothing" path
+  logind HandleLidSwitch=suspend, /etc/systemd/logind.conf.d/50-a16-lid.conf
+
+One real suspend, initiated by closing the lid:
+
+  23:24:40  systemd-logind: Lid closed. / Suspending...
+  23:24:43  kernel: PM: suspend entry (s2idle)
+  23:25:17  systemd-logind: Lid opened.
+  23:25:17  kernel: xhci-hcd xhci-hcd.2.auto: A16 suspend: hcd state=4 flags=0x181 root_hub=8 | shared state=4 ...
+  23:25:17  kernel: dwc3-qcom a600000.usb: PM: failed to resume: error -110
+  23:25:17  kernel: xhci-hcd xhci-hcd.2.auto: A16 resume: hcd state=4 flags=0x180 root_hub=8 | ...
+  23:25:17  kernel: ath12k_wifi7_pci 0004:01:00.0: failed to resume core: -110
+  23:25:17  kernel: ath12k_wifi7_pci 0004:01:00.0: PM: failed to resume async: error -110
+  23:25:17  kernel: PM: suspend exit                <- the system resumed; the radio did not
+  (and nothing from ath12k afterwards: no recovery attempt, no WMI traffic, no firmware reload)
+
+Findings
+--------
+1. Suspend/resume itself works in s2idle with the lid: 34 s asleep and the machine came back with
+   no hang. The display came back (the system-sleep hook), the radio did not.
+
+2. a16_keep_mhi_up=0 does NOT keep the radio. The resume waits for the firmware and expires with
+   -110 (ETIMEDOUT) -- the same signature the unpatched kernel had -- so the re-attach path did
+   not complete either. Neither of our two resume paths (keep-MHI-up, re-attach) survives.
+
+3. It is not ath12k-specific: dwc3-qcom a600000.usb failed to resume with -110 in the same resume
+   pass. Two independent devices timing out points at a platform-level resume problem
+   (interconnect/NoC, power domains or clock state) rather than the Wi-Fi driver alone. This is
+   the first time a non-Wi-Fi device has shown the same failure.
+
+4. The Wi-Fi hardware is healthy afterwards:
+     0004:01:00.0  vendor 0x17cb  device 0x1112  current_link_speed 8.0 GT/s  width x1
+                   power_state D0  enable 1  driver ath12k_wifi7_pci bound
+                   netdev wlP4p1s0 present, rfkill 6 entries
+   So the PCIe link and the device survived; what is wedged is the firmware/driver state, not the
+   hardware. (Read with plain user rights; no root needed.)
+
+5. There is no reboot-free recovery from that state, and this is already measured -- reload_wifi's
+   ladder: rung 1 (NetworkManager) and rung 2 (supplicant) no effect; rung 3 unbind/bind -- the
+   unbind succeeds, the bind does not return the radio; hard rung h3 (PCI function remove + bus
+   rescan) and h4 (module unload) both go through the same remove path, and h4 froze the whole
+   machine (hard reset). A wedged radio therefore costs a reboot, which is why the fix has to be
+   the resume path and not the recovery ladder.
+
+6. Leading suspect for finding 3: the platform's clock and interconnect providers never finish
+   sync_state(), so the NoC and clock controllers are left un-settled:
+
+     qnoc-glymur interconnect-1: sync_state() pending due to 1dfa000.crypto
+     qnoc-glymur 16e0000.interconnect: sync_state() pending due to 1dfa000.crypto
+     gcc-glymur 100000.clock-controller: sync_state() pending due to 3d6c000.gmu
+     gpucc-glymur 3d90000.clock-controller: sync_state() pending due to 3d6c000.gmu
+
+   Two consumers -- the crypto engine (QCE, 1dfa000.crypto) and the GPU management unit
+   (3d6c000.gmu) -- never probe, so their providers never settle. A device whose interconnect or
+   clocks are not managed can time out exactly like this at resume. Worth chasing as the common
+   cause of both the ath12k and the dwc3 failures.
+
+7. Separately observed (not investigated): after the resume the display sits in a pm_runtime
+   storm -- msm_dp_pm_runtime_resume / msm_dp_pm_runtime_suspend repeating dozens of times per
+   second (23:28:54, type=10, core_init=0 phy_init=0).
+
+Raw logs: /home/jc/a16-payload/sleep-test-20261002-232401.log
+          /home/jc/a16-payload/wifi-recover-20261002-232625.log

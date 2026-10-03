@@ -1,0 +1,22 @@
+SUPERSEDED / REVERTED 2026-09-17: this was a workaround for a symptom of the build-config
+mismatch (see notes/2026-09-17-build-config-mismatch.md), not a gen8 GPU bug.  The tree is
+back to upstream here (.create_private_vm wired into a8xx_gpu_funcs).
+
+--- a/drivers/gpu/drm/msm/adreno/a6xx_gpu.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_gpu.c
+@@ -2918,7 +2918,14 @@
+ 		.gpu_get_freq = a6xx_gmu_get_freq,
+ 		.gpu_set_freq = a6xx_gpu_set_freq,
+ 		.create_vm = a6xx_create_vm,
+-		.create_private_vm = a6xx_create_private_vm,
++	/*
++	 * A16 experiment (2026-09-17): gen8 (a8xx/Glymur) gets a6xx's per-process-pagetable
++	 * path here, and its first act -- msm_iommu_pagetable_create(to_msm_vm(gpu->vm)->mmu,
++	 * ...) -- is not valid on gen8: any MSM_GET_PARAM oopses with a level 0 translation
++	 * fault in msm_gpu_create_private_vm (see notes/2026-09-17-display-solved-hbr3.md).
++	 * Leave the op unset so contexts take the global VM instead of the broken path.
++	 */
++	/* .create_private_vm = a6xx_create_private_vm, */
+ 		.get_rptr = a6xx_get_rptr,
+ 		.progress = a8xx_progress,
+ 		.sysprof_setup = a6xx_gmu_sysprof_setup,

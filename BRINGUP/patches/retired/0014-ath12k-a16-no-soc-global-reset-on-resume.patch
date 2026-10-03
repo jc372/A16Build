@@ -1,0 +1,110 @@
+--- a/drivers/net/wireless/ath/ath12k/core.h
++++ b/drivers/net/wireless/ath/ath12k/core.h
+@@ -274,6 +274,12 @@
+ 	ATH12K_FLAG_QMI_FW_READY_COMPLETE,
+ 	ATH12K_FLAG_FTM_SEGMENTED,
+ 	ATH12K_FLAG_FIXED_MEM_REGION,
++
++	/* A16: this power up / power down comes from the system resume path, not from a cold boot or
++	 * from a firmware-crash recovery.  Set in ath12k_core_resume_early(), read in the PCI HAL so it
++	 * can leave the device's own state alone (see the note in ath12k_pci_power_up()).
++	 */
++	ATH12K_FLAG_A16_RESUMING,
+ };
+ 
+ struct ath12k_tx_conf {
+--- a/drivers/net/wireless/ath/ath12k/core.c
++++ b/drivers/net/wireless/ath/ath12k/core.c
+@@ -190,7 +190,14 @@
+ 		return ret;
+ 
+ 	reinit_completion(&ab->restart_completed);
++
++	/* A16: mark this power up as a resume, so the PCI HAL can tell it apart from a cold boot --
++	 * on a resume the device was deliberately kept (mhi_power_down_keep_dev) and its firmware
++	 * should still be running.
++	 */
++	set_bit(ATH12K_FLAG_A16_RESUMING, &ab->dev_flags);
+ 	ret = ath12k_hif_power_up(ab);
++	clear_bit(ATH12K_FLAG_A16_RESUMING, &ab->dev_flags);
+ 	if (ret)
+ 		ath12k_warn(ab, "failed to power up hif during resume: %d\n", ret);
+ 
+@@ -211,9 +218,16 @@
+ 						ATH12K_RESET_TIMEOUT_HZ);
+ 	if (time_left == 0) {
+ 		ath12k_warn(ab, "timeout while waiting for restart complete");
++		/* A16: what the device was doing when this timed out.  With the SoC global reset skipped
++		 * (see ath12k_pci_power_up()) the interesting question is whether the firmware is still
++		 * alive -- i.e. whether the device ever announced itself after the resume at all.
++		 */
++		ath12k_warn(ab, "A16: resume timed out -- no firmware-ready event arrived after the resume\n");
+ 		return -ETIMEDOUT;
+ 	}
+ 
++	ath12k_dbg(ab, ATH12K_DBG_PCI, "A16: resume -- the device announced itself, restart complete\n");
++
+ 	return 0;
+ }
+ EXPORT_SYMBOL(ath12k_core_resume);
+--- a/drivers/net/wireless/ath/ath12k/pci.c
++++ b/drivers/net/wireless/ath/ath12k/pci.c
+@@ -19,6 +19,15 @@
+ #include "hal.h"
+ #include "qmi.h"
+ 
++/* A16: on a system resume, do not run the WiFi SoC's global reset -- see ath12k_pci_power_up().
++ * Default on, so the behaviour can be compared with a single boot parameter:
++ *   /sys/module/ath12k/parameters/a16_skip_global_reset_on_resume
++ */
++static bool a16_skip_global_reset_on_resume = true;
++module_param(a16_skip_global_reset_on_resume, bool, 0644);
++MODULE_PARM_DESC(a16_skip_global_reset_on_resume,
++		 "A16: skip the SoC global reset when powering up from a system resume (default: on)");
++
+ #define ATH12K_PCI_BAR_NUM		0
+ #define ATH12K_PCI_DMA_MASK		36
+ 
+@@ -1452,7 +1461,30 @@
+ 
+ 	ab_pci->register_window = 0;
+ 	clear_bit(ATH12K_PCI_FLAG_INIT_DONE, &ab_pci->flags);
+-	ath12k_pci_sw_reset(ab_pci->ab, true);
++
++	/* A16 (glymur-asus-zenbook-a16-ux3607oa): this call is used by the cold boot, by the
++	 * firmware-crash recovery and by the system resume path, and it used to reset the WiFi SoC in
++	 * all three cases (ath12k_pci_sw_reset() -> ath12k_pci_soc_global_reset()).  On a resume that
++	 * is exactly wrong: the suspend keeps the device on purpose (ath12k_mhi_stop(is_suspend=true)
++	 * -> mhi_power_down_keep_dev()), i.e. the firmware is supposed to still be running, and the
++	 * reset threw it away while nothing re-downloaded it.  Measured on this machine (2026-09-17,
++	 * and again on 2026-09-22 in s2idle): after the suspend the device came up in neither SBL nor
++	 * mission mode, ath12k_core_resume() timed out after 20 s, and every WMI command failed for
++	 * the rest of the boot --
++	 *
++	 *     mhi mhi0: Wait for device to enter SBL or Mission mode      <- and no line after it
++	 *     ath12k_wifi7_pci 0004:01:00.0: timeout while waiting for restart complete
++	 *
++	 * So on a resume, leave the reset line alone and let MHI re-attach to the firmware that is
++	 * still there.  Set a16_skip_global_reset_on_resume=0 to compare against the old behaviour.
++	 */
++	if (a16_skip_global_reset_on_resume &&
++	    test_bit(ATH12K_FLAG_A16_RESUMING, &ab->dev_flags)) {
++		ath12k_info(ab, "A16: resume -- not resetting the device (MHI state 0x%x); the firmware should still be running\n",
++			    mhi_get_mhi_state(ab_pci->mhi_ctrl));
++	} else {
++		ath12k_pci_sw_reset(ab_pci->ab, true);
++	}
+ 
+ 	/* Disable ASPM during firmware download due to problems switching
+ 	 * to AMSS state.
+@@ -1470,6 +1502,10 @@
+ 		return ret;
+ 	}
+ 
++	if (test_bit(ATH12K_FLAG_A16_RESUMING, &ab->dev_flags))
++		ath12k_info(ab, "A16: resume -- MHI state after power up: 0x%x (3 = M0, i.e. the device is running)\n",
++			    mhi_get_mhi_state(ab_pci->mhi_ctrl));
++
+ 	if (ab->static_window_map)
+ 		ath12k_pci_select_static_window(ab_pci);
+ 

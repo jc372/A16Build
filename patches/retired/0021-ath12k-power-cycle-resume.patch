@@ -1,0 +1,191 @@
+patches/0021 -- ath12k: a16_power_cycle, treat a system suspend as a power cycle
+
+Why
+---
+Upstream documents that s2idle can power devices down on these Qualcomm SoCs:
+
+    [RFC PATCH 0/1] soc: qcom: rpmh-rsc: Register s2idle_ops to indicate s2ram behavior in s2idle
+
+      "the quirky platform behavior of mimicking s2ram in s2idle for older Qcom SoCs ... device
+       drivers ... need to prepare for the possible power loss during system suspend by shutting
+       down or resetting the devices."
+
+Measured here on 2026-10-02 (boot 01bd23bd, evidence in
+BRINGUP/evidence/2026-10-02-s2idle-keepmhi0-radio-still-dies-usb-too.txt): after a suspend the WiFi
+device is healthy at the PCIe level -- link 8.0 GT/s x1, power_state D0, driver bound, `wlP4p1s0`
+present -- while its firmware is dead (`ath12k_wifi7_pci 0004:01:00.0: failed to resume core: -110`),
+and a USB controller fails the same way in the same resume pass
+(`dwc3-qcom a600000.usb: PM: failed to resume: error -110`).  The earlier A16 resume work assumed the
+opposite -- keep the MHI link, or keep the device with `mhi_power_down_keep_dev()` -- which is why the
+radio kept dying.  This patch makes the driver behave as if the device lost power, because on this
+machine it may have.
+
+What it adds
+------------
+`a16_power_cycle` (bool, default 1, 0644 -- writable at runtime, read at suspend/resume time, so the
+three modes can be compared without a reboot):
+
+  * `ath12k_mhi_stop(is_suspend=true)` -> `ATH12K_MHI_POWER_OFF` (full power down, device reset)
+    instead of `ATH12K_MHI_POWER_OFF_KEEP_DEV`
+  * `ath12k_pci_power_up()` on a resume does `ath12k_pci_sw_reset()` instead of skipping the reset
+  * `ath12k_core_resume_early()` always re-attaches through the crash-recovery path, which downloads
+    the firmware again when the device has come back in SBL
+
+Modes:
+  `a16_keep_mhi_up=1`                      -> keep the MHI link and firmware (previous behaviour, unchanged)
+  `a16_keep_mhi_up=0 a16_power_cycle=0`    -> mhi_power_down_keep_dev() + re-attach to the running firmware
+  `a16_keep_mhi_up=0 a16_power_cycle=1`    -> **default**: full power cycle (reset + firmware reload)
+
+Build record
+------------
+Built through `BRINGUP/tools/a16-install-ath12k-resume-fix.sh build`, and only after
+`BRINGUP/tools/a16-fix-build-config.sh` + `BRINGUP/tools/a16-abi-layout-gate.sh`:
+
+  * the gate FAILED first: the tree's `.config` had drifted from the running kernel's (23 lines --
+    `CONFIG_SCHED_CLASS_EXT`, `CONFIG_EXT_GROUP_SCHED`, `CONFIG_EXT_SUB_SCHED`, `CONFIG_NET_SCH_BPF`
+    lost, which moves every field after `task_struct.sched_class`; `thread_pid` 1824 vs the kernel's
+    2144).  This is the pahole/BTF drift the fix script exists for; it restored the options and proved
+    `thread_pid = 2144`, gate then PASS.
+  * a first rebuild after that produced an identical .ko ("up to date") -- the stale objects were not
+    recompiled -- so the module directory was cleaned and rebuilt for real.
+  * result: `ath12k.ko` sha256 `d5de83934902b36d27c3e74028a1cb8b` (previous stale build
+    `7b0782704b1ec8c71100ad3ea3d8ac53`), `vermagic 7.3.0-rc3-next-20260914 ...` matching the kernel,
+    `module_layout 0xe6658f7b` (kernel's `0xe6658f7b`), 346 imports, 0 without a CRC, 0 disagreeing.
+
+Install and test
+----------------
+    sudo bash ~/a16.sh radiofix          # install into /lib/modules/<kver>/updates/a16/ + depmod
+    # reboot, then one deliberate s2idle suspend:
+    sudo bash ~/a16.sh sleep measure     # or close the lid with 'sleep lid suspend'
+    sudo reload_wifi status              # then: did the radio come back on its own?
+
+Log lines to look for in the resume:
+
+    A16: suspend -- taking the device down for a power cycle (full MHI power down, device reset)
+    A16: resume -- re-attaching the driver (power cycle: full reset + firmware reload)
+
+Expected outcomes: the radio comes back by itself (the platform really did cut power and the driver now
+re-initialises correctly), or the failure moves somewhere informative (e.g. the firmware download
+failing against a device that is still powered).  Either is progress.  `radiofix revert` removes the
+module; `echo 0 > /sys/module/ath12k/parameters/a16_power_cycle` switches to the keep-dev/re-attach
+mode at runtime for comparison.
+
+--- a/drivers/net/wireless/ath/ath12k/core.c
++++ b/drivers/net/wireless/ath/ath12k/core.c
+@@ -53,6 +53,29 @@
+ static bool a16_keep_mhi_up;
+ module_param(a16_keep_mhi_up, bool, 0644);
+ MODULE_PARM_DESC(a16_keep_mhi_up, "A16: keep the MHI link (and the device's firmware) up across a suspend");
++
++/* A16: a16_power_cycle -- prepare for power loss, i.e. treat a system suspend as a power cycle.
++ *
++ * Upstream documents this platform behaviour: "[RFC PATCH 0/1] soc: qcom: rpmh-rsc: Register
++ * s2idle_ops to indicate s2ram behavior in s2idle" -- "the quirky platform behavior of mimicking
++ * s2ram in s2idle for older Qcom SoCs ... device drivers ... need to prepare for the possible power
++ * loss during system suspend by shutting down or resetting the devices."
++ *
++ * Measured on this machine (glymur / Zenbook A16 UX3607OA, 2026-10-02): after a suspend the WiFi
++ * device is healthy at the PCIe level (link 8.0 GT/s, D0, driver bound, netdev present) while its
++ * firmware is dead, and a USB controller on the same resume pass fails with -110 as well.  With this
++ * set, the suspend does a full MHI power down (device reset) instead of mhi_power_down_keep_dev(),
++ * and the resume does the full cold bring-up and then reloads the firmware through the crash-recovery
++ * path -- that is, it behaves as if the device lost power, because on this machine it may have.
++ *
++ *   0 (with a16_keep_mhi_up=0): mhi_power_down_keep_dev() + re-attach to the running firmware
++ *   1 (default):               mhi_power_down() + full reset + firmware reload
++ * Writable at runtime: it is read at suspend/resume time, so the modes can be compared without a
++ * reboot.
++ */
++bool a16_power_cycle = true;
++module_param(a16_power_cycle, bool, 0644);
++MODULE_PARM_DESC(a16_power_cycle, "A16: treat a system suspend as a power cycle (full device reset + firmware reload)");
+ MODULE_PARM_DESC(a16_fix_level, "A16: highest local fix included in this build");
+ MODULE_PARM_DESC(ftm_mode, "Boots up in factory test mode");
+ EXPORT_SYMBOL(ath12k_ftm_mode);
+@@ -199,8 +222,13 @@
+ 
+ 	if (a16_keep_mhi_up)
+ 		ath12k_info(ab, "A16: suspend -- keeping the MHI link and the device's firmware up\n");
+-	else
++	else {
++		ath12k_info(ab, "A16: suspend -- taking the device %s\n",
++			    a16_power_cycle ?
++			    "down for a power cycle (full MHI power down, device reset)" :
++			    "down but keeping it (mhi_power_down_keep_dev)");
+ 		ath12k_hif_power_down(ab, true);
++	}
+ 
+ 	return 0;
+ }
+@@ -252,8 +280,16 @@
+ 	 * ath12k_core_start(), which redoes the HTC/WMI handshake).  That path also completes
+ 	 * restart_completed, which is what ath12k_core_resume() is waiting for.
+ 	 */
+-	if (test_and_clear_bit(ATH12K_FLAG_A16_KEPT_DEVICE, &ab->dev_flags)) {
+-		ath12k_info(ab, "A16: resume -- device kept across the suspend; re-attaching the driver to it\n");
++	/* A16: a16_power_cycle -- the suspend took the device down, so the firmware is not running
++	 * either: re-attach the driver and let the crash-recovery path bring the device back to mission
++	 * mode, which downloads the firmware again when the device has come up in SBL after the reset.
++	 */
++	if (a16_power_cycle ||
++	    test_and_clear_bit(ATH12K_FLAG_A16_KEPT_DEVICE, &ab->dev_flags)) {
++		ath12k_info(ab, "A16: resume -- re-attaching the driver%s\n",
++			    a16_power_cycle ?
++			    " (power cycle: full reset + firmware reload)" :
++			    " to the device that was kept across the suspend");
+ 		set_bit(ATH12K_FLAG_RECOVERY, &ab->dev_flags);
+ 		queue_work(ab->workqueue, &ab->restart_work);
+ 	}
+diff --git a/drivers/net/wireless/ath/ath12k/mhi.c b/drivers/net/wireless/ath/ath12k/mhi.c
+--- a/drivers/net/wireless/ath/ath12k/mhi.c
++++ b/drivers/net/wireless/ath/ath12k/mhi.c
+@@ -499,13 +499,17 @@
+ 	return ret;
+ }
+ 
++extern bool a16_power_cycle;
++
+ void ath12k_mhi_stop(struct ath12k_pci *ab_pci, bool is_suspend)
+ {
+ 	/* During suspend we need to use mhi_power_down_keep_dev()
+ 	 * workaround, otherwise ath12k_core_resume() will timeout
+-	 * during resume.
++	 * during resume.  A16: unless a16_power_cycle is set -- on this platform s2idle can cut
++	 * power to the endpoint, so prepare for power loss with a full power down (device reset)
++	 * instead, and let the resume do the full bring-up + firmware reload.
+ 	 */
+-	if (is_suspend)
++	if (is_suspend && !a16_power_cycle)
+ 		ath12k_mhi_set_state(ab_pci, ATH12K_MHI_POWER_OFF_KEEP_DEV);
+ 	else
+ 		ath12k_mhi_set_state(ab_pci, ATH12K_MHI_POWER_OFF);
+diff --git a/drivers/net/wireless/ath/ath12k/pci.c b/drivers/net/wireless/ath/ath12k/pci.c
+--- a/drivers/net/wireless/ath/ath12k/pci.c
++++ b/drivers/net/wireless/ath/ath12k/pci.c
+@@ -1454,6 +1454,8 @@
+ }
+ #endif
+ 
++extern bool a16_power_cycle;
++
+ int ath12k_pci_power_up(struct ath12k_base *ab)
+ {
+ 	struct ath12k_pci *ab_pci = ath12k_pci_priv(ab);
+@@ -1478,12 +1480,16 @@
+ 	 * So on a resume, leave the reset line alone and let MHI re-attach to the firmware that is
+ 	 * still there.  Set a16_skip_global_reset_on_resume=0 to compare against the old behaviour.
+ 	 */
+-	if (a16_skip_global_reset_on_resume &&
++	if (a16_skip_global_reset_on_resume && !a16_power_cycle &&
+ 	    test_bit(ATH12K_FLAG_A16_RESUMING, &ab->dev_flags)) {
+ 		ath12k_info(ab, "A16: resume -- not resetting the device (MHI state 0x%x); the firmware should still be running\n",
+ 			    mhi_get_mhi_state(ab_pci->mhi_ctrl));
+ 		set_bit(ATH12K_FLAG_A16_KEPT_DEVICE, &ab->dev_flags);
+ 	} else {
++		/* A16: a16_power_cycle -- reset the device as a cold boot does.  The device was taken
++		 * down by the suspend (and may have lost power), so the full bring-up plus the
++		 * firmware-crash recovery path that follows is what gets the firmware back.
++		 */
+ 		ath12k_pci_sw_reset(ab_pci->ab, true);
+ 	}
+ 

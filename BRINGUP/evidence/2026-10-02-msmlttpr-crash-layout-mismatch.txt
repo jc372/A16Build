@@ -1,0 +1,112 @@
+# 2026-10-02 — the msmlttpr "blown up screen" was a build-config error, not the DP change
+
+## What was staged
+
+`sudo bash ~/a16.sh msmlttpr` staged the LTTPR segment-training `msm.ko`
+candidate (patch `BRINGUP/patches/0018-msm-dp-lttpr-segment-training.patch`)
+over the known-good `dpnext` layer and rebooted.
+
+## Symptom
+
+Operator: "that completely blew up the screen ... I never see the laptop
+screen with that change. Not even sure if it booted, had to hard reset."
+Journal showed a kernel Oops from `gnome-shell` ~9 s after the GPU driver
+bound, on three consecutive boots; the prior `dpnext` boot had run 21 minutes
+clean with a normal shutdown.
+
+Oops signature:
+
+    Unable to handle kernel paging request at virtual address 0000000001c45953
+    pc : msm_gpu_create_private_vm+0x6c
+    lr : msm_context_vm+0x20
+    x0 : 0000000001c45953   w1 : 0000000000000001
+    Comm: gnome-shell   PID: 2938   UID: 60578
+    msm_dpu ... / msm 1.13.0 loaded, fb0: msmdrmfb, panel up in both boots
+
+## Root cause
+
+`msm_gpu_create_private_vm()` does:
+
+    vm = gpu->funcs->create_private_vm(gpu, kernel_managed);
+    if (!IS_ERR(vm))
+            to_msm_vm(vm)->pid = get_pid(task_pid(task));
+
+The disassembly of that function is **byte-identical** in the working module and
+in the failing one. What differed was the offset the compiler used for
+`task_struct.thread_pid`:
+
+    known-good dpnext msm.ko :  ldr x0, [x5, #2144]   (correct)
+    staged LTTPR msm.ko      :  ldr x0, [x5, #1824]   (320 bytes short)
+
+Proof of the correct value, read from the running kernel's own BTF:
+
+    pahole -C task_struct /sys/kernel/btf/vmlinux   ->  thread_pid @ 2144
+
+So `task_pid(task)` returned the number stored 320 bytes earlier, and
+`get_pid()`'s refcount increment on it page-faulted. The DP code never ran.
+
+Where the 320 bytes went: the build tree's `include/generated/autoconf.h` was
+last written **2026-09-22 08:45:44** and lacked
+`CONFIG_DEBUG_INFO_BTF`/`CONFIG_SCHED_CLASS_EXT`. `CONFIG_SCHED_CLASS_EXT`
+adds a 272-byte `sched_ext_entity` inside `task_struct` (plus other scheduler
+options) — a layout change in precisely the affected field.
+
+Two tooling traps produced that state:
+
+1. `make M=...` does not regenerate `include/generated/autoconf.h`; editing or
+   replacing `.config` alone leaves the compiler reading the old header.
+2. `make olddefconfig` run without a usable `pahole` on `PATH`/`LD_LIBRARY_PATH`
+   silently drops `CONFIG_DEBUG_INFO_BTF` and everything depending on it
+   (including `CONFIG_SCHED_CLASS_EXT`). The rebuild then produced a module that
+   was byte-identical to the previous one, which is how the mistake went
+   unnoticed through one full test cycle.
+
+## Fix applied
+
+    cp -a /home/jc/build/linux-next-1a1de54f7369-qmp-v5/.config  <tree>/.config   # kernel-identical apart from compiler/binas version strings
+    make -C <tree> ARCH=arm64 syncconfig                                         # regenerates autoconf.h without re-evaluating/dropping symbols
+
+## New guard: BRINGUP/tools/a16-abi-layout-gate.sh
+
+Reads the running kernel's struct offsets from `/sys/kernel/btf/vmlinux`,
+generates `_Static_assert(offsetof(...) == N)` probes, compiles them against a
+given tree. It must PASS before any module from that tree is staged.
+
+    <tree>/include/generated/autoconf.h SCHED_CLASS_EXT=0  mtime 2026-09-22  -> RESULT: FAIL
+      (task_struct.thread_pid, .pid, .comm, .cred, .mm, .sched_class all disagree)
+    <tree>/include/generated/autoconf.h SCHED_CLASS_EXT=1  mtime 2026-10-02  -> RESULT: PASS
+
+Verified-identical offsets on the fixed tree: thread_pid 2144, pid 2040, mm 1912,
+cred 2560, comm 2576, sched_class 1112, ptracer_cred 2544, real_cred 2552,
+cached_requested_key 2568, posix_cputimers 2416, posix_cputimers_work 2496,
+vtime 2312, tick_dep_mask 2360.
+
+## Verification of the rebuilt module (2026-10-02, after the fix)
+
+    sha256    79bd07cce5fca803d3d6d6f9bb42b637e59b07317fec2a0d23d82862bfd38896
+    srcversion 9480D61C3303C172B7EE756   (unchanged - it does not track layout)
+    vermagic  7.3.0-rc3-next-20260914 SMP preempt mod_unload modversions aarch64
+    139 objects recompiled (not a stale-object link)
+    msm_gpu_create_private_vm reads task_struct.thread_pid at #2144  (kernel BTF: 2144)
+
+There is no `/boot/System.map-*` on this machine, so the symbol-CRC cross-check was
+run against the kernel's own modules in `/lib/modules/<kver>/kernel/` with
+`modprobe --dump-modversions`:
+
+    module_layout: ours 0xe6658f7b = stock 0xe6658f7b
+    full sweep of all 8494 stock modules: our imports 808, matched 808,
+    mismatched 0, uncovered 0
+
+So the module now agrees with the running kernel both on the layout of the
+structures it touches and on every imported symbol CRC.
+
+## Consequence for the DP work
+
+- The LTTPR candidate was never actually tested: the machine oopsed before any
+  display work happened. It is neither proven nor disproven.
+- The `dpnext` and QMP layers (both built earlier with a config whose generated
+  headers matched the kernel — dpnext reads `thread_pid` at 2144) are unaffected
+  and remain the known-good state.
+- Earlier "unknown cause" hard reboots on DP attempts should not be attributed to
+  this bug without checking the built artifact's offset; this only explains the
+  failure of the module built on 2026-10-02 after the 16:44 tree copy.

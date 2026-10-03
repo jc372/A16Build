@@ -1,0 +1,42 @@
+USB-C external display test followed by abrupt reboot
+2026-10-02 — ASUS Zenbook A16 UX3607OA
+Kernel: 7.3.0-rc3-next-20260914, boot c86f662f before test; dcf59317 after
+
+Test
+----
+The operator connected the MSI monitor over USB-C DP Alt Mode while running
+`sudo bash ~/a16.sh display watch` in a terminal. This was USB-C, not the laptop's
+HDMI connector.
+
+What the capture verifies
+-------------------------
+`/home/jc/a16-payload/display-outputs-20261002-112041.log` recorded:
+
+- At 11:21:10, `card1-DP-2` changed from disconnected to connected. DP-2 is the
+  USB-C DisplayPort output (`af5c000` controller / `fde000.phy`).
+- The connector read monitor modes including 5120x1440. The output was still
+  `enabled=disabled`; this proves detection/EDID access, not successful video.
+- Last intact watcher poll: 11:21:15, DP-2 still connected.
+- The capture file ends with 84 NUL bytes after those polls, consistent with an
+  incomplete/corrupted capture; do not interpret bytes after the final text line.
+
+Reboot and logs
+---------------
+The following boot ID is `dcf59317`, with boot start reported as 11:21:40. The
+preceding boot's persistent journal ends with the watcher starting at monotonic
+914.085 seconds and has no later DRM/link-training lines, kernel panic/oops,
+watchdog-reset, or orderly shutdown record. `/sys/fs/pstore` is absent/empty and
+`/var/crash` has no vmcore. Therefore the capture establishes a reboot after the
+USB-C hotplug test, but does not identify whether the kernel crashed, locked hard,
+or was reset by another mechanism; do not call it a diagnosed kernel panic.
+
+The prior snapshot at 11:21:10 showed the tert PHY domain on and no tert COM-clock
+error. That pertains to the HDMI/tert path, not DP-2's USB-C PHY, and does not
+validate or explain this USB-C result.
+
+Next
+----
+Keep this as a USB-C DP-2 failure with successful EDID detection but no active
+image. The updated `display watch` now streams kernel-ring messages during hotplug
+and syncs the log to disk every two seconds and on connector changes. Re-run that
+watcher before the next USB-C test; do not alter the known-good display/boot path.

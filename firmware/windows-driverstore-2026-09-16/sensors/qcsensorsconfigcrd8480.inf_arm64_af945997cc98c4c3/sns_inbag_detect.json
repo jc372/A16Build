@@ -1,0 +1,28 @@
+{
+  "config":
+  {
+    "hw_platform": ["IDP", "QCB", "CRD", "MTP", "Surf", "RCM"],
+    "platform_family": ["161", "168"]
+  },
+  "inbag_detect_0_platform":{
+    "owner": "inbag_detect",
+    ".inbag_detect":{
+      "owner": "inbag_detect",
+        ".config":{
+          "owner": "inbag_detect",
+            "ib_hold_time":{ "type": "flt", "ver": "0",
+              "data": "50.0"
+            },
+            "gpio_polling_time":{ "type": "flt", "ver": "0",
+              "data": "1.0"
+            },
+            "gpio_lid":{ "type": "int", "ver": "0",
+              "data": "92"
+            },
+            "gpio_lid_close_value":{ "type": "int", "ver": "0",
+              "data": "0"
+            }
+       }
+    }
+  }
+}

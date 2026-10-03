@@ -1,0 +1,10 @@
+{
+  "format_version": "1.0.0",
+  "change_version": "5",
+  "change_date": "2023-10-25 04:03:47",
+  "source": "2.0.5.0",
+  "import": "operator_settings_asus_eyes_tracking.json",
+  "settings": {
+    "override_device_volume": true
+  }
+}

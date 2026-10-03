@@ -1,0 +1,1927 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ConstraintModel>
+  <Limits> 
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>8</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>2</Consumption> <!-- Global limitation on OffloadRestrictions streams -->
+    </Resource>	
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>2</Consumption> <!-- Global limitation on MLHWRestrictions streams -->
+    </Resource>	
+  </Limits>
+
+  <ExclusiveEndpoints>
+    <Endpoint>
+      <HWID>AUCD\QCOM0C29</HWID>
+      <TopologyName>TopologyExternalDisplay*</TopologyName>
+      <PinId>1</PinId>
+    </Endpoint>
+    <Endpoint>
+      <HWID>qcasd\DynamicEnumExternalDisplay</HWID>
+      <TopologyName>ExternalDisplay00</TopologyName>
+      <PinId>3</PinId>
+    </Endpoint>
+    <Endpoint>
+      <HWID>qcasd\DynamicEnumExternalDisplay</HWID>
+      <TopologyName>ExternalDisplay01</TopologyName>
+      <PinId>3</PinId>
+    </Endpoint>
+    <Endpoint>
+      <HWID>qcasd\DynamicEnumExternalDisplay</HWID>
+      <TopologyName>ExternalDisplay10</TopologyName>
+      <PinId>3</PinId>
+    </Endpoint>
+    <Endpoint>
+      <HWID>qcasd\DynamicEnumExternalDisplay</HWID>
+      <TopologyName>ExternalDisplay11</TopologyName>
+      <PinId>3</PinId>
+    </Endpoint>
+    <Endpoint>
+      <HWID>qcasd\DynamicEnumExternalDisplay</HWID>
+      <TopologyName>ExternalDisplay20</TopologyName>
+      <PinId>3</PinId>
+    </Endpoint>
+    <Endpoint>
+      <HWID>qcasd\DynamicEnumExternalDisplay</HWID>
+      <TopologyName>ExternalDisplay21</TopologyName>
+      <PinId>3</PinId>
+    </Endpoint>
+  </ExclusiveEndpoints>
+  
+  <ResourceConsumer>
+    <!-- Keyword Detector (SVA) -->
+    <ConsumerInfo>
+      <KeywordDetector />
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+	</Resource>
+ 	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+ 
+  
+  <ResourceConsumer>
+    <!-- AudioStream from MicArray, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>MicrophoneArray0</TopologyName> <!-- MicArray CircuitName reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	  <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream from MicArray, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>MicrophoneArray0</TopologyName> <!-- MicArray CircuitName reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer> 
+
+  <ResourceConsumer>
+    <!-- AudioStream from micarray, speech mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>MicrophoneArray0</TopologyName> <!-- MicArray CircuitName reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{FC1CFC9B-B9D6-4CFA-B5E0-4BB2166878B2}</Mode> <!--Signal processing mode speech-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource> 
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer> 
+  
+  <ResourceConsumer>
+    <!-- AudioStream from micarray, communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>MicrophoneArray0</TopologyName> <!-- MicArray CircuitName reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer> 
+
+  
+   <ResourceConsumer>
+    <!-- AudioStream to speaker, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+	  <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, media mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource> 
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, movie mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+	<Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+	</Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, Communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>    
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, Notification mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9CF2A70B-F377-403B-BD6B-360863E0355C}</Mode> <!--Signal processing mode Notification-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, default mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, Media mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, movie mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+   
+  <ResourceConsumer>
+    <!-- AudioStream to speaker, default mode, loopback -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>Speaker0</TopologyName> <!-- Speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Loopback</ConnectorType> <!-- Loopback -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>    
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, media mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource> 
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, movie mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+	</Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, Communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>    
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, Notification mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9CF2A70B-F377-403B-BD6B-360863E0355C}</Mode> <!--Signal processing mode Notification-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, default mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, Media mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, movie mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+   
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA speaker, default mode, loopback -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\AGGREGATEDSPEAKER</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>aggregatedspeaker0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Loopback</ConnectorType> <!-- Loopback -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>    
+  </ResourceConsumer>
+    
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource> 	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, media mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+    <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, movie mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, Communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, Notification mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9CF2A70B-F377-403B-BD6B-360863E0355C}</Mode> <!--Signal processing mode Notification-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource> 	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, default mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>    
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, Media mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource> 	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, movie mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+    <ResourceConsumer>
+    <!-- AudioStream to SDCA simple jack headset, default mode, loopback -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- Example of h/w id specified in msft class driver inf -->
+        <TopologyName>uajheadsetspk0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Loopback</ConnectorType> <!-- Loopback -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>    
+  </ResourceConsumer>
+    
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource> 	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, media mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+    <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, movie mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, Communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, Notification mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9CF2A70B-F377-403B-BD6B-360863E0355C}</Mode> <!--Signal processing mode Notification-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource> 	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, default mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, Media mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource> 	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, movie mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Offload</ConnectorType> <!-- Offload -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+   
+  <ResourceConsumer>
+    <!-- AudioStream to Non-SDCA headset, default mode, loopback -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetspeaker</TopologyName> <!-- Headset speaker circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Loopback</ConnectorType> <!-- Loopback -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>    
+  </ResourceConsumer>
+   
+  
+  <ResourceConsumer>
+    <!-- AudioStream from SDCA headsetMic, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>uajheadsetmic0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream from SDCA headsetMic, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>uajheadsetmic0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>   
+  
+  <ResourceConsumer>
+    <!-- AudioStream from SDCA headsetMic, speech mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>uajheadsetmic0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{FC1CFC9B-B9D6-4CFA-B5E0-4BB2166878B2}</Mode> <!--Signal processing mode speech-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer> 
+  
+  <ResourceConsumer>
+    <!-- AudioStream from SDCA headsetMic, communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>SDCA\DynamicEnumChild</HWID> <!-- HW id specified in msft class driver inf -->
+        <TopologyName>uajheadsetmic0</TopologyName> <!-- Endpoint circuit reference string-->
+        <PinId>0</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>1</Consumption> 
+    </Resource>
+  </ResourceConsumer> 
+  
+  <ResourceConsumer>
+    <!-- AudioStream from Non-SDCA headsetMic, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetmic</TopologyName> <!-- Headset Mic circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream from Non-SDCA headsetMic, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetmic</TopologyName> <!-- Headset mic circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+	<Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>   
+  
+  <ResourceConsumer>
+    <!-- AudioStream from Non-SDCA headsetMic, speech mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetmic</TopologyName> <!-- Headset mic circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{FC1CFC9B-B9D6-4CFA-B5E0-4BB2166878B2}</Mode> <!--Signal processing mode speech-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer> 
+  
+  <ResourceConsumer>
+    <!-- AudioStream from Non-SDCA headsetMic, communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\VEN_QCOM&amp;DEV_0FCD&amp;SUBSYS_CRD08480</HWID> <!-- HW id specified in qcasd8480.inf -->
+        <TopologyName>headsetmic</TopologyName> <!-- Headset mic circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>1</Consumption> 
+    </Resource>
+   </ResourceConsumer> 
+  
+   <ResourceConsumer>
+    <!-- AudioStream to BlueTooth, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\BluetoothSpeakerHandsFreeProfile</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>BluetoothHandsFreeSpeaker0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>2</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to BlueTooth, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\BluetoothSpeakerHandsFreeProfile</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>BluetoothHandsFreeSpeaker0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>2</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to BlueTooth, Communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\BluetoothSpeakerHandsFreeProfile</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>BluetoothHandsFreeSpeaker0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>2</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType> <!-- Host -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream from BlueToothMic, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\BluetoothMicHandsFreeProfile</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>BluetoothHandsFreeMic0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream from BlueToothMic, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\BluetoothMicHandsFreeProfile</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>BluetoothHandsFreeMic0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream from BlueToothMic, speech mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\BluetoothMicHandsFreeProfile</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>BluetoothHandsFreeMic0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{FC1CFC9B-B9D6-4CFA-B5E0-4BB2166878B2}</Mode> <!--Signal processing mode speech-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream from BlueToothMic, communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\BluetoothMicHandsFreeProfile</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>BluetoothHandsFreeMic0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to ExternalDisplay, raw mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>qcasd\DynamicEnumExternalDisplay</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>ExternalDisplay*</TopologyName> <!-- External Display Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Offload</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to ExternalDisplay, raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>qcasd\DynamicEnumExternalDisplay</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>ExternalDisplay*</TopologyName> <!-- External Display Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to ExternalDisplay, default mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>qcasd\DynamicEnumExternalDisplay</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>ExternalDisplay*</TopologyName> <!-- External Display Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Offload</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer> 
+
+  <ResourceConsumer>
+    <!-- AudioStream to ExternalDisplay, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>qcasd\DynamicEnumExternalDisplay</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>ExternalDisplay*</TopologyName> <!-- External Display Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to ExternalDisplay, raw mode, loopback -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>qcasd\DynamicEnumExternalDisplay</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>ExternalDisplay*</TopologyName> <!-- External Display Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw not used-->
+        <ConnectorType>Loopback</ConnectorType> <!-- Loopback -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to A2DP speaker, raw mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\A2dpSpeakerHeadset</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>A2DPSpeaker0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Offload</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to A2DP speaker raw mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\A2dpSpeakerHeadset</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>A2DPSpeaker0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to A2DP speaker raw mode, loopback -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>QCASD\A2dpSpeakerHeadset</HWID> <!-- Example of h/w id specified in qcasd8480.inf -->
+        <TopologyName>A2DPSpeaker0*</TopologyName> <!-- Circuit reference string-->
+        <PinId>3</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw not used-->
+        <ConnectorType>Loopback</ConnectorType> <!-- Loopback -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+    <Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+    <Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+  </ResourceConsumer>
+
+  <ResourceConsumer>
+    <!-- AudioStream to BLE Speaker, default mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>APXENUM\APXAUDIO</HWID> <!-- Example of h/w id specified in phoneaudiosample.inf -->
+        <TopologyName>speaker</TopologyName> <!-- BLE Speaker Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode Default-->
+        <ConnectorType>Offload</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+	<Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer> 
+  
+  <ResourceConsumer>
+    <!-- AudioStream to BLE Speaker, media mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>APXENUM\APXAUDIO</HWID> <!-- Example of h/w id specified in phoneaudiosample.inf -->
+        <TopologyName>speaker</TopologyName> <!-- BLE Speaker Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{4780004E-7133-41D8-8C74-660DADD2C0EE}</Mode> <!--Signal processing mode media-->
+        <ConnectorType>Offload</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+	<Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer> 
+  
+  <ResourceConsumer>
+    <!-- AudioStream to BLE Speaker, movie mode, offload -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>APXENUM\APXAUDIO</HWID> <!-- Example of h/w id specified in phoneaudiosample.inf -->
+        <TopologyName>speaker</TopologyName> <!-- BLE Speaker Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{B26FEB0D-EC94-477C-9494-D1AB8E753F6E}</Mode> <!--Signal processing mode movie-->
+        <ConnectorType>Offload</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+	<Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer> 
+
+  <ResourceConsumer>
+    <!-- AudioStream to BLE Speaker, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>APXENUM\APXAUDIO</HWID> <!-- Example of h/w id specified in phoneaudiosample.inf -->
+        <TopologyName>speaker</TopologyName> <!-- BLE Speaker Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+	<Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to BLE Speaker, communication mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>APXENUM\APXAUDIO</HWID> <!-- Example of h/w id specified in phoneaudiosample.inf -->
+        <TopologyName>speaker</TopologyName> <!-- BLE Speaker Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{98951333-B9CD-48B1-A0A3-FF40682D73F7}</Mode> <!--Signal processing mode communication-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+	<Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>	
+  </ResourceConsumer>
+  
+  <ResourceConsumer>
+    <!-- AudioStream to BLESpeaker, raw mode, loopback -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>APXENUM\APXAUDIO</HWID> <!-- Example of h/w id specified in phoneaudiosample.inf -->
+        <TopologyName>speaker</TopologyName> <!-- BLESpeaker Circuit reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_LINEOUT_DEST -->
+        <Mode>{9E90EA20-B493-4FD1-A1A8-7E1361A956CF}</Mode> <!--Signal processing mode raw not used-->
+        <ConnectorType>Loopback</ConnectorType> <!-- Loopback -->
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>    
+  </ResourceConsumer>  
+  
+  <ResourceConsumer>
+    <!-- AudioStream from BLE Mic, default mode, host -->
+    <ConsumerInfo>
+      <Stream>
+        <HWID>APXENUM\APXAUDIO</HWID> <!-- Example of h/w id specified in phoneaudiosample.inf -->
+        <TopologyName>microphone</TopologyName> <!-- BLE Mic filter reference string-->
+        <PinId>1</PinId> <!-- KSPIN_TOPO_MIC_ELEMENTS -->
+        <Mode>{C18E2F7E-933D-4965-B7D1-1EEF228D2AF3}</Mode> <!--Signal processing mode default-->
+        <ConnectorType>Host</ConnectorType>
+      </Stream>
+    </ConsumerInfo>
+    <Resource>
+      <ID>AudioSession</ID>
+      <Consumption>1</Consumption>
+    </Resource>	
+	<Resource>
+      <ID>OffloadRestrictions</ID>
+      <Consumption>0</Consumption>
+    </Resource>
+	<Resource>
+      <ID>MLHWRestrictions</ID>
+      <Consumption>0</Consumption> 
+    </Resource>
+  </ResourceConsumer>
+</ConstraintModel>

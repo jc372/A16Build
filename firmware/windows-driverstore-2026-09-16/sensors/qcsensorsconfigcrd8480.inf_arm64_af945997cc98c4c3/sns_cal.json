@@ -1,0 +1,7 @@
+{
+  "config":
+  {
+    "hw_platform": ["IDP", "QCB", "CRD", "MTP"],
+    "soc_id": ["100"]
+  }
+}

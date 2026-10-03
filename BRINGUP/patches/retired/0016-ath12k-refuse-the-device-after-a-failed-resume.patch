@@ -1,0 +1,37 @@
+PATCH 0016 -- ath12k: refuse to use the device after a failed resume (no more frozen machine)
+
+On top of 0014 (keep the device across a suspend) and 0015 (re-attach to it).  0015 does not work: the
+firmware refuses the QMI firmware start with -22 ("qmi wlan config request failed, result: 1, err: 90"),
+ath12k_core_restart() returns before complete(&ab->restart_completed), and ath12k_core_resume() times
+out.  What is left behind is worse than a dead radio: ath12k_core_reconfigure_on_crash() has already
+deinited the HAL rings and its error path does not rebuild them, while the netdev is still registered.
+The next thing to touch it is NetworkManager opening the interface, and the WMI path then walks a
+deinited ring:
+
+    Internal error: Oops: 96000007 [#1] SMP
+    CPU: 2 PID: 1925 Comm: NetworkManager
+    pc : ath12k_hal_srng_access_begin+0x10/0x60 [ath12k]
+    lr : ath12k_ce_send+0xcc/0x2c0 [ath12k]
+    Call trace: ath12k_htc_send -> ath12k_wmi_cmd_send_nowait -> ath12k_wmi_cmd_send
+                -> ath12k_wmi_pdev_set_param -> ath12k_mac_op_start -> drv_start
+                -> ieee80211_do_open -> __dev_open -> rtnl_newlink (NetworkManager)
+    (measured 2026-09-22 10:13, kernel-tail.log)
+
+followed by "watchdog: BUG: soft lockup - CPU#1 stuck for 23s", which is what the operator sees as a
+machine frozen with no keyboard and no touchpad.
+
+Fix: set ATH12K_FLAG_CRASH_FLUSH when the resume times out.  That is the driver's own "the firmware is
+gone, do not touch the hardware" state -- ath12k_ce_send() checks it before it touches the ring and
+returns -ESHUTDOWN, wmi maps it to -ESHUTDOWN, the data path, peer, thermal and mac80211 paths all
+check it too.  A failed resume now degrades to "no WiFi until a reboot" instead of taking the machine
+down with it, which is also what makes 'sudo ~/a16.sh radiofix revive' (re-probe the PCI function
+without rebooting) usable as a recovery.
+
+Also corrects the MHI state text in the 0014 log line: 0x1 is M0 and 0x2 is M1 (both are mission mode),
+the earlier "0x2 = M0" label was wrong.
+
+--- a/drivers/net/wireless/ath/ath12k/core.c
++++ b/drivers/net/wireless/ath/ath12k/core.c
+
+--- a/drivers/net/wireless/ath/ath12k/pci.c
++++ b/drivers/net/wireless/ath/ath12k/pci.c

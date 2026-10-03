@@ -1,0 +1,126 @@
+name: Nightly ASUS Zenbook A16 kernel
+
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_call:
+    inputs:
+      linux_next_ref:
+        description: linux-next branch/tag/commit; blank uses the pinned known-good revision
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      linux_next_ref:
+        description: linux-next branch/tag/commit; blank uses the pinned known-good revision
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    outputs:
+      revision: ${{ steps.ref.outputs.revision }}
+      fedora_config_sha: ${{ steps.ref.outputs.fedora_config_sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: ref
+        env:
+          REQUESTED_REF: ${{ inputs.linux_next_ref }}
+        run: |
+          source config/build.env
+          requested_ref=${REQUESTED_REF:-$KNOWN_GOOD_LINUX_NEXT_REVISION}
+          revision=$(git ls-remote https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git "$requested_ref" | awk 'NR==1 {print $1}')
+          revision=${revision:-$requested_ref}
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          fedora_config_sha=$(curl -fsSL "$FEDORA_CONFIG_URL" | sha256sum | awk '{print $1}')
+          echo "fedora_config_sha=$fedora_config_sha" >> "$GITHUB_OUTPUT"
+  build:
+    needs: probe
+    runs-on: ubuntu-24.04
+    # GitHub-hosted jobs permit at most six hours. Leave the full window for a
+    # cold Fedora module build; cached retries normally finish much sooner.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reclaim runner disk for the Fedora module build
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+          df -h /
+      - name: Restore compiler cache
+        id: ccache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-${{ github.run_id }}
+          restore-keys: |
+            a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-
+            a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-
+            a16-ccache-${{ runner.os }}-
+      - name: Restore unchanged kernel bundle
+        id: kernel-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            out/*.tar.zst
+            out/*.sha256
+          key: a16-kernel-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-${{ hashFiles('config/*.env', 'config/*.config', 'scripts/apply-series.sh', 'scripts/audit-config.sh', 'scripts/build.sh', 'scripts/package.sh') }}
+      - name: Install build prerequisites
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev \
+            gcc-aarch64-linux-gnu device-tree-compiler zstd pipx curl ccache
+          pipx install b4
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          ccache --max-size=5G
+          ccache --zero-stats
+      - name: Clone linux-next
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth=1 https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git linux-next
+          git -C linux-next fetch --depth=1 origin "${{ needs.probe.outputs.revision }}"
+          git -C linux-next checkout FETCH_HEAD
+      - name: Apply minimal A16 series
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        run: bash scripts/apply-series.sh "$GITHUB_WORKSPACE/linux-next"
+      - name: Build ARM64 kernel, DTBs, and modules
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        env:
+          CCACHE_DIR: /home/runner/.cache/ccache
+          BUILD_CC: ccache aarch64-linux-gnu-gcc
+          BUILD_HOSTCC: ccache gcc
+        run: bash scripts/build.sh "$GITHUB_WORKSPACE/linux-next"
+      - name: Package
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        run: bash scripts/package.sh "$GITHUB_WORKSPACE/linux-next"
+      # This compressed bundle is the only output consumed by the GUI-image job.
+      # Do not turn a completed kernel build red if Actions artifact storage is full.
+      - name: Upload compressed kernel bundle
+        id: upload-kernel-bundle
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: zenbook-a16-linux-next-${{ github.run_number }}
+          path: |
+            out/*.tar.zst
+            out/*.sha256
+          if-no-files-found: error
+          retention-days: 1
+      - name: Report skipped kernel bundle upload
+        if: steps.upload-kernel-bundle.outcome == 'failure'
+        run: |
+          echo "::warning::Kernel build completed, but its transient artifact could not be uploaded (for example, Actions artifact storage may be full)."
+      - name: Show compiler cache statistics
+        if: always() && steps.kernel-cache.outputs.cache-hit != 'true'
+        run: ccache --show-stats || true
+      - name: Save compiler cache
+        if: always() && steps.kernel-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: a16-ccache-${{ runner.os }}-${{ needs.probe.outputs.revision }}-${{ needs.probe.outputs.fedora_config_sha }}-${{ github.run_id }}

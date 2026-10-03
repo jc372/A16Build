@@ -1,0 +1,17 @@
+DP-next USB-C test: no hard reboot, no external picture, internal panel black
+Date: 2026-10-02
+Boot ID: dde44d2c-f6c8-4de3-8ec0-de35e0e8c131 (unchanged after event)
+Loaded candidates: msm BBD010BD47287F02B65EE84; QMP combo 151CA3C3BDC39CA185C951B.
+Watcher: /home/jc/a16-payload/display-outputs-20261002-150232.log and /home/jc/a16-payload/display-outputs-20261002-150232.kernel.log; `display watch dp` enabled DRM DP-only debugging 0x100.
+
+Operator report: no picture on external monitor; internal panel went black; machine did NOT reboot and remains online. Do not equate black display with hard reboot.
+
+Capture:
+- At 15:03:01 DP-1 became connected AND `enabled=enabled`, with monitor modes through 5120x1440; eDP remained `connected/enabled`. This is a different result from the earlier disabled external connector, but does not prove a working video signal.
+- The actual external link rate remained 810000 kHz at 4 lanes (sink reported 8.1 Gbps capability); phase #1 on DP_PHY_LTTPR1 passed, phase #2 timed out `-110`. An external `Failed link training (rc=-104)` followed. Thus scoping the eDP HBR3 workaround corrected a real bug but did not lower the selected rate for this monitor or solve LTTPR channel EQ. No hard reboot followed this attempt; the failed-enable PUSH_IDLE guard may have helped, but causality is unproven.
+- Another training attempt at 8.1 Gbps/4 lanes failed at LTTPR1 phase #2. DPU vblank/commit/frame-done timeouts repeated; internal screen blacked out.
+- After the DP-1 disconnect logged at 15:03:40, a live status read found DP-1/DP-2 `disconnected/disabled`, eDP `connected/enabled`, backlight `bl_power=0` brightness 628, gdm active, but operator still reported black internal screen. The internal DP link successfully retrained later; that does not prove scanout recovered.
+- The watcher state log ends with `DRM debug restored to 0` after Ctrl-C. A separate root `dmesg --follow-new --time-format=raw` process survived as an orphan (PID 9071 at 15:05); the capture script's worker cleanup needs correction before a later test. The debug mask is no longer armed.
+
+- Operator follow-up: unplugging USB-C restores the laptop screen without rebooting or restarting gdm. Ctrl-C was pressed in the watcher; the state log ends with `DRM debug restored to 0`. The boot ID remains unchanged, and eDP is connected/enabled with backlight powered. This is real recovery on disconnect, though external video still fails. Do not repeat the same hotplug merely for evidence; the DP-only capture already contains rate, lanes, training-level requests, and failure sequence.
+- Detailed LTTPR1 phase-2 evidence: the repeater's clock recovery succeeded at 810000 kHz/4 lanes. Its AUX status repeatedly requested pre-emphasis levels 1, 2, then 3 on all lanes (`0xf0030`/`0xf0011`); the transmitter driver reported it sent those settings, but channel equalization never converged. The QMP v8 code programs its PCS LN0/LN1 drive-level table during initial clock configuration, while `set_voltages` updates only the TX drive/emphasis registers. That mismatch is a focused next hypothesis, not yet hardware-proven.

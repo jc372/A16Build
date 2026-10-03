@@ -1,0 +1,10 @@
+{
+  "format_version": "1.0.0",
+  "change_version": "1",
+  "change_date": "2022-01-13 02:35:15",
+  "source": "2.0.1.0",
+  "import": "operator_settings_asus_default.json",
+  "settings": {
+    "operator": "ASUS_TUF"
+  }
+}

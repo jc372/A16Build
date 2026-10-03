@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<Group id='LTMConfig'>
+	<version>1</version>
+	<StartOnInit>0</StartOnInit>
+	<NumConfigs>2</NumConfigs>
+
+		<ConfigName>default</ConfigName>
+		<BrightnessStrength>0x100</BrightnessStrength>
+		<TemporalFilterSpeedStepSizeOne>0x8</TemporalFilterSpeedStepSizeOne>
+		<TemporalControlTableInput>0x0 0x1E 0x32 0x80 0xA0 0x100</TemporalControlTableInput>
+		<TemporalControlTableOutput>0x1 0x2 0x4 0x4 0x4 0x4</TemporalControlTableOutput>
+		<TemporalControlTableLength>0x6</TemporalControlTableLength>
+		
+		<BacklightReductionTableInput>0x0 0x80 0xC0 0xE0 0xFF</BacklightReductionTableInput>
+		<BacklightReductionTableOutput>0x0 0x6D 0xA3 0xBE 0xD9</BacklightReductionTableOutput>
+		<BacklightReductionTableLength>0x5</BacklightReductionTableLength>
+		<BacklightReductionEnable>0x1</BacklightReductionEnable>
+		
+		<AmbientLightToContrastStrTableInput> 0x0 0x64 0x3E8 0x2710 0x7530</AmbientLightToContrastStrTableInput>
+		<AmbientLightToContrastStrTableOutput>0x0 0x20 0x080 0x0100 0x100</AmbientLightToContrastStrTableOutput>
+		<AmbientLightToContrastStrTableLength>0x5 </AmbientLightToContrastStrTableLength>
+		<AmbientLightToContrastStrEnable>0x1</AmbientLightToContrastStrEnable>
+		
+		<BacklightToContrastStrTableInput>0x0 0x40 0x80 0xC0 0xFF</BacklightToContrastStrTableInput>
+		<BacklightToContrastStrTableOutput>0x100 0x100 0x100 0x100 0x100</BacklightToContrastStrTableOutput>
+		<BacklightToContrastStrTableLength>0x5</BacklightToContrastStrTableLength>
+		<BacklightToContrastStrEnable>0x1</BacklightToContrastStrEnable>
+		
+		<LuxStartPoint>0x0</LuxStartPoint>
+		<param001>256</param001>
+		<param002>128</param002>
+		<param003>0x5</param003>
+		<param004>60</param004>
+		<param005>1.2</param005>
+		<param006>50</param006>
+		<param007>0x8</param007>
+
+		<!-- HDR + LTM Mode -->
+		<ConfigName1>Mode1</ConfigName1>
+		<BrightnessStrength1>0x100</BrightnessStrength1>		
+		<TemporalFilterSpeedStepSizeOne1>0x8</TemporalFilterSpeedStepSizeOne1>
+		<TemporalControlTableInput1>0x0 0x1E 0x32 0x80 0xA0 0x100</TemporalControlTableInput1>
+		<TemporalControlTableOutput1>0x1 0x2 0x4 0x4 0x4 0x4</TemporalControlTableOutput1>
+		<TemporalControlTableLength1>0x6</TemporalControlTableLength1>
+		
+        <BacklightReductionTableInput1>0x0 0x80 0xC0 0xE0 0xFF</BacklightReductionTableInput1>
+        <BacklightReductionTableOutput1>0x0 0x80 0xC0 0xE0 0xFF</BacklightReductionTableOutput1>
+		<BacklightReductionTableLength1>0x5</BacklightReductionTableLength1>
+        <BacklightReductionEnable1>0x0</BacklightReductionEnable1>
+		
+		<AmbientLightToContrastStrTableInput1>0x0 0x64 0x3E8 0x2710 0x7530</AmbientLightToContrastStrTableInput1>
+		<AmbientLightToContrastStrTableOutput1>0x0 0x0 0x0 0x40 0x80</AmbientLightToContrastStrTableOutput1>
+		<AmbientLightToContrastStrTableLength1>0x5 </AmbientLightToContrastStrTableLength1>
+		<AmbientLightToContrastStrEnable1>0x1</AmbientLightToContrastStrEnable1>
+		
+		<BacklightToContrastStrTableInput1>0x0 0x40 0x80 0xC0 0xFF</BacklightToContrastStrTableInput1>
+		<BacklightToContrastStrTableOutput1>0x100 0x100 0x100 0x100 0x100</BacklightToContrastStrTableOutput1>
+		<BacklightToContrastStrTableLength1>0x5</BacklightToContrastStrTableLength1>
+		<BacklightToContrastStrEnable1>0x1</BacklightToContrastStrEnable1>
+		
+		<LuxStartPoint1>0x0</LuxStartPoint1>
+		<param001_1>256</param001_1>
+		<param002_1>128</param002_1>
+		<param003_1>0x5</param003_1>
+		<param004_1>60</param004_1>
+		<param005_1>1.2</param005_1>
+		<param006_1>50</param006_1>
+		<param007_1>0x8</param007_1>
+
+</Group>

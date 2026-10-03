@@ -1,0 +1,140 @@
+External display plug -> desktop freeze.  ASUS Zenbook A16 (UX3607OA), 2026-09-17.
+Kernel 7.3.0-rc3-next-20260914, booted via the drm.debug=0x1ff debug entry.
+
+The monitor went on the USB-C port (USB-C DP alt-mode, DRM connector card1-DP-2).  The screen froze
+and the machine was power-cycled.  Extracted from the journal of the freeze boot -- the previous
+boot, whose entries run 09:08-10:45 on 2026-09-17 -- and from the boot after it.  DRM ioctl tracing
+was on for the freeze boot, so its raw journal is 7.6 million lines; DRM_IOCTL_WAIT_VBLANK,
+"Missed N kernel messages", the module list and the register dump are dropped here.
+
+Timeline of the freeze (all 2026-09-17):
+  10:44:42  the dock/monitor's USB hub enumerates on the USB-C port
+  10:44:43  MSI monitor's USB device + its usb-storage interface; sdb read errors
+  10:44:44  ucsi reports the partner's alt-mode list as malformed (29 x duplicate DP SVID)
+  10:44:45.733  DP-2 output enable starts: rate=810000, 4 lanes
+  10:44:45.744  disp_cc_mdss_dptx1_link_clk -- status stuck at 'off' -> -EBUSY
+  10:44:45.745  DP prepare fails, rc=-16
+  10:44:46 - 10:44:54  the atomic commit never completes: vblank timeout, frame done timeout
+  10:45:07  USB bus 3 deregistered
+  10:45:22  power key pressed (logind still serviced it) -> power cycle
+
+==============================================================================
+1. The trigger: the monitor enumerates on USB-C, and the PD firmware reports a broken alt-mode list
+==============================================================================
+Sep 17 10:44:42.500643 jc kernel: usb 3-1: new high-speed USB device number 2 using xhci-hcd
+Sep 17 10:44:42.625045 jc kernel: usb 3-1: New USB device found: idVendor=2109, idProduct=2211, bcdDevice=5.33
+Sep 17 10:44:42.625318 jc kernel: usb 3-1: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+Sep 17 10:44:42.625400 jc kernel: usb 3-1: Product: USB2.0 Hub             
+Sep 17 10:44:42.625474 jc kernel: usb 3-1: Manufacturer: VIA Labs, Inc.         
+Sep 17 10:44:43.449587 jc kernel: usb 3-1.3: new full-speed USB device number 3 using xhci-hcd
+Sep 17 10:44:43.576039 jc kernel: usb 3-1.3: New USB device found: idVendor=1462, idProduct=3fa4, bcdDevice=0.00
+Sep 17 10:44:43.576321 jc kernel: usb 3-1.3: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+Sep 17 10:44:43.576403 jc kernel: usb 3-1.3: Product: MSI Gaming Controller
+Sep 17 10:44:43.576470 jc kernel: usb 3-1.3: Manufacturer: MS
+Sep 17 10:44:43.576545 jc kernel: usb 3-1.3: SerialNumber: A02019010700
+Sep 17 10:44:43.669569 jc kernel: input: MS MSI Gaming Controller as /devices/platform/soc@0/a800000.usb/xhci-hcd.2.auto/usb3/3-1/3-1.3/3-1.3:1.0/0003:1462:3FA4.0005/input/input28
+Sep 17 10:44:43.669661 jc kernel: hid-generic 0003:1462:3FA4.0005: input,hidraw4: USB HID v1.10 Device [MS MSI Gaming Controller] on usb-xhci-hcd.2.auto-1.3/input0
+Sep 17 10:44:43.669876 jc kernel: usb-storage 3-1.3:1.1: USB Mass Storage device detected
+Sep 17 10:44:43.671517 jc kernel: scsi host1: usb-storage 3-1.3:1.1
+Sep 17 10:44:44.823082 jc kernel: Buffer I/O error on dev sdb, logical block 0, async page read
+
+-- ucsi / PMIC-glink, on the port the monitor is on (con2):
+Sep 17 10:44:44.829516 jc kernel: ucsi_glink.pmic_glink_ucsi pmic_glink.ucsi.0: con2: Firmware bug: duplicate partner altmode SVID 0xff01 at offset 1, ignoring but please contact the BIOS vendor to fix this issue.
+Sep 17 10:44:44.833838 jc kernel: ucsi_glink.pmic_glink_ucsi pmic_glink.ucsi.0: con2: Firmware bug: duplicate partner altmode SVID 0xff01 at offset 2, ignoring but please contact the BIOS vendor to fix this issue.
+Sep 17 10:44:44.838481 jc kernel: ucsi_glink.pmic_glink_ucsi pmic_glink.ucsi.0: con2: Firmware bug: duplicate partner altmode SVID 0xff01 at offset 3, ignoring but please contact the BIOS vendor to fix this issue.
+Sep 17 10:44:44.838607 jc kernel: ucsi_glink.pmic_glink_ucsi pmic_glink.ucsi.0: con2: Firmware bug: duplicate partner altmode SVID 0xff01 at offset 4, ignoring but please contact the BIOS vendor to fix this issue.
+Sep 17 10:44:44.839524 jc kernel: ucsi_glink.pmic_glink_ucsi pmic_glink.ucsi.0: con2: Firmware bug: duplicate partner altmode SVID 0xff01 at offset 5, ignoring but please contact the BIOS vendor to fix this issue.
+Sep 17 10:44:44.841581 jc kernel: ucsi_glink.pmic_glink_ucsi pmic_glink.ucsi.0: con2: Firmware bug: duplicate partner altmode SVID 0xff01 at offset 6, ignoring but please contact the BIOS vendor to fix this issue.
+    (all of these are SVID 0xff01 = VESA DisplayPort; 29 in total, offsets 1..29)
+
+==============================================================================
+2. The failure: the DP output's link clock never comes up, so DP prepare returns -16 (-EBUSY)
+==============================================================================
+Sep 17 10:44:45.733995 jc kernel: [drm:msm_dp_ctrl_on_link [msm]] rate=810000, num_lanes=4, pixel_rate=469000
+Sep 17 10:44:45.744755 jc kernel: disp_cc_mdss_dptx1_link_clk status stuck at 'off'
+Sep 17 10:44:45.744761 jc kernel: WARNING: drivers/clk/qcom/clk-branch.c:87 at clk_branch_toggle+0x19c/0x1d8, CPU#6: KMS thread/7283
+Sep 17 10:44:45.744994 jc kernel:  clk_branch_toggle+0x19c/0x1d8 (P)
+Sep 17 10:44:45.744999 jc kernel:  clk_branch2_enable+0x28/0x58
+Sep 17 10:44:45.745007 jc kernel:  clk_core_enable+0x9c/0x260
+Sep 17 10:44:45.745011 jc kernel:  clk_enable+0x38/0x98
+Sep 17 10:44:45.745017 jc kernel:  clk_bulk_enable+0x40/0xd8
+Sep 17 10:44:45.745022 jc kernel:  msm_dp_ctrl_enable_mainlink_clocks+0x180/0x338 [msm]
+Sep 17 10:44:45.745032 jc kernel:  msm_dp_ctrl_on_link+0xc4/0x3d8 [msm]
+Sep 17 10:44:45.745040 jc kernel:  msm_dp_display_atomic_enable+0xa4/0x3d8 [msm]
+Sep 17 10:44:45.745045 jc kernel:  msm_dp_bridge_atomic_enable+0x20/0x50 [msm]
+Sep 17 10:44:45.745054 jc kernel:  drm_atomic_bridge_chain_enable+0x6c/0xe8
+Sep 17 10:44:45.745059 jc kernel:  drm_atomic_helper_commit_encoder_bridge_enable+0x108/0x1d0
+Sep 17 10:44:45.745063 jc kernel:  drm_atomic_helper_commit_modeset_enables+0x40/0x78
+Sep 17 10:44:45.745069 jc kernel:  msm_atomic_commit_tail+0x170/0xcc0 [msm]
+Sep 17 10:44:45.745080 jc kernel:  commit_tail+0xcc/0x2a0
+Sep 17 10:44:45.745085 jc kernel:  drm_atomic_helper_commit+0x1b4/0x1d0
+Sep 17 10:44:45.745090 jc kernel:  drm_atomic_commit+0x98/0x100
+Sep 17 10:44:45.745098 jc kernel:  drm_mode_atomic_ioctl+0xc88/0x10c0
+Sep 17 10:44:45.745106 jc kernel:  drm_ioctl_kernel+0xe4/0x178
+Sep 17 10:44:45.745111 jc kernel:  drm_ioctl+0x2c4/0x650
+Sep 17 10:44:45.745117 jc kernel:  __arm64_sys_ioctl+0xc8/0x158
+Sep 17 10:44:45.745131 jc kernel:  invoke_syscall.constprop.0+0xb0/0x130
+Sep 17 10:44:45.745136 jc kernel:  el0_svc_common.constprop.0+0x44/0x140
+Sep 17 10:44:45.745142 jc kernel:  do_el0_svc+0x28/0x58
+Sep 17 10:44:45.745146 jc kernel:  el0_svc+0x48/0x310
+Sep 17 10:44:45.745150 jc kernel:  el0t_64_sync_handler+0xc0/0x110
+Sep 17 10:44:45.745155 jc kernel:  el0t_64_sync+0x1b8/0x1c0
+
+==============================================================================
+3. The freeze: the atomic commit that was bringing the output up never completes
+==============================================================================
+Sep 17 10:44:46.117628 jc kernel: [drm:dpu_encoder_phys_vid_wait_for_commit_done:545] [dpu error]vblank timeout: 80821300
+Sep 17 10:44:46.117643 jc kernel: [drm:dpu_kms_wait_for_commit_done:527] [dpu error]wait for commit done returned -110
+Sep 17 10:44:46.154675 jc kernel: [drm:dpu_encoder_frame_done_timeout:2730] [dpu error]enc38 frame done timeout
+Sep 17 10:44:52.288953 jc kernel: [drm:dpu_encoder_phys_vid_wait_for_commit_done:545] [dpu error]vblank timeout: 80821300
+Sep 17 10:44:52.289056 jc kernel: [drm:dpu_kms_wait_for_commit_done:527] [dpu error]wait for commit done returned -110
+Sep 17 10:44:52.339552 jc kernel: [drm:dpu_encoder_phys_vid_wait_for_commit_done:545] [dpu error]vblank timeout: 80821300
+Sep 17 10:44:52.339566 jc kernel: [drm:dpu_kms_wait_for_commit_done:527] [dpu error]wait for commit done returned -110
+Sep 17 10:44:52.379555 jc kernel: [drm:dpu_encoder_frame_done_timeout:2730] [dpu error]enc38 frame done timeout
+Sep 17 10:44:54.082517 jc kernel: [drm:dpu_encoder_phys_vid_wait_for_commit_done:545] [dpu error]vblank timeout: 80821300
+Sep 17 10:44:54.082527 jc kernel: [drm:dpu_kms_wait_for_commit_done:527] [dpu error]wait for commit done returned -110
+Sep 17 10:44:54.133605 jc kernel: [drm:dpu_encoder_phys_vid_wait_for_commit_done:545] [dpu error]vblank timeout: 80821300
+Sep 17 10:44:54.133612 jc kernel: [drm:dpu_kms_wait_for_commit_done:527] [dpu error]wait for commit done returned -110
+Sep 17 10:44:54.174205 jc kernel: [drm:dpu_encoder_frame_done_timeout:2730] [dpu error]enc38 frame done timeout
+Sep 17 10:44:54.188082 jc kernel: [drm:dpu_encoder_phys_vid_wait_for_commit_done:545] [dpu error]vblank timeout: 80821300
+Sep 17 10:44:54.188090 jc kernel: [drm:dpu_kms_wait_for_commit_done:527] [dpu error]wait for commit done returned -110
+Sep 17 10:44:54.239105 jc kernel: [drm:dpu_encoder_phys_vid_wait_for_commit_done:545] [dpu error]vblank timeout: 80821300
+Sep 17 10:44:54.239111 jc kernel: [drm:dpu_kms_wait_for_commit_done:527] [dpu error]wait for commit done returned -110
+
+==============================================================================
+4. Aftermath inside the same boot: the kernel is still alive, the compositor is not
+==============================================================================
+Sep 17 10:22:48.507559 jc kernel: xhci-hcd xhci-hcd.2.auto: USB bus 3 deregistered
+Sep 17 10:45:07.742538 jc kernel: xhci-hcd xhci-hcd.2.auto: USB bus 3 deregistered
+Sep 17 10:45:22.849308 jc systemd-logind[1788]: Power key pressed short.
+    After the last [dpu error] the gnome-shell KMS thread repeats DRM_IOCTL_WAIT_VBLANK until the
+    power key is pressed.  logind services that key, so nothing panicked -- /var/crash is empty and
+    kdump has no vmcore.  The display pipeline is wedged; the kernel is not.
+
+==============================================================================
+5. The HDMI output fails the same way at every boot, with nothing plugged in
+   (usb_2_qmpphy -> hdmi-bridge: the A16's HDMI takes the tert combo PHY's DP lanes)
+==============================================================================
+Jul 28 08:48:57.300001 jc kernel: gcc_usb3_tert_phy_com_aux_clk status stuck at 'off'
+Jul 28 08:48:57.300012 jc kernel: WARNING: drivers/clk/qcom/clk-branch.c:87 at clk_branch_toggle+0x19c/0x1d8, CPU#7: (udev-worker)/705
+Jul 28 08:48:57.300219 jc kernel:  clk_branch_toggle+0x19c/0x1d8 (P)
+Jul 28 08:48:57.300227 jc kernel:  clk_branch2_enable+0x28/0x58
+Jul 28 08:48:57.300233 jc kernel:  clk_core_enable+0x9c/0x260
+Jul 28 08:48:57.300239 jc kernel:  clk_enable+0x38/0x98
+Jul 28 08:48:57.300249 jc kernel:  clk_bulk_enable+0x40/0xd8
+Jul 28 08:48:57.300256 jc kernel:  qmp_combo_com_init+0x114/0xa10 [phy_qcom_qmp_combo]
+Jul 28 08:48:57.300262 jc kernel:  qmp_combo_dp_init+0x3c/0xa0 [phy_qcom_qmp_combo]
+Jul 28 08:48:57.300268 jc kernel:  phy_init+0x7c/0x188
+Jul 28 08:48:57.300275 jc kernel:  msm_dp_ctrl_phy_init+0x78/0x178 [msm]
+Jul 28 08:48:57.300281 jc kernel:  msm_dp_display_host_phy_init+0xbc/0x180 [msm]
+Jul 28 08:48:57.300286 jc kernel:  msm_dp_bridge_detect+0x80/0x320 [msm]
+Jul 28 08:48:57.300293 jc kernel:  drm_bridge_connector_detect+0x44/0x100 [drm_display_helper]
+Jul 28 08:48:57.300300 jc kernel:  detect_connector_status+0x70/0xa8
+Jul 28 08:48:57.300305 jc kernel:  drm_helper_probe_single_connector_modes+0x4f8/0x720
+Jul 28 08:48:57.300311 jc kernel:  drm_client_modeset_probe+0x1ac/0x1d28
+Jul 28 08:48:57.300317 jc kernel:  __drm_fb_helper_initial_config_and_unlock+0x48/0x690
+Jul 28 08:48:57.300323 jc kernel:  drm_fb_helper_initial_config+0x4c/0x98
+
+Jul 28 08:48:57.631028 jc kernel: phy phy-88e1000.phy.12: phy_power_on was called before phy_init
+Jul 28 08:48:58.912996 jc kernel: phy phy-88e1000.phy.12: phy_power_on was called before phy_init
+Jul 28 08:49:04.401517 jc kernel: phy phy-88e1000.phy.12: phy_power_on was called before phy_init

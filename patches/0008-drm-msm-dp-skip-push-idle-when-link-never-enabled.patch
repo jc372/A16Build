@@ -1,0 +1,40 @@
+From: Jesse Casco <jesse.casco@gmail.com>
+Subject: [PATCH] drm/msm/dp: skip PUSH_IDLE when the link was never enabled
+Date: Sat, 08 Aug 2026 13:13:41 -0400
+Message-ID: <20260808171325.133041-1-jesse.casco@gmail.com>
+State:       posted, not merged (not in mainline or linux-next at the time of writing)
+Tested-by:   ASUS Zenbook A16 (UX3607OA) on next-20260803 / next-20260807 (the reporter's machine)
+Why we want it: on glymur, a failed eDP enable followed by any disable path (DPMS off,
+             session exit, `echo 1 > /sys/class/graphics/fb0/blank`) makes TrustZone
+             force-stop SOCCP/ADSP and the SoC resets silently ~50 ms later.
+Not needed once the eDP link trains (which BRINGUP/patches/0006+0007 make it do); it is
+insurance for a boot where training still fails.
+Provenance:  verbatim from https://patchew.org/linux/20260808171325.133041-1-jesse.casco@gmail.com/
+
+diff --git a/drivers/gpu/drm/msm/dp/dp_display.c b/drivers/gpu/drm/msm/dp/dp_display.c
+index bc646d172..5d2ddf180 100644
+--- a/drivers/gpu/drm/msm/dp/dp_display.c
++++ b/drivers/gpu/drm/msm/dp/dp_display.c
+@@ -1458,6 +1458,20 @@ void msm_dp_display_atomic_disable(struct msm_dp *dp)
+ 
+ 	msm_dp_display = container_of(dp, struct msm_dp_display_private, msm_dp_display);
+ 
++	/*
++	 * If .atomic_enable() bailed out - link training failure is the common
++	 * case - the mainlink was never brought up and ->power_on stayed false.
++	 * Driving the PUSH_IDLE pattern into a controller that was never
++	 * enabled times out, and .atomic_post_disable() then drops the
++	 * controller's runtime-PM reference without tearing the PHY back down,
++	 * because msm_dp_display_disable() returns early on !power_on.  On
++	 * glymur (Snapdragon X2 Elite) that combination is answered by a
++	 * TrustZone-level SOCCP/ADSP force-stop and a silent SoC reset.
++	 * There is nothing to push idle, so leave it alone.
++	 */
++	if (!dp->power_on)
++		return;
++
+ 	msm_dp_ctrl_push_idle(msm_dp_display->ctrl);
+ }
+ 
+-- 
+2.55.0

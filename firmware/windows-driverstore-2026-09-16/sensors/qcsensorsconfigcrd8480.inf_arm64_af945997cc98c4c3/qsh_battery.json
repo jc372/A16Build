@@ -1,0 +1,16 @@
+{
+  "config":
+  {
+    "hw_platform": ["IDP", "QCB", "CRD", "MTP", "Surf", "RCM"],
+    "platform_family": ["161", "168"]
+  },
+  "polling_rates": {
+    "owner": "qsh_battery",
+    "rate_low": { "type": "int", "ver": "0",
+      "data": "6"
+    },
+    "rate_high": { "type": "int", "ver": "0",
+      "data": "2"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+[a16-bt-dtb] === a16-bt-dtb --install 20260916-163138 ===
+
+== decompile the DTB in use ==
+[a16-bt-dtb] source  : /boot/efi/a16boot/glymur-asus-zenbook-a16-ux3607oa.dtb.a16stock (161943 bytes, stock)
+[a16-bt-dtb] dts     : 9736 lines, 2 uart14 node(s)
+
+== add the serdev client and the stub rails ==
+[a16-bt-dtb] patched : 1 bluetooth node, 6 stub rails
+
+== compile and verify ==
+[a16-bt-dtb] compiled: 163093 bytes, sha256 d8fe1c623d65f5ad
+   present : qcom,wcn7850-bt
+   present : vddrfa1p9-supply
+   present : regulator-always-on
+   present : qcom,geni-uart
+   present : qcom,geni-debug-uart
+   model   : "ASUS Zenbook A16 (UX3607OA)"
+   uart14 still okay: status = "okay"
+   w-disable2-gpios = <0x58 0x74 0x00>   <- kill line deasserted at pwrseq probe (BT allowed)
+
+== install the DTB and add the menu entry ==
+[a16-bt-dtb] ESP   : /boot/efi/a16boot/glymur-a16-bt-test.dtb  (sha256 d8fe1c623d65f5add2a17682cb3c8af5979c9d7539cd28cb34f8d88fde61de28)
+[a16-bt-dtb] /boot : /boot/glymur-a16-bt-test.dtb
+   /boot/efi/a16boot/grub.cfg : entry appended (backup kept)
+   /boot/efi/EFI/Boot/grub.cfg : entry appended (backup kept)
+   /boot/efi/EFI/ubuntu/grub.cfg : entry appended (backup kept)
+   /boot/efi/EFI/ubuntu_snapdragon/grub.cfg : entry appended (backup kept)
+[a16-bt-dtb] 4 config file(s) updated
+
+
+== arm the paths entries [1]-[4] load ==
+[a16-bt-dtb] (a16-bt-arm.sh rc=0)
+
+[a16-bt-dtb] NEXT: reboot (no menu interaction needed), then:
+               bash /home/jc/a16-payload/a16-bt-setup.sh status
+[a16-bt-dtb] Expect: serdev client PRESENT, 6 of 6 stub rails, then either hci0 in
+[a16-bt-dtb] /sys/class/bluetooth with a name, or the qca firmware lines naming what it
+[a16-bt-dtb] asked for.  'command 0xfc00 tx timeout' again means the kill line was not it.
+[a16-bt-dtb] log: /var/tmp/a16-bt-dtb-20260916-163138.log

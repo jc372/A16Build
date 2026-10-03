@@ -1,0 +1,82 @@
+PATCH 0018 -- ath12k: leave the MHI link (and the device's firmware) up across a suspend
+
+What the morning's measurements add up to: this platform's suspend does not take the WiFi device's
+power or its firmware away.  The device comes out of the resume in mission mode (MHI state 0x2 = M1)
+and refuses a fresh firmware start with -22 ("qmi wlan config request failed, result: 1, err: 90"),
+which is only possible for a device whose firmware is still running.  So the part that a suspend
+actually destroys is the *host* side: ath12k_core_suspend_late() -> ath12k_hif_power_down(is_suspend)
+-> mhi_power_down_keep_dev() + MHI deinit, and every attempt to re-attach afterwards has failed --
+the driver's own re-attach is refused by the firmware (0015), and taking the driver off the device and
+re-probing it dies on the MHI/QRTR objects left behind by the failed resume (11:37: mhi_queue oops +
+"sysfs: cannot create duplicate filename '/bus/mhi/devices/mhi0_IPCR'").
+
+So do not tear it down.  With a16_keep_mhi_up=Y, ath12k_core_suspend_late() keeps the MHI link, the CE
+and HTC state and the rings exactly as they are (it still disables the interrupts, so an associated
+radio cannot wake the system straight back up), and ath12k_core_resume_early() has nothing to power up
+or re-attach: it re-arms the interrupts and lets the resume finish with the driver exactly as it was
+before the suspend.  Nothing is reset, nothing is re-attached, nothing is rebuilt.
+
+Enable with:  options ath12k a16_skip_global_reset_on_resume=Y a16_keep_mhi_up=Y
+              (sudo ~/a16.sh radiofix install keepmhi)
+
+Default is N, i.e. the behaviour of 0014/0015/0016/0017, so the two can be compared from the same
+module.
+
+--- a/drivers/net/wireless/ath/ath12k/core.c	2026-09-22 11:42:13.148778158 -0400
++++ b/drivers/net/wireless/ath/ath12k/core.c	2026-09-22 11:41:18.022823113 -0400
+@@ -38,8 +38,22 @@
+  * tools read this before they unbind the driver or start a suspend test, so a stale module cannot be
+  * used for something that needs a later fix -- 'radiofix revive' on a build without 0017 is a freeze.
+  */
+-static int a16_fix_level = 17;
+-module_param(a16_fix_level, int, 0444);MODULE_PARM_DESC(a16_fix_level, "A16: highest local fix included in this build");
++static int a16_fix_level = 18;
++module_param(a16_fix_level, int, 0444);
++
++/* A16: do not tear the MHI link down when the system suspends.  Measured on this machine: the
++ * suspend keeps the WiFi device powered and its firmware running (that is what makes the resume's
++ * SoC global reset wrong -- the device refuses a fresh firmware start with -22), so the only part
++ * that is actually destroyed across a suspend is the *host* side: ath12k_hif_power_down(is_suspend=true)
++ * -> mhi_power_down_keep_dev() + MHI deinit, and the re-attach afterwards is what fails.  Leave the
++ * MHI link, the CE/HTC state and the rings exactly as they were and see whether the radio simply
++ * keeps working: ath12k_core_suspend_late() then only disables the interrupts (so an associated radio
++ * cannot wake the system straight back up) and ath12k_core_resume_early() re-arms them.
++ */
++static bool a16_keep_mhi_up;
++module_param(a16_keep_mhi_up, bool, 0644);
++MODULE_PARM_DESC(a16_keep_mhi_up, "A16: keep the MHI link (and the device's firmware) up across a suspend");
++MODULE_PARM_DESC(a16_fix_level, "A16: highest local fix included in this build");
+ MODULE_PARM_DESC(ftm_mode, "Boots up in factory test mode");
+ EXPORT_SYMBOL(ath12k_ftm_mode);
+ 
+@@ -183,7 +197,10 @@
+ 	ath12k_hif_irq_disable(ab);
+ 	ath12k_hif_ce_irq_disable(ab);
+ 
+-	ath12k_hif_power_down(ab, true);
++	if (a16_keep_mhi_up)
++		ath12k_info(ab, "A16: suspend -- keeping the MHI link and the device's firmware up\n");
++	else
++		ath12k_hif_power_down(ab, true);
+ 
+ 	return 0;
+ }
+@@ -199,6 +216,18 @@
+ 
+ 	reinit_completion(&ab->restart_completed);
+ 
++	/* A16: a16_keep_mhi_up -- the device and the MHI link were never touched, so there is nothing
++	 * to power up and nothing to re-attach: re-arm the interrupts that suspend_late disabled and let
++	 * the resume finish with the driver exactly as it was before the suspend.
++	 */
++	if (a16_keep_mhi_up) {
++		ath12k_info(ab, "A16: resume -- the device and the MHI link were left up; re-arming the interrupts\n");
++		ath12k_hif_ce_irq_enable(ab);
++		ath12k_hif_irq_enable(ab);
++		complete(&ab->restart_completed);
++		return 0;
++	}
++
+ 	/* A16: mark this power up as a resume, so the PCI HAL can tell it apart from a cold boot --
+ 	 * on a resume the device was deliberately kept (mhi_power_down_keep_dev) and its firmware
+ 	 * should still be running.

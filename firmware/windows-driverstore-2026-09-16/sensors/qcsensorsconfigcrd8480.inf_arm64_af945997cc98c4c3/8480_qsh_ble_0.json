@@ -1,0 +1,12 @@
+{
+  "config":{
+    "hw_platform": ["IDP", "QCB", "CRD", "MTP", "Surf", "RCM"],
+    "platform_family": ["161", "168"]
+  },
+  "qsh_ble_config":{
+    "owner": "qsh_ble",
+    "uart_instance":{ "type": "int", "ver": "0",
+        "data": "6"
+    }
+  }
+}

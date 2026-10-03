@@ -1,0 +1,22 @@
+--- a/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_vid.c
++++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_vid.c
+@@ -543,6 +543,19 @@
+ 		msecs_to_jiffies(50));
+ 	if (ret <= 0) {
+ 		DPU_ERROR("vblank timeout: %x\n", hw_ctl->ops.get_flush_register(hw_ctl));
++		/*
++		 * A16 (2026-10-02): this flush waits for a vsync that can never arrive when
++		 * the frame source is dead - an external DP stream whose link training
++		 * failed has no pixel clock and never produces one.  Left pending, every
++		 * later commit touching this CRTC times out as well, and because one
++		 * atomic commit covers both CRTCs the whole desktop freezes (only a reboot
++		 * clears it).  Drop the pending flush so the pipeline keeps running; this
++		 * commit still reports the timeout and the external output stays dark.
++		 */
++		if (hw_ctl->ops.clear_pending_flush && hw_ctl->ops.trigger_flush) {
++			hw_ctl->ops.clear_pending_flush(hw_ctl);
++			hw_ctl->ops.trigger_flush(hw_ctl);
++		}
+ 		return -ETIMEDOUT;
+ 	}
+ 

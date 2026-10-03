@@ -1,0 +1,35 @@
+Sep 17 08:23:19 jc kernel: Internal error: Oops: 0000000096000004 [#1]  SMP
+Sep 17 08:23:19 jc kernel: Modules linked in: snd_seq_dummy(E) snd_hrtimer(E) rfcomm(E) reset_gpio(E) snd_soc_wsa884x(E) regmap_sdw(E) gpio_shared_proxy(E) q6apm_lpass_dais(E) q6prm_clocks(E) q6apm_dai(E) snd_q6dsp_common(E) q6prm(E) algif_hash(E) algif_skcipher(E) af_alg(E) bnep(E) snd_soc_hdmi_codec(E) qrtr_mhi(E) snd_q6apm(E) apr(E) nls_iso8859_1(E) binfmt_misc(E) panel_samsung_atna33xc20(E) fastrpc(E) rpmsg_ctrl(E) rpmsg_char(E) qrtr_smd(E) qcom_pd_mapper(E) msm(OE) hci_uart(E) soundwire_qcom(E) snd_soc_x1e80100(E) btqca(E) snd_soc_qcom_sdw(E) btrtl(E) snd_soc_qcom_common(E) slimbus(E) snd_soc_lpass_wsa_macro(E) snd_soc_lpass_va_macro(E) btbcm(E) soundwire_bus(E) snd_soc_lpass_macro_common(E) ath12k_wifi7(E) btintel(E) ath12k(E) pm8941_pwrkey(E) snd_soc_core(E) qcom_spmi_temp_alarm(E) bluetooth(E) snd_seq_midi(E) snd_seq_midi_event(E) snd_compress(E) industrialio(E) ocmem(E) ac97_bus(E) ubwc_config(E) mac80211(E) snd_rawmidi(E) gpu_sched(E) snd_pcm_dmaengine(E) snd_seq(E) drm_gpuvm(E) snd_pcm(E) qcom_q6v5_pas(E) drm_exec(E)
+Sep 17 08:23:19 jc kernel:  snd_seq_device(E) drm_dp_aux_bus(E) qcom_pil_info(E) cfg80211(E) snd_timer(E) drm_display_helper(E) qcom_q6v5(E) qcom_sysmon(E) mdt_loader(E) qcom_tsens(E) cec(E) snd(E) mhi(E) qcom_common(E) qcomtee(E) qcom_glink_smem(E) libarc4(E) qcom_glink(E) soundcore(E) rc_core(E) gpucc_glymur(OE) qcom_smd(E) tee(E) display_connector(E) leds_gpio(E) simple_bridge(E) input_leds(E) joydev(E) sch_fq_codel(E) efi_pstore(E) uas(E) usb_storage(E) hid_asus(E) usbhid(E) hid_multitouch(E) hid_generic(E) nvme(E) i2c_hid_of(E) nvme_core(E) i2c_hid_acpi_prp0001(E) i2c_hid(E) nvme_keyring(E) nvme_auth(E) xhci_plat_hcd(E) hid(E) phy_nxp_ptn3222(E) i2c_qcom_geni(E) qcom_pon(E) reboot_mode(E) rtc_pm8xxx(E) nvmem_qcom_spmi_sdam(E) phy_qcom_eusb2_repeater(E) pinctrl_spmi_gpio(E) qcom_spmi_pmic(E) regmap_spmi(E) pmic_glink_altmode(E) ucsi_glink(E) aux_hpd_bridge(E) typec_ucsi(E) qcom_battmgr(E) socinfo(E) spmi_pmic_arb(E) phy_qcom_qmp_combo(E) spmi_devres(E) aux_bridge(E) qcom_stats(E) dwc3_qcom(E) spmi(E) dispcc_glymur(E)
+Sep 17 08:23:19 jc kernel:  pinctrl_glymur(E) evacc_glymur(E) typec(E) dwc3(E) videocc_glymur(E) phy_qcom_edp(E) ulpi(E) qcom_aoss(E) thunderbolt(E) phy_qcom_m31_eusb2(E) phy_qcom_qmp_usb(E) camcc_glymur(E) udc_core(E) pinctrl_sm8650_lpass_lpi(E) gpi(E) pinctrl_lpass_lpi(E) aes_ce_blk(E) qrtr(E) nvmem_qfprom(E) gxclkctl_kaanapali(E) llcc_qcom(E) qcom_hwspinlock(E) tcsrcc_glymur(E) ghash_ce(E) qcom_rpmh_regulator(E) bam_dma(E) phy_qcom_qmp_pcie(E) qcom_cpucp_mbox(E) pmic_glink(E) icc_bwmon(E) gcc_glymur(E) gf128mul(E) pdr_interface(E) sm4_ce_gcm(E) qcom_pdr_msg(E) pwrseq_pcie_m2(E) sm4_ce_ccm(E) sm4_ce(E) sm4_ce_cipher(E) qmi_helpers(E) sm4(E) rpmsg_core(E) smp2p(E) qcom_smem(E) fixed(E) qnoc_glymur(E) gpio_keys(E) dmi_sysfs(E) autofs4(E)
+Sep 17 08:23:19 jc kernel: CPU: 3 UID: 60578 PID: 4557 Comm: gnome-shell Tainted: G        W  OE       7.3.0-rc3-next-20260914 #1 PREEMPT(lazy) 
+Sep 17 08:23:19 jc kernel: Tainted: [W]=WARN, [O]=OOT_MODULE, [E]=UNSIGNED_MODULE
+Sep 17 08:23:19 jc kernel: Hardware name: ASUS Zenbook A16 UX3607OA/UX3607OA, BIOS UX3607OA.312 07/12/2026
+Sep 17 08:23:19 jc kernel: pstate: 81400009 (Nzcv daif +PAN -UAO -TCO +DIT -SSBS BTYPE=--)
+Sep 17 08:23:19 jc kernel: pc : msm_gpu_create_private_vm+0x6c/0x1c0 [msm]
+Sep 17 08:23:19 jc kernel: lr : msm_gpu_create_private_vm+0x44/0x1c0 [msm]
+Sep 17 08:23:19 jc kernel: sp : ffff80008e7ebae0
+Sep 17 08:23:19 jc kernel: x29: ffff80008e7ebae0 x28: 0000000000000018 x27: 0000000000000018
+Sep 17 08:23:19 jc kernel: x26: 0000000000000018 x25: ffff0008092fde00 x24: 0000000000000040
+Sep 17 08:23:19 jc kernel: x23: ffff80008e7ebc38 x22: ffffb36b3dc44d28 x21: ffff00081954d000
+Sep 17 08:23:19 jc kernel: x20: ffff0008092fde00 x19: 0000000000000020 x18: ffff80008af5d060
+Sep 17 08:23:19 jc kernel: x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+Sep 17 08:23:19 jc kernel: x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
+Sep 17 08:23:19 jc kernel: x11: 0000000000000000 x10: 0000000000000000 x9 : ffffb36b8fc0df4c
+Sep 17 08:23:19 jc kernel: x8 : ffff0008216b60c8 x7 : 0000000000000000 x6 : 0000000000000000
+Sep 17 08:23:19 jc kernel: x5 : ffff00084d98a2c0 x4 : ffff000821032000 x3 : ffff0008216b6000
+Sep 17 08:23:19 jc kernel: x2 : 0000000000000001 x1 : 0000000000000001 x0 : 000000000467fa07
+Sep 17 08:23:19 jc kernel: Call trace:
+Sep 17 08:23:19 jc kernel:  msm_gpu_create_private_vm+0x6c/0x1c0 [msm] (P)
+Sep 17 08:23:19 jc kernel:  msm_context_vm+0xcc/0x128 [msm]
+Sep 17 08:23:19 jc kernel:  adreno_get_param+0x40/0x440 [msm]
+Sep 17 08:23:19 jc kernel:  msm_ioctl_get_param+0x58/0xe0 [msm]
+Sep 17 08:23:19 jc kernel:  drm_ioctl_kernel+0xe4/0x178
+Sep 17 08:23:19 jc kernel:  drm_ioctl+0x2c4/0x650
+Sep 17 08:23:19 jc kernel:  __arm64_sys_ioctl+0xc8/0x158
+Sep 17 08:23:19 jc kernel:  invoke_syscall.constprop.0+0xb0/0x130
+Sep 17 08:23:19 jc kernel:  el0_svc_common.constprop.0+0x44/0x140
+Sep 17 08:23:19 jc kernel:  do_el0_svc+0x28/0x58
+Sep 17 08:23:19 jc kernel:  el0_svc+0x48/0x310
+Sep 17 08:23:19 jc kernel:  el0t_64_sync_handler+0xc0/0x110
+Sep 17 08:23:19 jc kernel:  el0t_64_sync+0x1b8/0x1c0

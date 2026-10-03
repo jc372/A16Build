@@ -1,0 +1,31 @@
+{
+  "format_version": "1.0.0",
+  "change_version": "1",
+  "change_date": "2022-12-15 03:02:06",
+  "source": "2.0.5.0",
+  "import": "operator_settings_asus_rog.json",
+  "settings": {
+    "default_profile": [
+      {
+        "endpoint": "internal_speaker",
+        "spatial_audio": false,
+        "profile": "game"
+      },
+      {
+        "endpoint": "internal_speaker",
+        "spatial_audio": true,
+        "profile": "game"
+      },
+      {
+        "endpoint": "headphone",
+        "spatial_audio": false,
+        "profile": "game"
+      },
+      {
+        "endpoint": "headphone",
+        "spatial_audio": true,
+        "profile": "game"
+      }
+    ]
+  }
+}

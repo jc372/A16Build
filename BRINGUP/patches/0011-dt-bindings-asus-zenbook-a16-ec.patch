@@ -1,0 +1,90 @@
+From: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+
+Some Qualcomm Snapdragon X2 Elite (Extreme)-based ASUS laptops (at
+least the Zenbook A14 and A16) expose a custom, somewhat
+Qualcomm reference-derived EC interface. It allows for fan speed
+reporting, keyboard backlight setting and receiving of a number of
+miscellaneous sideband events.
+
+Introduce a binding for that class of devices.
+
+Signed-off-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+---
+ .../asus,zenbook-a16-ux3607oa-ec.yaml              | 65 ++++++++++++++++++++++
+ 1 file changed, 65 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/embedded-controller/asus,zenbook-a16-ux3607oa-ec.yaml b/Documentation/devicetree/bindings/embedded-controller/asus,zenbook-a16-ux3607oa-ec.yaml
+new file mode 100644
+index 000000000000..27e03c011ad6
+--- /dev/null
++++ b/Documentation/devicetree/bindings/embedded-controller/asus,zenbook-a16-ux3607oa-ec.yaml
+@@ -0,0 +1,65 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/embedded-controller/asus,zenbook-a16-ux3607oa-ec.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: ASUS Zenbook A16 (UX3607OA)-class Embedded Controller
++
++maintainers:
++  - Konrad Dybcio <konradybcio@kernel.org>
++
++description:
++  The Qualcomm Snapdragon X2 series-based ASUS Zenbook A16 (and similar
++  machines) come with a custom EC firmware, loosely based on the
++  Qualcomm reference ("Hamoa CRD EC") implementation, with a lot of
++  customization.
++
++properties:
++  compatible:
++    enum:
++      - asus,zenbook-a14-ux3407na-ec
++      - asus,zenbook-a16-ux3607oa-ec
++
++  reg:
++    const: 0x76
++
++  interrupts:
++    maxItems: 1
++
++  "#thermal-sensor-cells":
++    const: 1
++
++  wakeup-source: true
++
++required:
++  - compatible
++  - reg
++  - interrupts
++  - '#thermal-sensor-cells'
++  - wakeup-source
++
++additionalProperties: false
++
++examples:
++  - |
++    #include <dt-bindings/interrupt-controller/irq.h>
++    i2c {
++        #address-cells = <1>;
++        #size-cells = <0>;
++
++        embedded-controller@76 {
++          compatible = "asus,zenbook-a16-ux3607oa-ec";
++          reg = <0x76>;
++
++          interrupts-extended = <&tlmm 66 IRQ_TYPE_EDGE_FALLING>;
++
++          pinctrl-0 = <&ec_int_n_default>;
++          pinctrl-names = "default";
++
++          #thermal-sensor-cells = <1>;
++
++          wakeup-source;
++        };
++    };
++...
+
+-- 
+2.55.0
+

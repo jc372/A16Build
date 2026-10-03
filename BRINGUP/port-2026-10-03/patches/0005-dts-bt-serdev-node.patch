@@ -1,0 +1,72 @@
+--- a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
++++ b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
+@@ -1266,3 +1266,69 @@
+ 
+ 	status = "okay";
+ };
++
++/*
++ * A16: the Bluetooth UART (uart14, a98000.serial) is a serdev controller, so its tty is
++ * hidden from userspace and btattach cannot open it. hci_qca binds a serdev *client*, and
++ * the DT had none -- only a port graph child. Six supplies are requested by hci_qca's
++ * wcn7850 data and described nowhere, so they are stubbed as always-on fixed regulators.
++ * TEST, NOT A FIX: the rails are very likely already powered (WLAN on the same module
++ * works), but they still have to be mapped for real before this is more than a test.
++ */
++&uart14 {
++	bluetooth {
++		compatible = "qcom,wcn7850-bt";
++		max-speed = <3200000>;
++		vddio-supply = <&a16_bt_vddio>;
++		vddaon-supply = <&a16_bt_vddaon>;
++		vdddig-supply = <&a16_bt_vdddig>;
++		vddrfa0p8-supply = <&a16_bt_vddrfa0p8>;
++		vddrfa1p2-supply = <&a16_bt_vddrfa1p2>;
++		vddrfa1p9-supply = <&a16_bt_vddrfa1p9>;
++	};
++};
++
++&{/} {
++	a16_bt_vddio: regulator-bt-vddio {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDIO";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		regulator-always-on;
++	};
++	a16_bt_vddaon: regulator-bt-vddaon {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDAON";
++		regulator-min-microvolt = <600000>;
++		regulator-max-microvolt = <600000>;
++		regulator-always-on;
++	};
++	a16_bt_vdddig: regulator-bt-vdddig {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDDIG";
++		regulator-min-microvolt = <850000>;
++		regulator-max-microvolt = <850000>;
++		regulator-always-on;
++	};
++	a16_bt_vddrfa0p8: regulator-bt-vddrfa0p8 {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDRFA0P8";
++		regulator-min-microvolt = <800000>;
++		regulator-max-microvolt = <800000>;
++		regulator-always-on;
++	};
++	a16_bt_vddrfa1p2: regulator-bt-vddrfa1p2 {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDRFA1P2";
++		regulator-min-microvolt = <1200000>;
++		regulator-max-microvolt = <1200000>;
++		regulator-always-on;
++	};
++	a16_bt_vddrfa1p9: regulator-bt-vddrfa1p9 {
++		compatible = "regulator-fixed";
++		regulator-name = "A16_BT_VDDRFA1P9";
++		regulator-min-microvolt = <1900000>;
++		regulator-max-microvolt = <1900000>;
++		regulator-always-on;
++	};
++};

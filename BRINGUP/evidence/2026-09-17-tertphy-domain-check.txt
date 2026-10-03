@@ -1,0 +1,70 @@
+External display / tert combo PHY — result of the "is the COM block just unpowered" test
+2026-09-17, boot 20167034-408a-430a-9b8f-e45b68b7725a (kernel 7.3.0-rc3-next-20260914,
+entry [3], acpi=off). Raw logs: /home/jc/a16-payload/tert-phy-power-20260917-112706.log
+(the check) and /home/jc/a16-payload/boots/20260917-112728-20167034/ (the same boot's snapshot).
+
+What was armed before this boot (tools/a16-tert-phy-power.sh arm, 11:25): `status = okay` on
+`/soc@0/usb@a000000`, the only DT consumer of `GCC_USB30_TERT_GDSC`. Both DTB copies were edited
+(/boot and the ESP twin), backups `*.a16-tertphy-bak`.
+
+Result — the armed consumer never voted, so the domain and the clock are unchanged:
+
+  live /soc@0/usb@a000000 status = okay                       (the arm took effect)
+  gcc_usb30_tert_gdsc            off-0                        (unchanged)
+  gcc_usb3_tert_phy_com_aux_clk  enable=0 prepare=0           (unchanged)
+  gcc_usb3_tert_phy_com_aux_clk status stuck at 'off'
+  Failed to enable clk 'com_aux': -16
+  phy phy-88e1000.phy.9: phy init failed --> -16
+  card1-HDMI-A-1 disconnected                                 (nothing plugged)
+
+Why — the consumer deferred and never finished probing:
+
+  platform a000000.usb: deferred probe pending: dwc3-qcom: failed to register DWC3 Core
+
+That message is `dev_err_probe()` after `dwc3_core_probe()` failed in `dwc3_qcom_probe()`
+(drivers/usb/dwc3/dwc3-qcom.c:710); the device is on the deferred-probe list, i.e. the driver
+returned -EPROBE_DEFER — it is waiting on the same combo PHY that cannot come up. So
+`genpd_dev_pm_attach()` never powers the domain: nothing in the DT is bound to it.
+
+Consequence for the theory: lever 1 (a disabled-but-present controller) is a dead end, because
+this consumer can never bind. It does not by itself say the domain is innocent.
+
+Second lever, staged in the same tool and not yet booted (2026-09-17 11:32):
+`sudo bash ~/a16.sh tertphy arm bridge` adds a *single* `power-domains = <&gcc GCC_USB30_TERT_GDSC>`
+to `/hdmi-bridge` (`parade,ps185hdm`, driver `simple-bridge`, which binds on every boot). The
+platform bus calls `dev_pm_domain_attach(dev, true)` before probe, and with exactly one
+power-domain specifier `genpd_dev_pm_attach()` calls `genpd_power_on()`
+(drivers/pmdomain/core.c:3411) — so the domain is forced on at attach with no dependency on
+dwc3-qcom. A device with two or more specifiers is skipped by that path (core.c:3457), which is
+why this cannot simply be appended to `phy@88e1000`, which already has one.
+
+Verified without touching /boot: arm/revert were run against a copy of the DTB in /tmp
+(`A16_DT_FILES=...`), writing `72 18` (raw `48 12`) — byte-identical to the usb node's specifier —
+idempotent on a second run, and `revert` restores both levers.
+
+Result of the second lever (`arm bridge`, boot 3a63a313, 2026-09-17 12:05:34)
+-----------------------------------------------------------------------------
+
+  live /hdmi-bridge power-domains = 0000004800000012   (== the usb node's = <&gcc GCC_USB30_TERT_GDSC>)
+  /hdmi-bridge driver = simple-bridge
+  gcc_usb30_tert_gdsc            on                     <- was off-0
+  gcc_usb3_tert_phy_com_aux_clk  enable=0 prepare=0     (no `stuck at 'off'`)
+  journal: no com_aux, no `Failed to enable clk`, no `phy init failed`, no
+           `disp_cc_mdss_dptx1_link_clk status stuck at 'off'`, and none of the
+           `phy_power_on was called before phy_init` lines either
+  card1-eDP-1 connected (2880x1800), card1-HDMI-A-1 disconnected (nothing plugged)
+
+Counted in the per-boot snapshots: the previous boot (20167034) has 3 `com_aux`/`stuck at` lines,
+this one has none. The connector-probe path that used to fail (`drm_fb_helper_initial_config` ->
+`drm_bridge_connector_detect` -> `msm_dp_bridge_detect` -> `msm_dp_ctrl_phy_init`) still runs — the
+difference is that the PHY initialises without error now.
+
+Conclusion: the tert combo PHY's COM clock was only unpowered (the hypothesis item 10 was built on).
+The fix is a machine-DTS change — the domain needs a consumer (or an always-on/keepalive vote) —
+not the upstream PHY programming series. What is not yet proven is an actual output: no monitor has
+been through it since, and the connector stays `disconnected` with nothing plugged. Next test:
+`sudo bash ~/a16.sh display watch` over SSH, plug a monitor into HDMI, watch for link training; if
+the picture freezes instead, the kernel survives and `sudo bash ~/a16.sh display recover` (monitor
+unplugged) rebuilds the desktop — patch 0008 is the insurance if a failed enable tries to push idle
+into a controller that never came up.
+

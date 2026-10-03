@@ -1,0 +1,23 @@
+USB-C trial of training-time PCS drive candidate: LTTPR EQ still fails; system hard-reset after Settings interaction
+Date: 2026-10-02
+
+Candidate and boot
+- The user staged `dpdrive`, rebooted, and the test boot loaded QMP srcversion `37880928124460B5D4B8E91` (SHA-256 `7c0818c9d5150d25b9b936f665cbe65ac30affc66406f3a5c7d031e5e07b57ac`) plus MSM srcversion `BBD010BD47287F02B65EE84`.
+- After the operator-reported hard reboot, the current boot ID is `f19af953-4fda-4095-993e-7ef5204d93cd`, different from prior boot `9ca78d41-00c1-4f0c-8b0f-3f3a46aed590`. Current boot has the same candidate QMP and MSM srcversions. DP-1/DP-2/HDMI are currently disconnected. `/var/lib/a16-dpdrive/7.3.0-rc3-next-20260914` rollback state remains present, as do the underlying QMP and dpnext rollback states.
+
+Operator report
+- Connected USB-C: laptop panel stayed on and usable; external monitor appeared to be recognized briefly, then reported no video.
+- The monitor appeared in Display Settings. Opening/interacting there immediately froze the machine; the operator hard rebooted.
+- The operator-visible timing associates the freeze with the failed display attempt, but does not identify whether the trigger was GNOME Settings, a modeset/retry, the DPU timeout condition, another kernel path, or a broader reset cause.
+
+Previous-boot journal evidence
+- The current kernel journal for the previous boot contains no DP watcher files for this attempt; use this boot's persistent journal only.
+- It shows the training-time marker sequence at 8100 Mbps: PCS level `0x02`, then `0x12`, `0x16`, `0x1a`, matching the requests this candidate was intended to track.
+- LTTPR1 link training #2 still failed with `ret=-110`; main link training failed `rc=-104`, DP prepare failed, and DPU vblank/commit/frame-done/IRQ timeouts followed. This happened in two closely spaced attempts in the first ~62 seconds of monotonic boot time. The PCS refresh ran but did not make this link train successfully.
+- Journal continues to report many DPU timeouts well after link-training failure. Near 143.6 seconds it records USB disconnects and xHCI controller removal. There is no recorded kernel panic, oops, watchdog reset, explicit orderly shutdown, or identified reset initiator in the captured journal tail. Those absences do not prove what caused the reboot.
+- No dedicated `display watch dp` log was running, so the new attempt's connector snapshots, exact EQ status bytes, and settings/modeset sequence were not captured separately.
+
+Decision / safe next step
+- Do not repeat the USB-C test or open Display Settings with the monitor connected on this candidate. It did not fix LTTPR1 equalization and the user experienced a freeze followed by hard reboot.
+- Safest next move is revert only the new `dpdrive` layer and reboot to the prior, already-tested QMP v5 + MSM trial: `sudo bash ~/a16.sh dpdrive revert`. This is a disk/initrd revert, not a live module unload; follow with reboot. Do not run `dpnext revert` before `dpdrive revert`, because the layers have independent initrd backups.
+- The experiment narrows one hypothesis: PCS levels now tracked the commanded settings, yet EQ still timed out. Remaining likely areas include LTTPR pattern/capability sequencing or the physical/link-rate margin; the Settings-induced system freeze remains unlocalized. Preserve this as a failure result; do not present PCS update as a fix.

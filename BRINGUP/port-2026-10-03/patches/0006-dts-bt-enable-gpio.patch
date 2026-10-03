@@ -1,0 +1,16 @@
+--- a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
++++ b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
+@@ -1285,6 +1285,13 @@
+ 		vddrfa0p8-supply = <&a16_bt_vddrfa0p8>;
+ 		vddrfa1p2-supply = <&a16_bt_vddrfa1p2>;
+ 		vddrfa1p9-supply = <&a16_bt_vddrfa1p9>;
++		/* 0006: the chip is held disabled on pin 116 (the wlan-connector declares it
++		 * as w-disable2, ACTIVE_LOW). hci_qca requires enable-gpios -- without it
++		 * the radio never leaves reset and every UART command times out (-110).
++		 * Pin and polarity taken from the Glymur reference board:
++		 * glymur-crd.dtsi: bt-enable-gpios = <&tlmm 116 GPIO_ACTIVE_HIGH>.  */
++		enable-gpios = <&tlmm 116 GPIO_ACTIVE_HIGH>;
++		bt-enable-gpios = <&tlmm 116 GPIO_ACTIVE_HIGH>;
+ 	};
+ };
+ 

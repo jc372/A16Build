@@ -1,0 +1,11 @@
+--- a/drivers/phy/qualcomm/phy-qcom-edp.c
++++ b/drivers/phy/qualcomm/phy-qcom-edp.c
+@@ -1085,7 +1085,7 @@
+ 	.aux_cfg = edp_phy_aux_cfg_v8,
+ 	.vco_div_cfg = edp_phy_vco_div_cfg_v8,
+ 	.dp_swing_pre_emph_cfg = &dp_phy_swing_pre_emph_cfg_v8,
+-	.edp_swing_pre_emph_cfg = &edp_phy_swing_pre_emph_cfg,
++	.edp_swing_pre_emph_cfg = &dp_phy_swing_pre_emph_cfg_v8,   /* A16 experiment: v8 drive values on the eDP path */
+ 	.ver_ops = &qcom_edp_phy_ops_v8,
+ };
+ 

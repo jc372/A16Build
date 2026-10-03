@@ -1,0 +1,152 @@
+From: Hermes <hermes@localhost>
+Subject: usb: host: xhci-plat: do not fail the system suspend when the HCD was left unsuspended (A16)
+
+On the ASUS Zenbook A16 UX3607OA (Glymur / QCC2072), the second and every later system suspend of a
+boot aborts:
+
+  xhci-hcd xhci-hcd.1.auto: PM: dpm_run_callback(): platform_pm_suspend returns -22
+  xhci-hcd xhci-hcd.1.auto: PM: failed to suspend async: error -22
+  PM: Some devices failed to suspend, or early wake event detected
+
+-22 is -EINVAL from xhci_suspend(), i.e. hcd->state (or xhci->shared_hcd->state) is not
+HC_STATE_SUSPENDED when xhci_plat_suspend_common() runs: the USB core did not suspend this HCD's
+root hubs.  True on the first suspend of a boot, false on every one after the first resume.  The
+abort takes the whole system suspend with it, so a closed lid leaves the machine awake and
+systemd-logind retries the impossible suspend every ~33 s (~10 %/h of drain).
+
+This lands in the platform glue because it is the only piece of the path that is a loadable module
+(xhci-plat-hcd.ko) on this machine: leave the controller running instead of failing, and skip the
+matching resume, mirroring the existing `sideband_at_suspend` pattern.  The state of hcd and its
+root hubs is logged at each transition so the underlying reason can be identified.
+
+Provenance: ours, workaround.  Not for upstream as-is: on a healthy controller the -EINVAL should be
+fixed (the HCD should be bus-suspended), not skipped.
+
+State: carried on the A16, verify with `sudo lid_sleep test 2` (both attempts should sleep).
+
+--- a/drivers/usb/host/xhci-plat.c	2026-09-14 12:00:02.000000000 -0400
++++ b/drivers/usb/host/xhci-plat.c	2026-09-17 15:29:01.702086589 -0400
+@@ -466,6 +466,77 @@
+ }
+ EXPORT_SYMBOL_GPL(xhci_plat_remove);
+ 
++/*
++ * A16 (glymur-asus-zenbook-a16-ux3607oa) -- the second and later system suspends of a boot abort
++ * because the USB core does not leave this HCD in the state xhci_suspend() requires:
++ *
++ *   xhci-hcd xhci-hcd.1.auto: PM: dpm_run_callback(): platform_pm_suspend returns -22
++ *   xhci-hcd xhci-hcd.1.auto: PM: failed to suspend async: error -22
++ *
++ * -22 is -EINVAL from xhci_suspend() (drivers/usb/host/xhci.c), which xhci_plat_suspend_common()
++ * calls once the USB core has suspended the root hubs.  It returns -EINVAL when hcd->state or
++ * xhci->shared_hcd->state is not HC_STATE_SUSPENDED, i.e. when the root hubs were not suspended --
++ * which is true for the first suspend of a boot and false for every one after it, on this board's
++ * xhci-hcd.1.auto (a400000.usb, the instance with the internal USB mass storage device on its
++ * SuperSpeed bus; xhci-hcd.2.auto is unaffected).  Because the platform callback fails, the whole
++ * system suspend is aborted, and systemd-logind retries it every ~33 s while the lid stays shut:
++ * the machine never sleeps and the battery drains ~10 %/h.
++ *
++ * Nothing in userspace can put hcd->state right, so the useful behaviour is to leave the controller
++ * running and let the system suspend proceed -- the controller was never stopped, so there is
++ * nothing to resume either, and the resume half skips symmetrically.  Both the skip and the state
++ * logging are module parameters so a boot can be compared with and without them:
++ *
++ *   /sys/module/xhci_plat_hcd/parameters/a16_skip_unsuspended_hcd   (fix; default 1)
++ *   /sys/module/xhci_plat_hcd/parameters/a16_state_log              (diagnostic; default 1)
++ */
++struct a16_xhci_state {
++	struct xhci_hcd *xhci;
++	bool skipped_suspend;
++};
++
++static struct a16_xhci_state a16_xhci_states[4];
++static bool a16_skip_unsuspended_hcd = 1;
++static bool a16_state_log = 1;
++module_param(a16_skip_unsuspended_hcd, bool, 0644);
++module_param(a16_state_log, bool, 0644);
++
++static struct a16_xhci_state *a16_xhci_state(struct xhci_hcd *xhci)
++{
++	struct a16_xhci_state *slot = NULL;
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(a16_xhci_states); i++) {
++		if (a16_xhci_states[i].xhci == xhci)
++			return &a16_xhci_states[i];
++		if (!a16_xhci_states[i].xhci && !slot)
++			slot = &a16_xhci_states[i];
++	}
++
++	if (!slot)
++		slot = &a16_xhci_states[0];
++
++	slot->xhci = xhci;
++	return slot;
++}
++
++static void a16_log_hcd_state(struct device *dev, const char *where)
++{
++	struct usb_hcd *hcd = dev_get_drvdata(dev);
++	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
++	struct usb_hcd *shared = xhci->shared_hcd;
++
++	if (!a16_state_log)
++		return;
++
++	dev_info(dev,
++		 "A16 %s: hcd state=%d flags=0x%lx root_hub=%d | shared state=%d root_hub=%d | wakeup=%d quirks=0x%llx\n",
++		 where, hcd->state, hcd->flags, hcd->self.root_hub->state,
++		 shared ? shared->state : -1,
++		 shared ? shared->self.root_hub->state : -1,
++		 device_may_wakeup(dev), (unsigned long long)xhci->quirks);
++}
++
+ static int xhci_plat_suspend_common(struct device *dev)
+ {
+ 	struct usb_hcd	*hcd = dev_get_drvdata(dev);
+@@ -478,13 +549,26 @@
+ 	ret = xhci_priv_suspend_quirk(hcd);
+ 	if (ret)
+ 		return ret;
++	a16_log_hcd_state(dev, "suspend");
++
+ 	/*
+ 	 * xhci_suspend() needs `do_wakeup` to know whether host is allowed
+ 	 * to do wakeup during suspend.
+ 	 */
+ 	ret = xhci_suspend(xhci, device_may_wakeup(dev));
+-	if (ret)
++	if (ret) {
++		if (ret == -EINVAL && hcd->state != HC_STATE_SUSPENDED &&
++		    a16_skip_unsuspended_hcd) {
++			dev_info(dev,
++				 "A16: the USB core left this HCD unsuspended (state=%d, shared=%d) -- leaving the controller running so the system suspend can proceed
++",
++				 hcd->state, xhci->shared_hcd ? xhci->shared_hcd->state : -1);
++			a16_xhci_state(xhci)->skipped_suspend = true;
++			return 0;
++		}
++
+ 		return ret;
++	}
+ 
+ 	if (!device_may_wakeup(dev) && (xhci->quirks & XHCI_SUSPEND_RESUME_CLKS)) {
+ 		clk_disable_unprepare(xhci->clk);
+@@ -563,6 +647,17 @@
+ {
+ 	struct usb_hcd	*hcd = dev_get_drvdata(dev);
+ 	struct xhci_plat_priv *priv = hcd_to_xhci_priv(hcd);
++	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
++	struct a16_xhci_state *a16_state = a16_xhci_state(xhci);
++
++	/* A16: the matching suspend was skipped, so the controller never stopped: skip the resume too. */
++	if (a16_state->skipped_suspend) {
++		a16_state->skipped_suspend = false;
++		a16_log_hcd_state(dev, "resume (suspend was skipped)");
++		return 0;
++	}
++
++	a16_log_hcd_state(dev, "resume");
+ 
+ 	if (priv->sideband_at_suspend) {
+ 		priv->sideband_at_suspend = 0;

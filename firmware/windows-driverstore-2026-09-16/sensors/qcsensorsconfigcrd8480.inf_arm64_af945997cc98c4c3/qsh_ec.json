@@ -1,0 +1,27 @@
+{
+  "config": {
+    "hw_platform": ["CRD", "RUMI"],
+    "platform_family": ["161", "168"]
+  },
+  "qsh_ec_sensor": {
+    "owner": "qsh_ec",
+    "open_threshold"     : { "type": "flt", "ver": "0", "data": "37.0"},
+    "close_threshold"    : { "type": "flt", "ver": "0", "data": "33.0"},
+    "angle_threshold"    : { "type": "flt", "ver": "0", "data": "10.0" },
+    "lux_threshold"      : { "type": "flt", "ver": "0", "data": "20.0" },
+    "ec_who_am_i_val"    : { "type": "int", "ver": "0", "data": "4"  },
+    "ec_who_am_i_addr"   : { "type": "int", "ver": "0", "data": "67" },
+    "ec_version_val"     : { "type": "int", "ver": "0", "data": "17"   },
+    "ec_capabilities"    : { "type": "int", "ver": "0", "data": "3"   },
+    "ec_version_addr"    : { "type": "int", "ver": "0", "data": "68" },
+    "ec_data_addr"       : { "type": "int", "ver": "0", "data": "160" },
+    "ec_on_delay_ms"     : { "type": "int", "ver": "0", "data": "100" }
+  },
+  "qsh_ec_platform": {
+    "owner": "qsh_ec",
+    "bus_type"           : { "type": "int", "ver": "0", "data": "0"   },
+    "bus_instance"       : { "type": "int", "ver": "0", "data": "7"   },
+    "slave_config"       : { "type": "int", "ver": "0", "data": "105"  },
+    "max_bus_speed_khz"  : { "type": "int", "ver": "0", "data": "400" }
+  }
+}

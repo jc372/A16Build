@@ -1,0 +1,10 @@
+{
+  "format_version": "1.0.0",
+  "change_version": "1",
+  "change_date": "2022-08-10 02:42:32",
+  "source": "2.0.4.0",
+  "import": "operator_settings_asus_default.json",
+  "settings": {
+    "operator": "ASUS_ProArt"
+  }
+}

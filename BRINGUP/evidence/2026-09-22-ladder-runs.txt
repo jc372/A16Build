@@ -1,0 +1,149 @@
+# 2026-09-22 — the sleep/radio ladder, run on the machine (four results)
+
+Operator ran the ladder from `sudo bash ~/a16.sh wifisleep` on the morning of 2026-09-22, plus
+`code ec install` for the EC driver.  Logs: `~/a16-payload/wifi-sleep-*.log`,
+`~/a16-payload/ec-*.log`.  The machine restarted twice (boots `e977939d`, `a1658140`; current
+`df749ba3`) — a hard reset loses the journal, so the tool logs are the record.
+
+## 1. s2idle does NOT protect the radio — and that is the useful answer
+
+`sudo wifisleep s2idle on` (persisted in `/etc/tmpfiles.d/a16-mem-sleep.conf`), then `test` on a
+healthy radio, boot `a1658140` (`wifi-sleep-20260922-085918.log`):
+
+    --- attempt 1  (2026-09-22 08:59:19)  mem_sleep=s2idle  hook=no  radio=associated ---
+       SUSPEND: slept (0s uptime).
+       RADIO  : waiting up to 60 s for the interface to come back...
+       RADIO  : GONE -- not associated, no route on wlP4p1s0.  The kernel's last words:
+       ath12k_wifi7_pci 0004:01:00.0: failed to enable PMF QOS: -11
+       ath12k_wifi7_pci 0004:01:00.0: fail to start mac operations in pdev idx 0 ret -11
+       ath12k_wifi7_pci 0004:01:00.0: wmi command 16387 timeout
+       ath12k_wifi7_pci 0004:01:00.0: failed to send WMI_PDEV_SET_PARAM cmd
+
+s2idle runs the *same* driver callbacks as deep suspend with the platform still powered — so the
+radio's death is **ath12k's own resume path**, not the platform powering the module down.  That
+retires "the platform cut the M.2 rail" as the explanation, and with it the hope that s2idle was the
+whole fix.
+
+(The same wedge is visible in `wifi-sleep-20260922-085408.log` on the previous boot, where the radio
+was already dead before the attempt ran.)
+
+## 2. Unloading ath12k hangs the machine — on a healthy radio, not just a wedged one
+
+`sudo wifisleep hook test` (`wifi-sleep-20260922-085522.log`) ends right after the command it was
+about to run:
+
+    -- driver reload, now, on the running system (no suspend involved)
+       what it does: modprobe -r ath12k_wifi7 ath12k ; echo 1 > /sys/bus/pci/rescan ; modprobe ath12k_wifi7
+
+and no further line: the machine stopped responding and had to be restarted.  2026-09-17 had the same
+freeze, but on a radio that was *already* wedged, which left open the possibility that it was the
+wedge.  It is not: **`modprobe -r ath12k_wifi7 ath12k` hangs this kernel with a healthy radio.**
+
+Consequences: the reload-across-suspend hook is not a fix anyone can use, the driver-teardown rungs of
+`reload_wifi` are equally out (`A16_I_KNOW=1` stays as the only way to call them), and `wifisleep`
+now refuses `hook test` / `hook on` unless `A16_I_KNOW=1`.
+
+## 3. The xhci module swap ran cleanly, and the next resume was a black screen
+
+`sudo wifisleep xhci` on boot `a1658140` (`wifi-sleep-20260922-090107.log`) did exactly what it says:
+
+    modprobe -r exit     : 0
+    modprobe exit        : 0
+    loaded srcversion    : 0B4B259A2DBD385DF8BAE78
+    VERIFIED: the patched module is loaded (a16_skip_unsuspended_hcd=Y, a16_state_log=Y).
+
+Reported afterwards: **the machine would not resume — the screen stayed black and the keyboard
+backlight was off — so it was restarted.**  The kernel log of that boot stops without the suspend
+lines (a hard reset does not flush the journal), so there is no `A16 …` transition line to read, and
+the patched module is not loaded now (the stock one loads again at boot: srcversion
+`B815AC5012DCB68AE787AF`).
+
+So: not a single suspend attempt is on record with patches/0010 loaded.  The swap itself re-creates
+the USB controllers, which is the most likely reason the following resume went wrong, and it is a good
+argument for landing the fix the way it is meant to land — in the initramfs, so it is simply the
+module that boots (`wifisleep xhci persist`, which backs up the old one and verifies the file list
+before anything is replaced).  The swap is now refused by default too.
+
+## 4. The EC driver works, and it is not the radio's missing piece
+
+`sudo bash ~/a16.sh ec install` → restart → `a16-ec.sh verify` (`ec-20260922-085106.log`):
+
+    DT node        : 1   (1 = the DTB arm worked)
+    i2c client     : 9-0076
+    driver bound   : asus-glymur-ec
+    module loaded  : asus_glymur_ec  used by 0
+    hwmon          : /sys/class/hwmon/hwmon21
+       fan1_input = 1980   → 2.0      (the CPU fan, ~1980 RPM)
+       fan2_input = 1320   → 1.3
+       temp1_input = 33000 → 33.0
+       temp2_input = 36000 → 36.0
+    kbd backlight  : asus::kbd_backlight
+    EC interrupts  :  260:  5  ...  msmgpio  66 Edge  9-0076
+
+So the fans, both temperature sensors, the event interrupt and the keyboard-backlight LED all exist —
+the driver binds and works.  Two notes:
+
+* **"No keyboard backlight" is the LED being at 0**, not a missing device:
+  `/sys/class/leds/asus::kbd_backlight/max_brightness = 3`, `brightness = 0`.  Set it with
+  `sudo bash ~/a16.sh ec kbd 2` (0–3).  If the EC refuses the write, that is the finding.
+* The radio still died in the s2idle suspend *with the EC driver bound* (§1), i.e. the EC's
+  modern-standby notify did not save it.  The EC is a working subsystem now, but it is not the fix
+  for the Wi-Fi wedge.
+
+## What is left, and it is one experiment at a time
+
+The teardown-based levers are gone (§2, §3), s2idle is answered (§1), and the EC is in (§4).  What
+remains is the driver: `patches/0014` makes `ath12k_pci_power_up()` skip the SoC global reset when the
+call comes from a resume (`ATH12K_FLAG_A16_RESUMING`), because the suspend deliberately keeps the
+device (`mhi_power_down_keep_dev()`) and the reset throws away the firmware that is supposed to still
+be running.  Built and ABI-verified here (vermagic the kernel's, `module_layout` `0xe6658f7b`, all 345
+imports carry the kernel's CRC; new parameter `a16_skip_global_reset_on_resume`).
+
+    sudo ~/a16step                    # installs it, then says: start again into [3]
+    (start again into [3])
+    sudo ~/a16step                    # starts the suspend test detached; wake it with the lid
+    sudo ~/a16step                    # the verdict
+
+The same one line each time: it works out whether it should install, test, or report — which matters
+here because the console may be a black screen and SSH is the only way in.  `sudo ~/a16step status`,
+`verdict` and `log` are read-only; `sudo ~/a16step xhci` lands patches/0010 in the initramfs later.
+
+And: if a resume leaves the screen black, the machine is often alive — SSH in and read
+`sudo journalctl -k -b | grep -E 'A16: resume|restart complete|MHI state'` before power-cycling, since
+a hard reset is what loses the evidence.
+
+## 5. The run with patches/0014 installed (boot `3c9417ab`, 09:28) — and the USB controller died too
+
+After the export-CRC repair the module loaded (ath12k_wifi7 came up, the radio worked), then the
+suspend test ran.  The journal of that boot has the patch's own lines, and they say the patch did the
+part it was meant to do:
+
+    09:29:39  ath12k_wifi7_pci 0004:01:00.0: A16: resume -- not resetting the device (MHI state 0x0); the firmware should still be running
+    09:29:39  mhi mhi0: Wait for device to enter SBL or Mission mode
+    09:29:39  ath12k_wifi7_pci 0004:01:00.0: A16: resume -- MHI state after power up: 0x2 (0x2 = M0, i.e. the device is running)
+    09:29:39  ath12k_wifi7_pci 0004:01:00.0: A16: resume timed out -- no firmware-ready event arrived after the resume
+    09:29:39  ath12k_wifi7_pci 0004:01:00.0: failed to resume core: -110
+
+`0x2` is `MHI_STATE_M0`: with the reset skipped the device **is** running its firmware — the earlier
+failure mode (a device that never got past `Wait for device to enter SBL`) is gone.  What is left is
+the driver's own bookkeeping: it waits for a firmware-restart event, and a device that was never reset
+has nothing to announce, so the 20 s wait expires and the radio is left half-attached (hence the WMI
+timeouts in the same log).  That is patches/0015 (`ath12k_core_resume_early()` re-attaches the driver
+to the kept device through the same path the firmware-crash recovery uses).
+
+**The same resume killed the USB controller**, which is why the dock's ethernet could not come back:
+
+    09:29:39  xhci-hcd xhci-hcd.1.auto: WARNING: Host System Error
+    09:29:39  xhci-hcd xhci-hcd.1.auto: xHCI host not responding to stop endpoint command
+    09:29:39  xhci-hcd xhci-hcd.1.auto: xHCI host controller not responding, assume dead
+    09:29:39  xhci-hcd xhci-hcd.1.auto: HC died; cleaning up
+    09:29:39  xhci-hcd xhci-hcd.1.auto: Timeout while waiting for stop endpoint command
+    09:29:39  usb 2-2: USB disconnect, device number 2        (the internal card reader)
+    09:29:39  PM: suspend exit
+
+`xhci-hcd.1.auto` is `a400000.usb` — the same controller as the "second suspend aborts with -22"
+finding, and the one carrying the dock's ASIX ethernet (`Bus 002 Device 003`) and the internal CRW.  So
+one resume currently costs two things: the radio (0014/0015) and this controller (its own fault, and
+also the likely explanation for the black screen + missing keyboard backlight seen on 2026-09-22 when
+the fix was swapped in at runtime).  Until that is understood, a suspend costs the network twice over —
+do not suspend; `sudo lid_sleep lid ignore` keeps a closed lid from trying.

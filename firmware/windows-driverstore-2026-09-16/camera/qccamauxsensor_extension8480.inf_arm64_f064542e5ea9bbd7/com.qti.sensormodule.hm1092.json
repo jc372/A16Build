@@ -1,0 +1,27 @@
+{
+  "Version":  1,
+  "Camera": {
+     	"PreviewResolution": [
+          {
+            "width": 360,
+            "height": 360,
+            "type": "NV12",
+			"aspectX": 1,
+			"aspectY": 1,
+			"minfps": 1,
+			"maxfps": 30
+          }
+        ],
+		"VideoResolution": [
+          {
+            "width": 360,
+            "height": 360,
+            "type": "NV12",
+			"aspectX": 1,
+			"aspectY": 1,
+			"minfps": 1,
+			"maxfps": 30
+          }
+        ]
+    }
+}

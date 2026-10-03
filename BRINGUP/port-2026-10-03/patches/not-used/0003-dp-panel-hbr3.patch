@@ -1,0 +1,23 @@
+--- a/drivers/gpu/drm/msm/dp/dp_panel.c
++++ b/drivers/gpu/drm/msm/dp/dp_panel.c
+@@ -187,6 +187,20 @@
+ 			link_info->rate = max_lttpr_rate;
+ 	}
+ 
++	/*
++	 * A16 experiment (2026-09-17): the panel's SUPPORTED_LINK_RATES list stops at 540000 (HBR2),
++	 * and HBR2 is exactly the case the v8 eDP PHY sequence gets wrong -- clock recovery passes on
++	 * all four lanes and channel equalization never converges (DPCD 0x202 = 11 11, adjust request
++	 * 0x44 = swing 0 / pre-emphasis 1, repeated, ret=-110).  An independent A16 owner's rate sweep
++	 * found HBR3 (810000) is the only rate that trains this panel, and upstream's own v8 validation
++	 * covers 4-lane 8.1G.  So take the highest rate the DT allows instead of the highest the sink's
++	 * list advertises.
++	 */
++	if (link->max_dp_link_rate >= 810000) {
++		link_info->rate = 810000;
++		link_info->rate_set = 3;   /* 0x1E in the eDP supported-link-rates table */
++	}
++
+ 	link_info->num_lanes = drm_dp_max_lane_count(dpcd);
+ 
+ 	/* Limit data lanes from data-lanes of endpoint property of dtsi */
