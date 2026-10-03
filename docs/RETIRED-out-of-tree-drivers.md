@@ -22,5 +22,5 @@ Nothing is loaded from an overlay, and no module is staged from a copied tree.
 that accompanied them. Kept in the repository history, not carried forward.
 
 **Where the material went:** the driver-era directories are archived under
-`archive/driver-era/` (`firmware/`, `patches/`, `scripts/`) so the repository root shows only
+`retired/` (`firmware/`, `patches/`, `scripts/`) so the repository root shows only
 what someone should actually use: this README, `docs/`, and `BRINGUP/`.

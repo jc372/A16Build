@@ -22,6 +22,7 @@ anything still open is marked as open rather than written as if it works.
 | 8 | [What works, what does not](#8-what-works-what-does-not) | Honest current state | — |
 | 9 | [Install steps](docs/install/) | The detailed Windows→Ubuntu steps, step by step | — |
 | 10 | [Retired: out-of-tree drivers](docs/RETIRED-out-of-tree-drivers.md) | Why the old module overlay is gone | — |
+| 11 | [retired/](retired/) | Driver-era files, kept referable and unused | — |
 
 ---
 
@@ -143,7 +144,7 @@ Eleven patches, in the order they apply:
 | `0012-dp-external-rate-cap` | DRM | Cap the external DP rate | External displays at the right rate |
 | `0013-dpu-drop-stuck-flush` | DRM | Drop the stuck flush after a vblank timeout | Prevents the frozen-desktop failure when an external link fails |
 
-**Deliberately not applied** — kept in `patches/not-used/` with the reasons:
+**Deliberately not applied** — kept in `BRINGUP/port-2026-10-03/patches/not-used/` with the reasons:
 
 | Patch | Why not |
 |-------|---------|
