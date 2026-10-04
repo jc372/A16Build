@@ -20,7 +20,7 @@ steps in order. You do not need a second computer.
 
 | | |
 |---|---|
-| **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`. The same page carries the installer script — download the package and the scripts into one folder and run `sudo bash a16-install-kernel.sh`; it puts the kernel, its modules and the device tree in place and adds the boot entry. Nothing else to fetch, and no repository clone. You still need Ubuntu on the machine (steps 1–4). |
+| **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`. The page carries exactly two files: the package and `a16-install-kernel.sh`. Download both into one folder, run `sudo bash a16-install-kernel.sh`, and it puts the kernel, its modules and the device tree in place and adds the boot entry. No repository clone, nothing else to fetch. You still need Ubuntu on the machine (steps 1–4). |
 | **Build it yourself** | Follow the steps below. Everything you need to build the same kernel from source travels on a USB stick, and the patches are in [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/). |
 
 Both routes end at the same place. The `.deb` is the same kernel this repository builds — the
@@ -236,20 +236,22 @@ install it with `apt`. The *snapshot* never needs the network — that is on the
 
 ### If you installed the `.deb`
 
-Installing it is one command. It works the version out of the package itself, so nothing below
-needs editing:
+Download `a16-install-kernel.sh` from the same release page into the folder with the package, and
+run it there:
 
 ```bash
-sudo bash BRINGUP/tools/a16-install-kernel.sh --deb ~/Downloads/linux-image-<version>_<version>_arm64.deb
+sudo bash a16-install-kernel.sh
 ```
 
-That installs the kernel, its modules and the device tree, runs `depmod`, builds the initramfs if the
-package's postinst did not — a missing initramfs is the single most common reason the machine will
-not start — and adds the boot entry with your root UUID, without touching the default. `--check`
-reports what it would do and writes nothing.
+It reads the version out of the package, so nothing needs editing. It installs the kernel, its
+modules and the device tree, runs `depmod`, builds the initramfs if the package's postinst did not —
+a missing initramfs is the single most common reason the machine will not start — and adds the boot
+entry with your root UUID, without touching the default. `--check` reports what it would do and
+writes nothing.
 
-By hand instead: `sudo dpkg -i <package>`, then `sudo update-initramfs -c -k <version>` if the
-postinst did not, then the boot entry from step 4, naming `/boot/glymur-a16-<version>.dtb`.
+If you would rather do it by hand: `sudo dpkg -i <package>`, then
+`sudo update-initramfs -c -k <version>` if the postinst did not, then the boot entry from step 4
+naming `/boot/glymur-a16-<version>.dtb`.
 
 Firmware is a separate matter: Wi-Fi and Bluetooth come from the standard `linux-firmware`
 package, but **audio needs the ADSP images and the topology out of your Windows install**, plus a
