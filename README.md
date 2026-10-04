@@ -62,8 +62,9 @@ for sound:
 3. **Bluetooth** needs nothing: the chip works from its ROM firmware.
 
 Wi-Fi may or may not work without its board file; sound does not work without the DSP images. Exact
-file names, sizes, sha256 and destinations are in [docs/firmware.md](docs/firmware.md), and the
-extractor attached to the release pulls the files out of your Windows driver store.
+file names, sizes, sha256 and destinations are in [docs/firmware.md](docs/firmware.md), and
+`BRINGUP/tools/extract-windows-a16-firmware.sh` in the repository pulls the files out of your Windows
+driver store.
 
 ## Step 1 — In Windows, before anything else
 

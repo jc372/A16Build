@@ -15,8 +15,9 @@ are different on this machine, in the order they matter.
 | qca Bluetooth patch and NVM | Bluetooth | **optional** — the chip runs without it | Ubuntu ships the patch; extras come from Windows |
 
 None of these files are redistributed here: they are Qualcomm/ASUS proprietary. Everything below
-gives the size and sha256 of each one so you can confirm you have the same bytes. The extractor
-script attached to the release pulls them from your own Windows driver store.
+gives the size and sha256 of each one so you can confirm you have the same bytes.
+`BRINGUP/tools/extract-windows-a16-firmware.sh` in the repository pulls them out of your own Windows
+driver store; it runs on the Windows side.
 
 ## 1. Sound — the glymur DSP images and topology (required)
 
@@ -46,7 +47,7 @@ Steps:
 
 1. On Windows (or in WSL), run the extractor and give it an output directory:
 
-        OUT=firmware/from-windows ./extract-windows-a16-firmware.sh
+        OUT=firmware/from-windows bash BRINGUP/tools/extract-windows-a16-firmware.sh
 
 2. Copy the five files to the destinations above, then confirm:
 
@@ -78,7 +79,7 @@ If that prints nothing, build the board file from your own Windows WLAN package 
 `qcwlancol8480` package bound to `VEN_17CB&DEV_1112&SUBSYS_E14F105B`; it ships 25 `bdwlan.*`
 images, one per board):
 
-    OUT=firmware/from-windows ./extract-windows-a16-firmware.sh
+    OUT=firmware/from-windows bash BRINGUP/tools/extract-windows-a16-firmware.sh
     A16_BOARD_SRC=firmware/from-windows/wlan/qcwlancol8480.inf_arm64_* \
         sudo bash make-a16-qcc2072-board-2.sh --install
 
