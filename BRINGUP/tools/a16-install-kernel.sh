@@ -69,7 +69,11 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
-if [ "$MODE" != check ] && [ "${A16_ALLOW_NONROOT:-0}" != 1 ]; then
+# --remove with no version only lists what is installed, so it needs no privileges
+NEEDS_ROOT=1
+[ "$MODE" = check ] && NEEDS_ROOT=0
+{ [ "$MODE" = remove ] && [ -z "$VER" ]; } && NEEDS_ROOT=0
+if [ "$NEEDS_ROOT" = 1 ] && [ "${A16_ALLOW_NONROOT:-0}" != 1 ]; then
 	[ "$(id -u)" = 0 ] || { echo "run with sudo: sudo bash $0"; exit 1; }
 fi
 
