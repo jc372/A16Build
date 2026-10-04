@@ -8,10 +8,10 @@
 #   sudo bash a16-install-kernel.sh --no-grub       # install only; write the entry out as text
 #   sudo bash a16-install-kernel.sh --reinstall     # install over a version already present
 #
-# Every command this script runs is in this script. It calls only tools already on the machine --
-# dpkg, depmod, update-initramfs, grub-script-check -- plus one sibling script, a16-grub-entry.sh,
-# which adds the menu entry. The only thing it fetches is the kernel package, and only when it
-# cannot find one locally (--deb, or beside itself, or in ~/a16-deb).
+# Every command this script runs is in this script, including writing the boot menu entry: it
+# needs nothing but the package and the tools already on the machine -- dpkg, depmod,
+# update-initramfs, grub-script-check. The only thing it fetches is the kernel package, and only
+# when it cannot find one locally (--deb, or beside itself, or in ~/a16-deb).
 #
 # Files it puts in place, all for the version it read out of the package:
 #
@@ -22,6 +22,7 @@
 #   /boot/glymur-a16-<ver>.dtb           the device tree this machine boots with
 #   /usr/lib/modules/<ver>/              ~7,400 modules, and modules.dep for them
 #   one menuentry in the EFI grub.cfg    titled "A16: linux-next <ver>"
+#   <grub.cfg>.a16-<stamp>               a backup of the menu, taken before it is edited
 #
 # What it does, in order:
 #   1. finds the package -- beside itself, in ~/a16-deb, in /tmp, or from the GitHub release
@@ -31,8 +32,7 @@
 #   4. verifies every file listed above, runs depmod, and builds the initramfs if the package's
 #      postinst did not -- an entry without an initramfs cannot boot, and that is the most common
 #      failure on this machine
-#   5. adds the boot menu entry via a16-grub-entry.sh, which backs the menu up first and refuses
-#      to add a duplicate
+#   5. adds the boot menu entry, backing the menu up first and refusing to add a duplicate
 #   6. prints the version, what went where, and exactly what to pick after rebooting
 #
 # Everything it installs goes to the real /boot and /usr/lib/modules -- that is the point. If you
@@ -42,6 +42,7 @@ VER_DEFAULT=7.3.0-rc5-next-20261002-ec1
 RELEASE_TAG=kernel-7.3.0-rc5-next-20261002-ec1
 REPO=jc372/A16Build
 R="${A16_ROOT:-}"; [ -n "$R" ] && SANDBOX=1 || SANDBOX=0
+STAMP="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo nostamp)"
 ROOT() { printf '%s%s' "$R" "$1"; }
 # Under sudo, $HOME is /root -- search the operator's home, or a package sitting in
 # ~/a16-deb is invisible and the script downloads the release instead of using it.
@@ -137,7 +138,7 @@ step "3. verify"
 [ -f "$BOOT/System.map-$VER" ]     && ok "boot/System.map-$VER"    || warn "boot/System.map-$VER missing"
 DTB="$BOOT/glymur-a16-$VER.dtb"
 [ -f "$DTB" ] || DTB="$(ls "$BOOT"/glymur-a16-*"$VER"*.dtb 2>/dev/null | head -1)"
-[ -n "$DTB" ] && [ -f "$DTB" ]     && ok "device tree ${DTB##"$R"}" || warn "no device tree for $VER -- the entry needs one (--dtb for a16-grub-entry.sh)"
+[ -n "$DTB" ] && [ -f "$DTB" ]     && ok "device tree ${DTB##"$R"}" || warn "no device tree for $VER -- the entry needs one"
 if [ -d "$MODS" ]; then
 	NMOD="$(find "$MODS" -name '*.ko*' 2>/dev/null | wc -l)"
 	[ "$NMOD" -gt 1000 ] && ok "modules: $NMOD under ${MODS##"$R"}" || warn "only $NMOD modules under ${MODS##"$R"} -- is that right?"
@@ -163,18 +164,75 @@ fi
 
 # ---------------------------------------------------------------- 4. the menu entry
 step "4. boot menu entry"
-ENTRY_TOOL="$HERE/a16-grub-entry.sh"
+
+# Self-contained on purpose: a user who downloads this script and the package from the release
+# page has no repository around it. The entry is written here rather than by a second script.
+menufile() {   # the menu the machine actually boots from, not the first one found -- EFI/Boot
+	local c best="" best_score=-1 score n          # sorts first but is the removable fallback
+	for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
+		[ -f "$c" ] || continue
+		score=0
+		case "$c" in *ubuntu*) score=$((score+100));; esac
+		n="$(grep -cE '^[[:space:]]*menuentry' "$c" 2>/dev/null || echo 0)"
+		score=$((score+n))
+		grep -q 'linux /boot/vmlinuz' "$c" 2>/dev/null && score=$((score+10))
+		[ "$score" -gt "$best_score" ] && { best_score="$score"; best="$c"; }
+	done
+	[ -n "$best" ] && printf '%s' "$best"
+}
+entry_text() {
+	local uuid="$1"
+	printf 'menuentry "A16: linux-next %s" {\n' "$VER"
+	printf '    # the four kernel options are required on this machine: acpi=off because the ACPI\n'
+	printf '    # path is broken under Linux here, and the three *_ignore_unused because the display\n'
+	printf '    # does not come up without them\n'
+	printf '    search --no-floppy --fs-uuid --set=root %s\n' "$uuid"
+	printf '    if [ -f /boot/vmlinuz-%s -a -f /boot/initrd.img-%s ]; then\n' "$VER" "$VER"
+	printf '        insmod fdt\n'
+	printf '        insmod gzio\n'
+	printf '        linux /boot/vmlinuz-%s root=UUID=%s ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7\n' "$VER" "$uuid"
+	printf '        devicetree /boot/%s\n' "${DTB##*/}"
+	printf '        initrd /boot/initrd.img-%s\n' "$VER"
+	printf '        boot\n'
+	printf '    fi\n'
+	printf '    echo "  vmlinuz-%s or its initramfs is missing -- reinstall it"\n' "$VER"
+	printf '    sleep 20\n'
+	printf '    configfile $prefix/grub.cfg\n'
+	printf '}\n'
+}
+
+MENU="$(menufile)"
+UUID="$(findmnt -no UUID / 2>/dev/null || echo '')"
+[ -n "$UUID" ] || { [ "$SANDBOX" = 1 ] && UUID='11111111-2222-3333-4444-555555555555'; }
+
 if [ "$MODE" = check ]; then
-	todo "would add the entry for $VER (a16-grub-entry.sh add $VER)"
-elif [ ! -f "$ENTRY_TOOL" ]; then
-	warn "a16-grub-entry.sh is not beside this script -- download it from the same release page"
-		warn "  (or BRINGUP/tools/ in the repository) and put it in the same directory, then re-run"
+	[ -n "$MENU" ] && ok "menu ${MENU##"$R"}" || warn "no GRUB menu found under ${R}/boot/efi"
+	todo "would append this entry; --check writes nothing"
+	entry_text "${UUID:-<root-uuid>}" | sed 's/^/  /'
+elif [ "$DO_GRUB" = 0 ]; then
+	warn "--no-grub: menu untouched; the entry it would have added:"
+	entry_text "${UUID:-<root-uuid>}" | sed 's/^/  /'
+elif [ -z "$MENU" ]; then
+	warn "no GRUB menu found (looked under ${R}/boot/efi and ${R}/boot/EFI) -- add the entry by hand"
+elif [ -z "$UUID" ]; then
+	warn "could not read the root filesystem UUID -- add the entry by hand"
+elif grep -q "vmlinuz-$VER" "$MENU" 2>/dev/null; then
+	ok "the menu already has an entry naming vmlinuz-$VER -- nothing to do"
+elif [ ! -w "$MENU" ]; then
+	warn "$MENU is not writable -- run this with sudo"
 else
-	ARGS=(add)
-	[ "$DO_GRUB" = 0 ] && ARGS+=(--no-grub)
-	[ -n "$DTB" ] && [ -f "$DTB" ] && ARGS+=(--dtb "$DTB")
-	ARGS+=("$VER")
-	A16_ALLOW_NONROOT=1 bash "$ENTRY_TOOL" "${ARGS[@]}"
+	BAK="$MENU.a16-$STAMP"
+	cp -f "$MENU" "$BAK" && ok "menu backed up to ${BAK##"$R"}"
+	{ echo; echo "# ---- added by a16-install-kernel.sh $STAMP ----"; entry_text "$UUID"; } >> "$MENU"
+	if grep -q "vmlinuz-$VER" "$MENU"; then
+		ok "entry added: \"A16: linux-next $VER\""
+		if command -v grub-script-check >/dev/null 2>&1; then
+			grub-script-check "$MENU" 2>/dev/null && ok "grub-script-check: syntax ok" || \
+				warn "grub-script-check complained -- restore ${BAK##"$R"} if in doubt"
+		fi
+	else
+		warn "could not append the entry; the menu is unchanged apart from the backup"
+	fi
 fi
 
 # ---------------------------------------------------------------- 5. what to do next
@@ -188,5 +246,5 @@ printf '  Nothing was set as the default -- the machine still boots what it boot
 printf '  before, so selecting it is not optional.\n'
 printf '  Confirm you are really on it:  uname -r  ->  %s\n' "$VER"
 printf '  Anything else printed there means the default entry was taken.\n'
-printf '\n  Later, retire an entry you no longer want with:\n'
-printf '      sudo bash %s/a16-grub-entry.sh remove %s\n' "${HERE##"$R"}" "$VER"
+printf '\n  The previous menu is kept beside it as grub.cfg.a16-<stamp>, so you can put it back.\n'
+printf '  To retire this entry later, delete its menuentry from that file.\n'
