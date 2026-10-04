@@ -13,7 +13,16 @@
 # independent of whether the screen, fans or keyboard did anything.
 set -u
 BAT=/sys/class/power_supply/qcom-battmgr-bat
-STATE_DIR=${A16_PAYLOAD:-$HOME/a16-payload}
+# Under sudo, $HOME is /root -- so resolve the operator's home instead, or the state file
+# lands somewhere they cannot read and 'state' appears to have lost the measurement.
+STATE_DIR=${A16_PAYLOAD:-}
+if [ -z "$STATE_DIR" ]; then
+  if [ -n "${SUDO_USER:-}" ] && [ -d "/home/${SUDO_USER}" ]; then
+    STATE_DIR=/home/${SUDO_USER}/a16-payload
+  else
+    STATE_DIR=$HOME/a16-payload
+  fi
+fi
 STATE=$STATE_DIR/suspend-drain.state
 FULL_WH=66.6          # energy_full of this pack, from the battery itself
 mkdir -p "$STATE_DIR"
