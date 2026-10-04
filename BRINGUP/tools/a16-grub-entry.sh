@@ -85,7 +85,9 @@ resolve() {
 			[ -f "$d" ] && DTB="$d" && break
 		done
 	fi
-	[ -z "$TITLE" ] && TITLE="[10] A16: next $VER"
+	# No [n] prefix: the numbers in older entries are historical labels, not menu positions, and a
+	# numbered title invites people to think they booted something they did not.
+	[ -z "$TITLE" ] && TITLE="A16: linux-next $VER"
 }
 entry_text() {
 	local uuid="$1"
@@ -165,7 +167,11 @@ check|add)
 			else warn "grub-script-check complained -- restore ${BAK##"$R"} if in doubt"; fi
 		fi
 		printf '\n  reboot and pick "%s" with Esc at power-on.\n' "$TITLE"
-		printf '  the previous entries are untouched -- if the display does not come up, use one.\n'
+		printf '  The default entry is NOT changed: the machine still boots what it booted before,\n'
+		printf '  so this one has to be selected by name.\n'
+		printf '  After booting, confirm you are on it:  uname -r   ->  %s\n' "$VER"
+		printf '  If that prints anything else, the default entry was taken instead.\n'
+		printf '  The old entries are untouched and still work.\n'
 	else
 		warn "could not append the entry; the menu is unchanged apart from the backup"
 		exit 1

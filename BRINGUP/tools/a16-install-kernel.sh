@@ -148,10 +148,12 @@ fi
 step "next"
 printf '  kernel installed : %s\n' "$VER"
 printf '  modules          : %s\n' "${MODS##"$R"}"
-printf '  menu entry       : "[10] A16: next %s"\n' "$VER"
+printf '  menu entry       : "A16: linux-next %s"\n' "$VER"
 echo
-printf '  Reboot, then press Esc at power-on and select that entry.\n'
-printf '  The entry you are using now is untouched -- if the display does not come\n'
-printf '  up on the new one, that is the way back.\n'
+printf '  Reboot, press Esc at power-on, and select that entry BY NAME.\n'
+printf '  Nothing was set as the default -- the machine still boots what it booted\n'
+printf '  before, so selecting it is not optional.\n'
+printf '  Confirm you are really on it:  uname -r  ->  %s\n' "$VER"
+printf '  Anything else printed there means the default entry was taken.\n'
 printf '\n  After it boots and you are happy with it, clear the dead entries:\n'
 printf '      sudo bash %s/a16-grub-prune.sh --apply\n' "${HERE##"$R"}"
