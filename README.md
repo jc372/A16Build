@@ -19,7 +19,7 @@ steps in order. You do not need a second computer.
 | **USB-A hub or dock** | The machine has both USB-A and USB-C, but **on this version the USB-C ports cannot be used** — so the keyboard, mouse, ethernet and any USB stick go through the machine's **USB-A port**, via a hub or dock when you need more than one. |
 | **Wired keyboard** | Whether the internal keyboard and touchpad work in the live session depends on the kernel the nightly ships — see step 3. Have one available. |
 | **Wired mouse** | Same reason. |
-| **USB stick or SD card, 8 GB+** | The installer image goes on either — the machine's own SD card works, and is one less USB-C device to worry about. A second stick if you want the payload separate. |
+| **USB stick or SD card, 8 GB+** | For the installer image — either works. A second one if you want the payload on its own media. |
 | **Ethernet, or another connection** | Needed **during the install** to set the clock (step 3), and **after it** for the build toolchain — unless you carry the toolchain pool on the stick (step 2). Wi-Fi only works once the new kernel is running. |
 
 Windows stays installed throughout. Do not erase it.
