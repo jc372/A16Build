@@ -10,8 +10,6 @@ done from Windows, and there are two reasons why:
 2. **Once Ubuntu is installed, the Ubuntu installer fails** if you run it again. It is not a
    repair tool here. Windows is.
 
-Neither is a bug you can fix by trying harder; both are how this machine works.
-
 ---
 
 ## The standing Secure Boot rule
@@ -88,13 +86,11 @@ kernel options alone — `acpi=off` is not optional on this machine.
 **Keep the entry valid or the machine will not boot it.** Two rules that have bitten here:
 
 - The `if [ -f ... ]` guard means a missing kernel file makes the entry silently do nothing:
-  pressing it just returns you to the menu. That is safer than a hang, and it is why a
-  black screen and a dead entry are different symptoms.
+  pressing it just returns you to the menu.
 - Do not leave **two entries with the same title**. They accumulate every time a kernel is
   installed, and picking the older duplicate boots a kernel you have since replaced.
 
-Editing from Windows, save the file as plain text, and keep a copy — the menu is your way back
-if a kernel comes up with no display.
+Editing from Windows, save the file as plain text and keep a copy.
 
 ---
 

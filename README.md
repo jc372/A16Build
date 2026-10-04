@@ -10,7 +10,7 @@ steps in order. You do not need a second computer.
 | | |
 |---|---|
 | **USB-A hub** | The machine has no USB-A ports. The hub must have one, and the keyboard, mouse and stick plug into it. |
-| **Wired keyboard** | Have one. Whether the internal keyboard and touchpad work in the live session **depends on the kernel the nightly ships** — see step 3. Do not count on them. |
+| **Wired keyboard** | Whether the internal keyboard and touchpad work in the live session depends on the kernel the nightly ships — see step 3. Have one available. |
 | **Wired mouse** | Same reason. |
 | **USB stick, 8 GB+** | The installer image, plus a second one if you want the payload on its own stick. |
 | **Ethernet (optional)** | Only for the clock — see step 3. The kernel build itself needs no network. |
@@ -65,17 +65,16 @@ Your stick now holds everything needed to build the kernel.
 > input by itself. Earlier nightlies needed a remastered image carrying the A16 device tree, and
 > a plain one booted ACPI with no internal input at all.
 >
-> So: try the plain nightly. If the internal keyboard and touchpad work, you are done — the
-> wired keyboard and mouse are insurance, and worth having plugged in anyway, because the
-> moment you need them is the moment you have no other way to type.
+> Try the plain nightly. If the internal keyboard and touchpad work, the wired ones are not
+> needed. Keep them connected until you know.
 >
-> This also means **the image you write is a moving target**: the same instructions can behave
-> differently a month later, in either direction. If input works, note the nightly's date.
+> The image is a moving target: the same instructions can behave differently a month later. If
+> internal input works, note the nightly's date.
 
 
 1. Write the **latest Ubuntu nightly arm64 image** to a USB stick. Use a nightly: released
    images do not carry the support this machine needs. If you use Rufus, choose **DD image mode**,
-   and **check the checksum** — a half-written stick has cost a flashing round here before.
+   and **check the checksum**.
 
 2. **Secure Boot off first** (**F2** at power-on → firmware setup), and put the stick **on the
    hub**, not in a USB-C port: a USB-C device is not seen during the install.
@@ -98,9 +97,8 @@ installer is not the tool for it — Windows is.
 
 ## Step 4 — Make Ubuntu start (EFI work, from Windows)
 
-**This is the step that fails.** A fresh install on this machine does not start: the
-firmware has no boot entry it can use and no EFI variable Linux can write, so Ubuntu
-installs fine and then boots to nothing. The fix is done here, from Windows, and it has to
+A fresh install on this machine does not start: the firmware has no boot entry it can use and
+no EFI variable Linux can write, so Ubuntu installs and then boots to nothing. The fix is done here, from Windows, and it has to
 happen before anything else can run on the Linux side.
 
 The short version is below; [the full page](docs/efi-on-windows.md) covers mounting, what
@@ -137,10 +135,9 @@ is on the partition, the repair scripts, and what to check when nothing starts.
    ```
 
    Leave `root=UUID=` and `acpi=off` alone — `acpi=off` is not optional on this machine. Keep
-   titles unique: duplicates pile up and one of them boots a kernel you have replaced.
+   titles unique: a duplicate title can boot a kernel you have replaced.
 
-4. **Save, keep a copy, and start the machine.** The menu is drawn by the firmware, so a bad
-   entry costs you a menu trip, not the machine. If the entry does nothing when picked, the
+4. **Save, keep a copy, and start the machine.** If the entry does nothing when picked, the
    kernel file it names is missing — mount the partition again and check the filenames.
 
 Do the same edit later for the kernel you build in step 5: it is the same file, one more entry.
