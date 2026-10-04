@@ -7,8 +7,8 @@
 #   sudo bash a16-install-kernel.sh --check         # report what it would do; changes nothing
 #   sudo bash a16-install-kernel.sh --no-grub       # install only; write the entry out as text
 #   sudo bash a16-install-kernel.sh --reinstall     # install over a version already present
-#   sudo bash a16-install-kernel.sh --remove <ver>  # undo: entry, package, /boot files, modules
-#   sudo bash a16-install-kernel.sh --remove        # list what is installed and which is running
+#   sudo bash a16-install-kernel.sh --remove        # undo this release's kernel: entry,
+#                                                   # package, /boot files, modules
 #
 # Every command this script runs is in this script, including writing the boot menu entry: it
 # needs nothing but the package and the tools already on the machine -- dpkg, depmod,
@@ -37,14 +37,18 @@
 #   5. adds the boot menu entry, backing the menu up first and refusing to add a duplicate
 #   6. prints the version, what went where, and exactly what to pick after rebooting
 #
-# --remove <ver> is the undo: it takes that kernel's menu entry out (backing the menu up
-# first), removes the package with dpkg, and clears the /boot files and the module tree.
-# It refuses to remove the kernel that is running -- boot another one first.
+# --remove is the undo, and it only ever touches the kernel this script ships with: it takes
+# that kernel's menu entry out (backing the menu up first), removes the package with dpkg,
+# and clears the /boot files and the module tree. Anything else on the machine is yours and
+# is left alone. It refuses to remove the running kernel -- boot another one first.
 #
 # Everything it installs goes to the real /boot and /usr/lib/modules -- that is the point. If you
 # only want to see what would happen, use --check, which writes nothing.
 
 VER_DEFAULT=7.3.0-rc5-next-20261002-t1
+# The one version --remove will ever touch: the kernel this script and its release carry.
+# A future release ships its own copy of this script with its own version here.
+SHIPPED_VERSION=7.3.0-rc5-next-20261002-t1
 RELEASE_TAG=kernel-7.3.0-rc5-next-20261002-t1
 REPO=jc372/A16Build
 R="${A16_ROOT:-}"; [ -n "$R" ] && SANDBOX=1 || SANDBOX=0
@@ -69,10 +73,8 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
-# --remove with no version only lists what is installed, so it needs no privileges
 NEEDS_ROOT=1
 [ "$MODE" = check ] && NEEDS_ROOT=0
-{ [ "$MODE" = remove ] && [ -z "$VER" ]; } && NEEDS_ROOT=0
 if [ "$NEEDS_ROOT" = 1 ] && [ "${A16_ALLOW_NONROOT:-0}" != 1 ]; then
 	[ "$(id -u)" = 0 ] || { echo "run with sudo: sudo bash $0"; exit 1; }
 fi
@@ -100,36 +102,39 @@ menufile() {   # the menu the machine actually boots from, not the first one fou
 }
 
 # ---------------------------------------------------------------- removal
-# Undo everything this script put in place for one kernel version: the menu entry, the package,
-# the /boot files and the module tree. It never removes the kernel you are running.
+# Undo the install of the kernel this script ships with -- and only that one. A kernel you built
+# or installed yourself is yours: this will not list it, remove it, or touch its files.
 if [ "$MODE" = remove ]; then
-	step "remove a kernel"
+	step "remove the kernel from this release"
 	BOOTD="$(ROOT /boot)"; MODSD="$(ROOT /usr/lib/modules)"
 	RUNNING="$(uname -r)"
+
 	if [ -z "$VER" ]; then
-		FOUND=0
-		for d in "$MODSD"/*next-* "$MODSD"/*a16* "$MODSD"/*glymur*; do
-			[ -d "$d" ] || continue
-			v="${d##*/}"
-			FOUND=1
-			printf '    %-44s %s\n' "$v" "$([ "$v" = "$RUNNING" ] && echo '<- running now; will not be removed')"
-		done
-		if [ "$FOUND" = 0 ]; then
-			echo "  (nothing matching this machine's kernel naming; module trees present:)"
-			for d in "$MODSD"/*/; do [ -d "$d" ] && printf '    %s\n' "${d##*/}"; done
-		fi
-		printf '\n  run again with one of them:  sudo bash %s --remove <version>\n' "$(basename "$0")"
-		exit 0
+		VER="$SHIPPED_VERSION"
+	elif [ "$VER" != "$SHIPPED_VERSION" ]; then
+		die "this script only removes the kernel it came with, $SHIPPED_VERSION
+         It will not touch $VER. If you installed that one yourself, it is yours to manage."
 	fi
-	case "$VER" in */*|.*|'') die "not a kernel version: $VER" ;; esac
-	[ "$VER" = "$RUNNING" ] && die "$VER is the kernel you are running.
-         Boot another kernel, then run this again -- removing the running one is not undoable."
-	[ -d "$MODSD/$VER" ] || [ -f "$BOOTD/vmlinuz-$VER" ] || \
-		die "$VER is not installed here (no /lib/modules/$VER and no /boot/vmlinuz-$VER)"
+	printf '  kernel from this release : %s\n' "$SHIPPED_VERSION"
+
+	if [ "$VER" = "$RUNNING" ] && [ "$SANDBOX" = 1 ]; then
+		warn "sandbox: this is the running kernel; a real run would refuse here"
+	elif [ "$VER" = "$RUNNING" ]; then
+		die "$VER is the kernel you are running.
+         Boot a different kernel first, then run this again -- removing the running one is not undoable."
+	fi
+
+	INSTALLED=0
+	{ [ -d "$MODSD/$VER" ] || [ -f "$BOOTD/vmlinuz-$VER" ]; } && INSTALLED=1
+	MENU="$(menufile)"
+	IN_MENU=0
+	[ -n "$MENU" ] && grep -q "vmlinuz-$VER" "$MENU" 2>/dev/null && IN_MENU=1
+	[ "$INSTALLED" = 1 ] || [ "$IN_MENU" = 1 ] || \
+		die "$VER is not installed here and the menu does not name it -- nothing to remove"
+	[ "$INSTALLED" = 0 ] && warn "only the menu entry is left of it; removing the entry"
 
 	# The menu entry goes first: if anything after this fails, nothing points at a missing kernel.
-	MENU="$(menufile)"
-	if [ -n "$MENU" ] && grep -q "vmlinuz-$VER" "$MENU" 2>/dev/null; then
+	if [ "$IN_MENU" = 1 ]; then
 		if [ -w "$MENU" ]; then
 			BAK="$MENU.a16-$STAMP"
 			cp -f "$MENU" "$BAK" && ok "menu backed up to ${BAK##"$R"}"
@@ -167,47 +172,52 @@ PYREMOVE
 		else
 			warn "$MENU is not writable -- run this with sudo"
 		fi
-	elif [ -n "$MENU" ]; then
+	else
 		skip "the menu has no entry for this kernel"
-	else
-		warn "no GRUB menu found -- delete its menuentry by hand"
 	fi
 
-	# The package, then whatever it or an earlier install left behind.
-	if [ "$SANDBOX" = 1 ]; then
-		skip "sandbox: dpkg is not run (it would remove the real package)"
-	elif dpkg -s "linux-image-$VER" >/dev/null 2>&1; then
-		dpkg -r "linux-image-$VER" >/dev/null 2>&1 && ok "package linux-image-$VER removed" || \
-			warn "dpkg -r failed -- remove it by hand: sudo dpkg -r linux-image-$VER"
-	else
-		skip "linux-image-$VER is not in dpkg (installed by hand?)"
-	fi
-
-	LEFT=0
-	for f in "$BOOTD/vmlinuz-$VER" "$BOOTD/initrd.img-$VER" "$BOOTD/config-$VER" "$BOOTD/System.map-$VER"; do
-		[ -f "$f" ] || continue
-		rm -f "$f" && { ok "removed ${f##"$R"}"; LEFT=1; }
-	done
-	for f in "$BOOTD"/glymur-a16-*"$VER"*.dtb; do
-		[ -f "$f" ] || continue
-		rm -f "$f" && { ok "removed ${f##"$R"}"; LEFT=1; }
-	done
-	# rm -rf, so it must be the module tree and not something else with this name
-	if [ -d "$MODSD/$VER/kernel" ]; then
-		rm -rf "$MODSD/$VER" && { ok "removed ${MODSD##"$R"}/$VER"; LEFT=1; }
-	elif [ -d "$MODSD/$VER" ]; then
-		warn "${MODSD##"$R"}/$VER has no kernel/ directory -- not removing it, look at it yourself"
+	if [ "$INSTALLED" = 1 ]; then
+		if [ "$SANDBOX" = 1 ]; then
+			skip "sandbox: dpkg is not run (it would remove the real package)"
+		elif dpkg -s "linux-image-$VER" >/dev/null 2>&1; then
+			dpkg -r "linux-image-$VER" >/dev/null 2>&1 && ok "package linux-image-$VER removed" || \
+				warn "dpkg -r failed -- remove it by hand: sudo dpkg -r linux-image-$VER"
+		else
+			skip "linux-image-$VER is not in dpkg"
+		fi
+		for f in "$BOOTD/vmlinuz-$VER" "$BOOTD/initrd.img-$VER" "$BOOTD/config-$VER" "$BOOTD/System.map-$VER"; do
+			[ -f "$f" ] || continue
+			rm -f "$f" && ok "removed ${f##"$R"}"
+		done
+		for f in "$BOOTD"/glymur-a16-*"$VER"*.dtb; do
+			[ -f "$f" ] || continue
+			rm -f "$f" && ok "removed ${f##"$R"}"
+		done
+		# rm -rf, so it has to be the module tree for this exact version
+		if [ -d "$MODSD/$VER/kernel" ]; then
+			rm -rf "$MODSD/$VER" && ok "removed ${MODSD##"$R"}/$VER"
+		elif [ -d "$MODSD/$VER" ]; then
+			warn "${MODSD##"$R"}/$VER has no kernel/ directory -- not removing it, look at it yourself"
+		fi
 	fi
 
 	step "done"
 	printf '  %s: ' "$VER"
-	if grep -q "vmlinuz-$VER" "$MENU" 2>/dev/null; then printf 'menu entry STILL PRESENT\n'; else printf 'menu entry gone\n'; fi
-	printf '  /boot files      : %s\n' "$(ls "$BOOTD"/vmlinuz-"$VER" 2>/dev/null | wc -l) vmlinuz left"
-	printf '  modules          : %s\n' "$([ -d "$MODSD/$VER" ] && echo 'STILL PRESENT' || echo gone)"
-	printf '  other kernels    : untouched\n'
+	if [ "$IN_MENU" = 1 ] && grep -q "vmlinuz-$VER" "$MENU" 2>/dev/null; then
+		printf 'menu entry STILL PRESENT\n'
+	else
+		printf 'menu entry gone\n'
+	fi
+	if [ "$INSTALLED" = 1 ]; then
+		printf '  /boot files      : %s\n' "$(ls "$BOOTD"/vmlinuz-"$VER" 2>/dev/null | wc -l) vmlinuz left"
+		printf '  modules          : %s\n' "$([ -d "$MODSD/$VER" ] && echo 'STILL PRESENT' || echo gone)"
+	else
+		printf '  /boot files      : none were left\n'
+	fi
+	printf '  everything else  : untouched\n'
 	echo
-	printf '  The menu as it was before this is kept at %s.\n' "grub.cfg.a16-$STAMP"
-	printf '  Nothing else of %s is left behind.\n' "$VER"
+	printf '  The menu as it was before this is kept at grub.cfg.a16-%s.\n' "$STAMP"
+	printf '  Nothing of %s is left behind.\n' "$VER"
 	exit 0
 fi
 

@@ -253,14 +253,16 @@ If you would rather do it by hand: `sudo dpkg -i <package>`, then
 `sudo update-initramfs -c -k <version>` if the postinst did not, then the boot entry from step 4
 naming `/boot/glymur-a16-<version>.dtb`.
 
-To undo an install — the boot entry, the package, the `/boot` files and the module tree:
+To undo it:
 
 ```bash
-sudo bash a16-install-kernel.sh --remove <version>     # the version is printed when you install it
-sudo bash a16-install-kernel.sh --remove               # with no version: what is installed, and which is running
+sudo bash a16-install-kernel.sh --remove
 ```
 
-It refuses to remove the kernel you are running, and it backs the menu up before editing it.
+That removes the kernel from this release — its boot entry (the menu is backed up first), the
+package, the `/boot` files and the module tree — and nothing else. It will not touch a kernel you
+built or installed yourself: it knows one version, the one it shipped with, and refuses any other.
+It also refuses to remove the kernel you are running, so boot a different one first.
 
 Firmware is a separate matter: Wi-Fi and Bluetooth come from the standard `linux-firmware`
 package, but **audio needs the ADSP images and the topology out of your Windows install**, plus a
