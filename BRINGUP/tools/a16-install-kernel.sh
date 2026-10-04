@@ -7,6 +7,8 @@
 #   sudo bash a16-install-kernel.sh --check         # report what it would do; changes nothing
 #   sudo bash a16-install-kernel.sh --no-grub       # install only; write the entry out as text
 #   sudo bash a16-install-kernel.sh --reinstall     # install over a version already present
+#   sudo bash a16-install-kernel.sh --remove <ver>  # undo: entry, package, /boot files, modules
+#   sudo bash a16-install-kernel.sh --remove        # list what is installed and which is running
 #
 # Every command this script runs is in this script, including writing the boot menu entry: it
 # needs nothing but the package and the tools already on the machine -- dpkg, depmod,
@@ -35,11 +37,15 @@
 #   5. adds the boot menu entry, backing the menu up first and refusing to add a duplicate
 #   6. prints the version, what went where, and exactly what to pick after rebooting
 #
+# --remove <ver> is the undo: it takes that kernel's menu entry out (backing the menu up
+# first), removes the package with dpkg, and clears the /boot files and the module tree.
+# It refuses to remove the kernel that is running -- boot another one first.
+#
 # Everything it installs goes to the real /boot and /usr/lib/modules -- that is the point. If you
 # only want to see what would happen, use --check, which writes nothing.
 
-VER_DEFAULT=7.3.0-rc5-next-20261002-ec1
-RELEASE_TAG=kernel-7.3.0-rc5-next-20261002-ec1
+VER_DEFAULT=7.3.0-rc5-next-20261002-t1
+RELEASE_TAG=kernel-7.3.0-rc5-next-20261002-t1
 REPO=jc372/A16Build
 R="${A16_ROOT:-}"; [ -n "$R" ] && SANDBOX=1 || SANDBOX=0
 STAMP="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo nostamp)"
@@ -50,14 +56,15 @@ UH="$HOME"
 if [ -n "${SUDO_USER:-}" ] && [ -d "/home/${SUDO_USER}" ]; then UH="/home/${SUDO_USER}"; fi
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-MODE=setup; DEB=""; DO_GRUB=1; REINSTALL=0
+MODE=setup; DEB=""; DO_GRUB=1; REINSTALL=0; VER=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--check)   MODE=check ;;
 		--no-grub) DO_GRUB=0 ;;
+		--remove)  MODE=remove; VER="${2:-}"; case "$VER" in --*|"") VER="" ;; *) shift ;; esac ;;
 		--reinstall) REINSTALL=1 ;;
 		--deb)     DEB="${2:-}"; shift ;;
-		-h|--help) sed -n '2,26p' "$0"; exit 0 ;;
+		-h|--help) sed -n '2,38p' "$0"; exit 0 ;;
 		*) echo "unknown option: $1 (try --help)"; exit 2 ;;
 	esac
 	shift
@@ -73,6 +80,132 @@ skip() { printf '  [--]   %s\n' "$*"; }
 warn() { printf '  [warn] %s\n' "$*"; }
 die()  { printf '  [fail] %s\n' "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
+
+menufile() {   # the menu the machine actually boots from, not the first one found -- EFI/Boot
+	local c best="" best_score=-1 score n          # sorts first but is the removable fallback
+	for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
+		[ -f "$c" ] || continue
+		score=0
+		case "$c" in *ubuntu*) score=$((score+100));; esac
+		n="$(grep -cE '^[[:space:]]*menuentry' "$c" 2>/dev/null || echo 0)"
+		score=$((score+n))
+		grep -q 'linux /boot/vmlinuz' "$c" 2>/dev/null && score=$((score+10))
+		[ "$score" -gt "$best_score" ] && { best_score="$score"; best="$c"; }
+	done
+	[ -n "$best" ] && printf '%s' "$best"
+}
+
+# ---------------------------------------------------------------- removal
+# Undo everything this script put in place for one kernel version: the menu entry, the package,
+# the /boot files and the module tree. It never removes the kernel you are running.
+if [ "$MODE" = remove ]; then
+	step "remove a kernel"
+	BOOTD="$(ROOT /boot)"; MODSD="$(ROOT /usr/lib/modules)"
+	RUNNING="$(uname -r)"
+	if [ -z "$VER" ]; then
+		FOUND=0
+		for d in "$MODSD"/*next-* "$MODSD"/*a16* "$MODSD"/*glymur*; do
+			[ -d "$d" ] || continue
+			v="${d##*/}"
+			FOUND=1
+			printf '    %-44s %s\n' "$v" "$([ "$v" = "$RUNNING" ] && echo '<- running now; will not be removed')"
+		done
+		if [ "$FOUND" = 0 ]; then
+			echo "  (nothing matching this machine's kernel naming; module trees present:)"
+			for d in "$MODSD"/*/; do [ -d "$d" ] && printf '    %s\n' "${d##*/}"; done
+		fi
+		printf '\n  run again with one of them:  sudo bash %s --remove <version>\n' "$(basename "$0")"
+		exit 0
+	fi
+	case "$VER" in */*|.*|'') die "not a kernel version: $VER" ;; esac
+	[ "$VER" = "$RUNNING" ] && die "$VER is the kernel you are running.
+         Boot another kernel, then run this again -- removing the running one is not undoable."
+	[ -d "$MODSD/$VER" ] || [ -f "$BOOTD/vmlinuz-$VER" ] || \
+		die "$VER is not installed here (no /lib/modules/$VER and no /boot/vmlinuz-$VER)"
+
+	# The menu entry goes first: if anything after this fails, nothing points at a missing kernel.
+	MENU="$(menufile)"
+	if [ -n "$MENU" ] && grep -q "vmlinuz-$VER" "$MENU" 2>/dev/null; then
+		if [ -w "$MENU" ]; then
+			BAK="$MENU.a16-$STAMP"
+			cp -f "$MENU" "$BAK" && ok "menu backed up to ${BAK##"$R"}"
+			if have python3; then
+				python3 - "$MENU" "$VER" <<'PYREMOVE'
+import re, sys
+path, ver = sys.argv[1], sys.argv[2]
+t = open(path).read(); out = []; i = 0; removed = 0
+for m in re.finditer(r'(?m)^(\s*menuentry\s+"[^"]+"\s*\{)', t):
+    start = m.start(); depth = 0; j = m.start(1) + len(m.group(1)) - 1
+    while j < len(t):
+        if t[j] == '{': depth += 1
+        elif t[j] == '}':
+            depth -= 1
+            if depth == 0: break
+        j += 1
+    end = j + 1
+    out.append(t[i:start])
+    if f'vmlinuz-{ver}' in t[start:end]:
+        removed += 1
+    else:
+        out.append(t[start:end])
+    i = end
+out.append(t[i:])
+open(path, 'w').write(''.join(out))
+print(f"  [ok]   removed {removed} menu entry naming vmlinuz-{ver}")
+PYREMOVE
+				if have grub-script-check; then
+					grub-script-check "$MENU" 2>/dev/null && ok "menu syntax ok" || \
+						warn "grub-script-check complained -- restore ${BAK##"$R"} if in doubt"
+				fi
+			else
+				warn "no python3 -- delete the menuentry naming vmlinuz-$VER from ${MENU##"$R"} by hand"
+			fi
+		else
+			warn "$MENU is not writable -- run this with sudo"
+		fi
+	elif [ -n "$MENU" ]; then
+		skip "the menu has no entry for this kernel"
+	else
+		warn "no GRUB menu found -- delete its menuentry by hand"
+	fi
+
+	# The package, then whatever it or an earlier install left behind.
+	if [ "$SANDBOX" = 1 ]; then
+		skip "sandbox: dpkg is not run (it would remove the real package)"
+	elif dpkg -s "linux-image-$VER" >/dev/null 2>&1; then
+		dpkg -r "linux-image-$VER" >/dev/null 2>&1 && ok "package linux-image-$VER removed" || \
+			warn "dpkg -r failed -- remove it by hand: sudo dpkg -r linux-image-$VER"
+	else
+		skip "linux-image-$VER is not in dpkg (installed by hand?)"
+	fi
+
+	LEFT=0
+	for f in "$BOOTD/vmlinuz-$VER" "$BOOTD/initrd.img-$VER" "$BOOTD/config-$VER" "$BOOTD/System.map-$VER"; do
+		[ -f "$f" ] || continue
+		rm -f "$f" && { ok "removed ${f##"$R"}"; LEFT=1; }
+	done
+	for f in "$BOOTD"/glymur-a16-*"$VER"*.dtb; do
+		[ -f "$f" ] || continue
+		rm -f "$f" && { ok "removed ${f##"$R"}"; LEFT=1; }
+	done
+	# rm -rf, so it must be the module tree and not something else with this name
+	if [ -d "$MODSD/$VER/kernel" ]; then
+		rm -rf "$MODSD/$VER" && { ok "removed ${MODSD##"$R"}/$VER"; LEFT=1; }
+	elif [ -d "$MODSD/$VER" ]; then
+		warn "${MODSD##"$R"}/$VER has no kernel/ directory -- not removing it, look at it yourself"
+	fi
+
+	step "done"
+	printf '  %s: ' "$VER"
+	if grep -q "vmlinuz-$VER" "$MENU" 2>/dev/null; then printf 'menu entry STILL PRESENT\n'; else printf 'menu entry gone\n'; fi
+	printf '  /boot files      : %s\n' "$(ls "$BOOTD"/vmlinuz-"$VER" 2>/dev/null | wc -l) vmlinuz left"
+	printf '  modules          : %s\n' "$([ -d "$MODSD/$VER" ] && echo 'STILL PRESENT' || echo gone)"
+	printf '  other kernels    : untouched\n'
+	echo
+	printf '  The menu as it was before this is kept at %s.\n' "grub.cfg.a16-$STAMP"
+	printf '  Nothing else of %s is left behind.\n' "$VER"
+	exit 0
+fi
 
 # ---------------------------------------------------------------- 1. the package
 step "1. kernel package"
@@ -167,19 +300,6 @@ step "4. boot menu entry"
 
 # Self-contained on purpose: a user who downloads this script and the package from the release
 # page has no repository around it. The entry is written here rather than by a second script.
-menufile() {   # the menu the machine actually boots from, not the first one found -- EFI/Boot
-	local c best="" best_score=-1 score n          # sorts first but is the removable fallback
-	for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
-		[ -f "$c" ] || continue
-		score=0
-		case "$c" in *ubuntu*) score=$((score+100));; esac
-		n="$(grep -cE '^[[:space:]]*menuentry' "$c" 2>/dev/null || echo 0)"
-		score=$((score+n))
-		grep -q 'linux /boot/vmlinuz' "$c" 2>/dev/null && score=$((score+10))
-		[ "$score" -gt "$best_score" ] && { best_score="$score"; best="$c"; }
-	done
-	[ -n "$best" ] && printf '%s' "$best"
-}
 entry_text() {
 	local uuid="$1"
 	printf 'menuentry "A16: linux-next %s" {\n' "$VER"
@@ -248,3 +368,4 @@ printf '  Confirm you are really on it:  uname -r  ->  %s\n' "$VER"
 printf '  Anything else printed there means the default entry was taken.\n'
 printf '\n  The previous menu is kept beside it as grub.cfg.a16-<stamp>, so you can put it back.\n'
 printf '  To retire this entry later, delete its menuentry from that file.\n'
+printf '  To undo this install entirely:  sudo bash %s --remove %s\n' "$(basename "$0")" "$VER"
