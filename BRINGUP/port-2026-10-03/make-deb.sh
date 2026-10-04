@@ -61,7 +61,11 @@ say "  $n modules staged, $(du -sh "$STAGE/usr/lib/modules/$VER" | cut -f1)"
 say ""
 say "=== depmod for the target ==="
 if command -v depmod >/dev/null 2>&1; then
-	depmod -b "$STAGE" "$VER" 2>/dev/null && say "  modules.dep written" || say "  depmod returned non-zero (postinst will retry on install)"
+	if depmod -b "$STAGE/usr" "$VER" 2>/tmp/depmod.err; then   # modules live under usr/
+		say "  modules.dep written"
+	else
+		say "  depmod returned non-zero:"; sed "s/^/    /" /tmp/depmod.err | head -5
+	fi
 else
 	say "  no depmod here; the postinst runs it on the target"
 fi
@@ -118,13 +122,18 @@ say ""
 say "=== dpkg-deb ==="
 DEB="$OUT/linux-image-${VER}_${VER}_arm64.deb"
 COMPRESS=zstd
-dpkg-deb -Z"$COMPRESS" --build "$STAGE" "$DEB" 2>/dev/null || {
+dpkg-deb --root-owner-group -Z"$COMPRESS" --build "$STAGE" "$DEB" 2>/dev/null || {
 	say "  zstd unavailable, using xz"
-	dpkg-deb -Zxz --build "$STAGE" "$DEB" || die "dpkg-deb failed"
+	dpkg-deb --root-owner-group -Zxz --build "$STAGE" "$DEB" || die "dpkg-deb failed"
 }
 say ""
 say "package : $DEB"
 say "size    : $(du -h "$DEB" | cut -f1)"
+if dpkg-deb -c "$DEB" 2>/dev/null | grep -q "modules.dep$"; then
+	say "depmod  : modules.dep is in the package"
+else
+	say "depmod  : NO modules.dep -- the postinst must run depmod on install"
+fi
 say "sha256  : $(sha256sum "$DEB" | cut -d' ' -f1)"
 say ""
 say "contents:"
