@@ -111,6 +111,10 @@ packages provide. Without any of them Bluetooth still works: the chip runs from 
 the driver logs `-2` for the absent rampatch `qca/hmtbtfw11.tlv`, which is missing here either way.
 [bluetooth.md](bluetooth.md) has the detail.
 
+These files were pulled from this machine's own Windows install, and they may not be needed at all. If
+you hit Bluetooth stability problems — drops, failed reconnects, the adapter disappearing — copy them
+into `/lib/firmware/qca/` and see whether it settles. That is the case they are kept for.
+
 ## Not covered here
 
 - **3D GPU** — the Adreno firmware is vendor-only and is not installed on this machine
