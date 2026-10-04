@@ -4,9 +4,10 @@
 wedge tracks *repeated* suspends: the first suspend of a boot keeps the radio, later ones cost it
 (measured 2026-10-02, see below).**
 The machine uses a locally assembled `board-2.bin` because the distro image lacks a matching
-board-data key. Downstream ath12k resume patches have been tested, but PCIe link loss can still
-leave the radio wedged. See the [current maintainer handoff](../BRINGUP/notes/2026-09-30-ath12k-maintainer-handoff.md)
-and the [A16 board-data provenance](../firmware/ath12k-board-2-qcc2072-e14f/README.md).
+board-data key, and the file has to be rebuilt from your own Windows WLAN package — see
+[firmware.md](firmware.md). Downstream ath12k resume patches have been tested, but PCIe link loss can
+still leave the radio wedged. See the [current maintainer handoff](../BRINGUP/notes/2026-09-30-ath12k-maintainer-handoff.md)
+and the [A16 board-data provenance](../retired/firmware/ath12k-board-2-qcc2072-e14f/README.md).
 
 ## Current status and maintainer handoff
 

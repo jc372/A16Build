@@ -48,6 +48,23 @@ does and every file it writes at the top of the script itself.
 
 ---
 
+## Firmware
+
+The kernel package contains no firmware: the drivers load it from `/lib/firmware` at boot, and a
+missing file means that one device does not come up. Ubuntu's packages cover Wi-Fi, Bluetooth,
+display and suspend on most systems. On this machine two groups are different, and one is required
+for sound:
+
+1. **Sound** needs the glymur DSP images and the topology. They exist in no distribution package and
+   have to be copied from your own Windows install.
+2. **Wi-Fi** needs a `board-2.bin` carrying this machine's board key. Your distribution's copy may or
+   may not already have it — check before rebuilding anything.
+3. **Bluetooth** needs nothing: the chip works from its ROM firmware.
+
+Wi-Fi may or may not work without its board file; sound does not work without the DSP images. Exact
+file names, sizes, sha256 and destinations are in [docs/firmware.md](docs/firmware.md), and the
+extractor attached to the release pulls the files out of your Windows driver store.
+
 ## Step 1 — In Windows, before anything else
 
 1. **Shrink the Windows partition** from Windows (Disk Management) to leave unallocated space

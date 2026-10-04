@@ -9,7 +9,7 @@
 | Part | Qualcomm WCN7850-class combo; BT side reached over UART (serdev), PCI id `17cb:1112` |
 | Adapter identity | chip PID `0x20`, SOC `0x40292100`, ROM `0x00000101`, patch `0x7b40` — **HMT/HAMILTON** |
 | Firmware in use | `/lib/firmware/qca/hmtbtfw20.tlv` (280 764 B) with `hmtnv20.b105/b10f/b112/b3b` (9 656 B) |
-| Firmware missing | `qca/hmtbtfw11.tlv` (the *rampatch*) — the driver logs `-2` and runs on ROM firmware, which works |
+| Firmware missing | `qca/hmtbtfw11.tlv` (the *rampatch*) — the driver logs `-2` and runs on ROM firmware, which works. Nothing here is required: [firmware.md](firmware.md) has the sizes and sha256 if you want to match what this machine runs. |
 
 ## The two changes
 
