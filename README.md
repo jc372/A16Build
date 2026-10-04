@@ -40,6 +40,12 @@ patches, the manifest and the hashes are here so you can check that.
 
 Windows stays installed throughout. Do not erase it.
 
+**Every command on this page is in the repository's scripts** -- the steps explain them
+rather than asking you to type anything that is not in a script. `a16-port.sh` builds the
+kernel from source; `a16-install-kernel.sh` installs a kernel you already have as a package,
+putting its image, modules, device tree and boot entry in place. Each script lists what it
+does and every file it writes at the top of the script itself.
+
 ---
 
 ## Step 1 — In Windows, before anything else

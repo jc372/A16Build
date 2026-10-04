@@ -6,25 +6,37 @@
 #   sudo bash a16-install-kernel.sh --deb FILE.deb  # a specific package (e.g. one you just built)
 #   sudo bash a16-install-kernel.sh --check         # report what it would do; changes nothing
 #   sudo bash a16-install-kernel.sh --no-grub       # install only; write the entry out as text
+#   sudo bash a16-install-kernel.sh --reinstall     # install over a version already present
+#
+# Every command this script runs is in this script. It calls only tools already on the machine --
+# dpkg, depmod, update-initramfs, grub-script-check -- plus one sibling script, a16-grub-entry.sh,
+# which adds the menu entry. The only thing it fetches is the kernel package, and only when it
+# cannot find one locally (--deb, or beside itself, or in ~/a16-deb).
+#
+# Files it puts in place, all for the version it read out of the package:
+#
+#   /boot/vmlinuz-<ver>                  the kernel
+#   /boot/initrd.img-<ver>               built if the package's postinst did not
+#   /boot/config-<ver>                   from the package
+#   /boot/System.map-<ver>               from the package
+#   /boot/glymur-a16-<ver>.dtb           the device tree this machine boots with
+#   /usr/lib/modules/<ver>/              ~7,400 modules, and modules.dep for them
+#   one menuentry in the EFI grub.cfg    titled "A16: linux-next <ver>"
 #
 # What it does, in order:
 #   1. finds the package -- beside itself, in ~/a16-deb, in /tmp, or from the GitHub release
-#   2. reads the version out of the package, and skips the install if that version is already there
-#   3. installs it with dpkg (kmod first if it is missing), which puts in place:
-#        /boot/vmlinuz-<ver>, config-<ver>, System.map-<ver>, glymur-a16-<ver>.dtb
-#        /usr/lib/modules/<ver>/          -- the modules, ~7,400 of them
-#   4. verifies all of that, runs depmod, and builds the initramfs if the package's postinst did not
-#      (an entry without an initramfs cannot boot -- it is the most common failure here)
-#   5. adds the boot menu entry, via a16-grub-entry.sh, which backs the menu up first and refuses to
-#      add a duplicate
+#   2. reads the version out of the package, and skips the install if that version is already
+#      there (--reinstall forces it, after backing up what it is about to replace)
+#   3. installs it with dpkg (kmod first if it is missing)
+#   4. verifies every file listed above, runs depmod, and builds the initramfs if the package's
+#      postinst did not -- an entry without an initramfs cannot boot, and that is the most common
+#      failure on this machine
+#   5. adds the boot menu entry via a16-grub-entry.sh, which backs the menu up first and refuses
+#      to add a duplicate
 #   6. prints the version, what went where, and exactly what to pick after rebooting
 #
 # Everything it installs goes to the real /boot and /usr/lib/modules -- that is the point. If you
 # only want to see what would happen, use --check, which writes nothing.
-#
-#   Sandbox (for testing the parts that can be redirected; dpkg itself is never run):
-#     A16_ROOT=/tmp/a16sb A16_ALLOW_NONROOT=1 bash a16-install-kernel.sh
-set -u
 
 VER_DEFAULT=7.3.0-rc5-next-20261002-ec1
 RELEASE_TAG=kernel-7.3.0-rc5-next-20261002-ec1

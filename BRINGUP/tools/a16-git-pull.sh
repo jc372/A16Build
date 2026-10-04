@@ -2,10 +2,10 @@
 # a16-git-pull.sh -- pull the A16Build repo on this machine, using a GitHub token
 #                    that never appears in this script, in argv, or in the URL.
 #
-#   bash /home/jc/a16-payload/a16-git-pull.sh              # stage the token if needed, then clone/pull
-#   bash /home/jc/a16-payload/a16-git-pull.sh --status     # show what is staged, fetch nothing
-#   bash /home/jc/a16-payload/a16-git-pull.sh --new-token  # drop the staged token, prompt for a fresh one, pull
-#   bash /home/jc/a16-payload/a16-git-pull.sh --check      # stage if needed, then only test the credential (no clone)
+#   bash ~/a16-payload/a16-git-pull.sh              # stage the token if needed, then clone/pull
+#   bash ~/a16-payload/a16-git-pull.sh --status     # show what is staged, fetch nothing
+#   bash ~/a16-payload/a16-git-pull.sh --new-token  # drop the staged token, prompt for a fresh one, pull
+#   bash ~/a16-payload/a16-git-pull.sh --check      # stage if needed, then only test the credential (no clone)
 #
 # The token is read with `read -rs` (no echo, not in history) and stored 0600 in
 # ~/.a16-git-token as two lines: username, then token.  git gets it through an askpass
