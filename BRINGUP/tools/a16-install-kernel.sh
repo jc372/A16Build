@@ -167,7 +167,8 @@ ENTRY_TOOL="$HERE/a16-grub-entry.sh"
 if [ "$MODE" = check ]; then
 	todo "would add the entry for $VER (a16-grub-entry.sh add $VER)"
 elif [ ! -f "$ENTRY_TOOL" ]; then
-	warn "a16-grub-entry.sh is not beside this script -- adding it by hand is not covered here"
+	warn "a16-grub-entry.sh is not beside this script -- download it from the same release page"
+		warn "  (or BRINGUP/tools/ in the repository) and put it in the same directory, then re-run"
 else
 	ARGS=(add)
 	[ "$DO_GRUB" = 0 ] && ARGS+=(--no-grub)
@@ -187,5 +188,10 @@ printf '  Nothing was set as the default -- the machine still boots what it boot
 printf '  before, so selecting it is not optional.\n'
 printf '  Confirm you are really on it:  uname -r  ->  %s\n' "$VER"
 printf '  Anything else printed there means the default entry was taken.\n'
-printf '\n  After it boots and you are happy with it, clear the dead entries:\n'
-printf '      sudo bash %s/a16-grub-prune.sh --apply\n' "${HERE##"$R"}"
+if [ -f "$HERE/a16-grub-prune.sh" ]; then
+	printf '  After it boots and you are happy with it, clear the dead entries:\n'
+	printf '      sudo bash %s/a16-grub-prune.sh --apply\n' "$HERE"
+else
+	printf '  To clear dead menu entries later, get a16-grub-prune.sh from the same\n'
+	printf '  release page (or BRINGUP/tools/ in the repository) and run it there.\n'
+fi

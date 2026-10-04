@@ -20,7 +20,7 @@ steps in order. You do not need a second computer.
 
 | | |
 |---|---|
-| **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`. Installs with one command — `a16-install-kernel.sh` in step 5 puts the kernel, its modules and the device tree in place and adds the boot entry. You still need Ubuntu on the machine (steps 1–4). |
+| **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`. The same page carries the installer script — download the package and the scripts into one folder and run `sudo bash a16-install-kernel.sh`; it puts the kernel, its modules and the device tree in place and adds the boot entry. Nothing else to fetch, and no repository clone. You still need Ubuntu on the machine (steps 1–4). |
 | **Build it yourself** | Follow the steps below. Everything you need to build the same kernel from source travels on a USB stick, and the patches are in [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/). |
 
 Both routes end at the same place. The `.deb` is the same kernel this repository builds — the
