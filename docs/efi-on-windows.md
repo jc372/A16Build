@@ -21,8 +21,8 @@ done from Windows, and there are two reasons why:
 | Windows | **On** |
 | Ubuntu, the installer, or any of the sticks | **Off** |
 
-Reach it by pressing **Esc at power-on** for the boot menu, then the firmware setup entry. If
-you forget and Linux will not start, that is almost always why.
+Reach it by pressing **F2** at power-on for firmware setup. **Esc** shows the boot
+options. If Linux will not start, check this first.
 
 ---
 
