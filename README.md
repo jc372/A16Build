@@ -59,11 +59,19 @@ Your stick now holds everything needed to build the kernel.
 
 ## Step 3 — Install Ubuntu
 
-1. Write the **latest Ubuntu nightly arm64 image** to a USB stick and start the machine from it.
-   Use a nightly: released images do not carry the support this machine needs.
-2. Install **alongside Windows**, onto the unallocated space from step 1. Let it use the
+1. Write the **latest Ubuntu nightly arm64 image** to a USB stick. Use a nightly: released
+   images do not carry the support this machine needs. If you use Rufus, choose **DD image mode**,
+   and **check the checksum** — a half-written stick has cost a flashing round here before.
+
+2. **Secure Boot off first** (**F2** at power-on → firmware setup), and put the stick **on the
+   hub**, not in a USB-C port: a USB-C device is not seen during the install.
+
+3. Start the machine with the stick in, pressing **Esc** at power-on for the **boot options** and
+   picking the stick.
+4. Install **alongside Windows**, onto the unallocated space from step 1. Let it use the
    existing EFI partition. Do not erase the disk.
-3. **Set the clock.** This machine has no clock Linux can read, so a live session starts with
+
+5. **Set the clock.** This machine has no clock Linux can read, so a live session starts with
    the wrong date, and Ubuntu's package indices have a `Valid-Until` that a wrong date breaks.
    Either plug in ethernet (it sets the clock by itself) or set the date and time by hand
    before updating anything.
@@ -83,10 +91,6 @@ happen before anything else can run on the Linux side.
 
 The short version is below; [the full page](docs/efi-on-windows.md) covers mounting, what
 is on the partition, the repair scripts, and what to check when nothing starts.
-
-The new kernel needs a menu entry, and the menu is a **file on the EFI partition**, so this part
-is done from Windows. The short version is below; [the full page](docs/efi-on-windows.md) covers
-mounting, what else is on the partition, and what to check when nothing starts.
 
 1. **Secure Boot: off for Linux, on for Windows — every time you switch.**
    **F2** at power-on opens **firmware setup** — that is where Secure Boot is set.
@@ -142,6 +146,12 @@ on your stick is the one this port was tested against.
 
 The build takes a while (a full kernel). Everything it does is logged to `~/a16-port/`.
 
+**One thing needs the network after all:** the build toolchain — `build-essential`, `gawk`, `flex`,
+`bison`, `bc`, `kmod`, `rsync`. If the installed system does not already have them, `a16-port.sh`
+will say so and they have to come from `apt`. A desktop install does not include them, so keep the
+ethernet (or another connection) available for that one step, or install them before you go
+offline. The *snapshot* needs no network — that is on the stick.
+
 ---
 
 ## Step 6 — Start it up
@@ -150,7 +160,8 @@ Choose the new kernel from the boot menu. **Check the display first** — if the
 you have the whole thing: internal display, external monitor, Bluetooth, and Wi-Fi, which works
 from here on without a cable.
 
-The boot menu is edited from Windows if you ever need to change it.
+To add another kernel later, edit the same menu file — from Linux via `/boot/efi`, or from
+Windows as in step 4.
 
 ---
 
