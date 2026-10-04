@@ -172,17 +172,22 @@ is on the partition, the repair scripts, and what to check when nothing starts.
    and change the three filenames:
 
    ```
+   ```
    menuentry "[10] A16: next <release>" {
        if [ -f /boot/vmlinuz-<release> ]; then
-           linux /boot/vmlinuz-<release> root=UUID=<your-root-uuid> ro acpi=off console=tty0 loglevel=7
+           linux /boot/vmlinuz-<release> root=UUID=<your-root-uuid> ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7
            devicetree /boot/glymur-a16-<release>.dtb
            initrd /boot/initrd.img-<release>
        fi
    }
    ```
 
-   Leave `root=UUID=` and `acpi=off` alone — `acpi=off` is not optional on this machine. Keep
+   Leave `root=UUID=` alone, and keep all four of `acpi=off`, `clk_ignore_unused`,
+   `pd_ignore_unused`, `regulator_ignore_unused` — they are not optional on this machine. Keep
    titles unique: a duplicate title can boot a kernel you have replaced.
+
+   All three files in that entry must exist. `vmlinuz` and the `.dtb` come with the kernel;
+   **the `initrd` does not** — see the box below.
 
 4. **Save, keep a copy, and start the machine.** If the entry does nothing when picked, the
    kernel file it names is missing — mount the partition again and check the filenames.
@@ -210,6 +215,22 @@ The build takes a while (a full kernel). Everything it does is logged to `~/a16-
 install it with `apt`. The *snapshot* never needs the network — that is on the stick.
 
 ---
+
+### If you installed the `.deb`
+
+`dpkg -i` puts the kernel, its modules and the device tree in place, and its postinst builds the
+initramfs. If yours is an older download, or `update-initramfs` is not installed, make it by hand —
+a missing initramfs is the single most common reason the machine will not start:
+
+```bash
+sudo update-initramfs -c -k 7.3.0-rc5-next-20261002-ec1
+```
+
+Then add the boot entry from step 4, naming `/boot/glymur-a16-7.3.0-rc5-next-20261002-ec1.dtb`.
+
+Firmware is a separate matter: Wi-Fi and Bluetooth come from the standard `linux-firmware`
+package, but **audio needs the ADSP images and the topology out of your Windows install**, plus a
+UCM profile. See [docs/audio.md](docs/audio.md) — without it the machine runs silently.
 
 ## Step 6 — Start it up
 

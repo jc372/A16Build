@@ -97,13 +97,21 @@ Description: Linux kernel $VER for the ASUS Zenbook A16 (UX3607OA)
  Built from linux-next next-20261002 with the A16 port applied: display, external display,
  Bluetooth, suspend, and the embedded controller.
  .
- No initramfs or bootloader hooks: add the boot entry yourself (see the repository README).
+ The postinst builds the initramfs for this kernel. No bootloader hook: add the boot
+ entry yourself (see the repository README).
 EOF
 cat > "$STAGE/DEBIAN/postinst" <<EOF
 #!/bin/sh
 set -e
 if command -v depmod >/dev/null 2>&1; then
     depmod -a $VER || true
+fi
+# Every boot entry references /boot/initrd.img-$VER, and GRUB stops at a missing file
+# rather than skipping the entry -- so build it here instead of leaving it to the user.
+if command -v update-initramfs >/dev/null 2>&1; then
+    update-initramfs -c -k $VER 2>/dev/null || update-initramfs -u -k $VER 2>/dev/null || true
+elif command -v mkinitramfs >/dev/null 2>&1; then
+    mkinitramfs -o /boot/initrd.img-$VER $VER 2>/dev/null || true
 fi
 echo "linux-image-$VER installed."
 echo "Add a boot entry for /boot/vmlinuz-$VER (with /boot/glymur-a16-$VER.dtb and"
