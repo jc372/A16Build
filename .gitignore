@@ -5,3 +5,10 @@ linux-next/
 *.tar.zst
 .diag/
 firmware/ath12k-board-2-qcc2072-e14f/rebuilt/
+
+# Vendor firmware extracted from the Windows driver packages (Qualcomm/ASUS proprietary):
+# not redistributable. Keep them on the machine, extract them with
+# BRINGUP/tools/extract-windows-a16-firmware.sh, and never commit them.
+retired/firmware/
+*.mbn
+*.elf
