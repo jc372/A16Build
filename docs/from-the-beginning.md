@@ -26,10 +26,10 @@ How to take a stock **ASUS Zenbook A16 (UX3607OA)** from "Windows only" to a wor
 
 ## 1. Hardware setup
 
-**You need a hub, and it has to have a USB-A port.** The A16 has no USB-A, and a plain
-USB-C dongle will not do: the machine's USB-A-side support is part of what you are bringing
-up, and having real USB-A ports on the hub is what makes the install keyboard-and-mouse
-possible.
+**You need a hub or dock, plugged into the machine's USB-A port.** The A16 has both
+USB-A and USB-C, but **on this version the USB-C ports cannot be used** — so the keyboard,
+mouse and ethernet all come through that one USB-A connector, and a hub is what gives you
+several devices from it.
 
 Until the Wi-Fi section below is satisfied, the hub must also provide:
 
