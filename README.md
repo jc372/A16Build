@@ -20,6 +20,7 @@ steps in order. You do not need a second computer.
 
 | | |
 |---|---|
+| **Everything, one script** | On the installed machine: `sudo bash a16-setup.sh --check` (changes nothing, tells you the state), then `sudo bash a16-setup.sh`. It installs the package, builds the initramfs, writes the boot entry with **your** root UUID already filled in (plus a copy on the EFI partition for Windows to read), installs the audio firmware if you have already extracted it, sets up the UCM profile and the PipeWire rule, and ends by listing exactly what is left for you. |
 | **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`, and installs with `dpkg -i`. You still need Ubuntu on the machine (steps 1–4), and you still add the boot entry yourself. |
 | **Build it yourself** | Follow the steps below. Everything you need to build the same kernel from source travels on a USB stick, and the patches are in [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/). |
 
@@ -202,6 +203,13 @@ Plug the stick into the new install and run, from the stick's directory:
 ```bash
 bash a16-port.sh --verify     # applies the patches to a scratch copy and checks every hash
 sudo bash a16-port.sh         # same again, then builds and installs beside the existing kernels
+```
+
+Or take the scripted route, which wraps the package, the initramfs, the boot entry and audio:
+
+```bash
+bash a16-setup.sh --check     # read-only: report the current state
+sudo bash a16-setup.sh        # do everything it can, then list what is left
 ```
 
 `--verify` builds nothing. Run it first: it will tell you in about a minute whether the payload
