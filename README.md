@@ -3,8 +3,8 @@
 Turn a Windows-only Zenbook A16 into a working **Ubuntu + linux-next** machine. Follow the
 steps in order. You do not need a second computer.
 
-> **Built with [Hermes](https://hermes-agent.nousresearch.com) driving a strong model, and a good
-> AI model is your friend here — especially when working through issues.**
+> **Put together with [Hermes](https://hermes-agent.nousresearch.com), an AI agent running on a
+> strong model. A good AI model is your friend here — especially when working through issues.**
 
 > **Status: the from-scratch route is untested.** Everything here was worked out on this machine
 > *after* it already had Ubuntu and the build toolchain installed. The patch set, the build, and
