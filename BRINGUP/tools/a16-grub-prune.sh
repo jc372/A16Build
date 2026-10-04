@@ -1,87 +1,133 @@
 #!/usr/bin/env bash
-# a16-grub-prune.sh -- remove stale [10] kernel entries, keep the current one.
+# a16-grub-prune.sh -- remove boot menu entries whose kernel is no longer on the disk.
 #
-#   bash a16-grub-prune.sh --dry-run     # show what would go (default)
-#   sudo bash a16-grub-prune.sh --apply  # do it: backup, rewrite, grub-script-check
+#   bash a16-grub-prune.sh                 # dry run: what would be removed (default)
+#   bash a16-grub-prune.sh --list          # every entry, and whether its files exist
+#   sudo bash a16-grub-prune.sh --apply    # remove them: backup, rewrite, syntax-check
 #
-# Why: every install-beside run appended a menu entry titled "[10] A16: ...". Six piled up,
-# and most now point at kernels that have been deleted. This keeps the one whose kernel
-# still exists and is newest, and removes the rest.
+# The rule is the only one that is safe to automate: an entry that names a vmlinuz which is not on
+# the disk cannot boot, so it is dead weight. Entries with no kernel line at all -- Windows, the
+# diagnostics screen, Ubuntu's own generated menu -- are never touched, and at least one working
+# A16 entry is always kept even if the tool thinks otherwise.
 #
-# Every other entry is left exactly as it is: [2] failsafe, [3] known-good, [5] Ubuntu,
-# [6] diagnostics, [7] Windows Boot Manager, [9] no-GUI command line.
+# Nothing is written without --apply, and --apply always leaves a timestamped backup of the menu
+# beside it plus a grub-script-check pass. Dry run is the default so a careless run is harmless.
+#
+# Sandbox (test against a copy of the menu, nothing real is touched):
+#   A16_ROOT=/tmp/a16sb A16_ALLOW_NONROOT=1 bash a16-grub-prune.sh --apply
 set -u
-ESP="${A16_ESP:-/boot/efi}"
-CFG="${A16_GRUB_CFG:-$ESP/EFI/ubuntu_snapdragon/grub.cfg}"
-KEEP="${A16_GRUB_KEEP:-mon1}"        # substring identifying the entry to keep
+
+R="${A16_ROOT:-}"; [ -n "$R" ] && SANDBOX=1 || SANDBOX=0
+STAMP="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo nostamp)"
 MODE="${1:---dry-run}"
 
-[ -f "$CFG" ] || { echo "FATAL: no $CFG"; exit 1; }
-if [ "$MODE" = "--apply" ] && [ "$(id -u)" != 0 ]; then
-  echo "FATAL: --apply needs root:  sudo bash $0 --apply"; exit 1
+case "$MODE" in
+	--dry-run|--apply|--list) : ;;
+	-h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+	*) echo "usage: $0 [--dry-run|--list|--apply]"; exit 2 ;;
+esac
+if [ "$MODE" = "--apply" ] && [ "${A16_ALLOW_NONROOT:-0}" != 1 ]; then
+	[ "$(id -u)" = 0 ] || { echo "FATAL: --apply needs root: sudo bash $0 --apply"; exit 1; }
 fi
 
-python3 - "$CFG" "$KEEP" "$MODE" <<'PY'
-import sys, os, re, glob, shutil, subprocess
-cfg, keep, mode = sys.argv[1], sys.argv[2], sys.argv[3]
-lines = open(cfg).read().split('\n')
+MENU=""
+for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
+	[ -f "$c" ] && MENU="$c" && break
+done
+[ -n "$MENU" ] || { echo "FATAL: no GRUB menu found under ${R}/boot/efi or ${R}/boot/EFI"; exit 1; }
 
-starts = [i for i, l in enumerate(lines) if l.startswith('menuentry')]
+BEFORE="$(grep -cE '^[[:space:]]*menuentry' "$MENU")"
+printf '\nmenu: %s   (%s entries)\n' "${MENU##"$R"}" "$BEFORE"
+[ "$SANDBOX" = 1 ] && printf 'sandbox: %s (nothing outside it is touched)\n' "$R"
+
+python3 - "$MENU" "$MODE" "$R" <<'PY'
+import os, re, sys
+menu, mode, R = sys.argv[1], sys.argv[2], sys.argv[3]
+text = open(menu).read()
+
+# every menuentry block, with its brace extent, so removal cannot cut into a neighbour
 blocks = []
-for n, s in enumerate(starts):
-    e = starts[n + 1] if n + 1 < len(starts) else len(lines)
-    while e > s and lines[e - 1].strip() == '':
-        e -= 1
-    blocks.append([s, e])
+for m in re.finditer(r'(?m)^([ \t]*)menuentry\s+"([^"]+)"\s*\{', text):
+    j = m.end() - 1; depth = 0
+    while j < len(text):
+        if text[j] == '{': depth += 1
+        elif text[j] == '}':
+            depth -= 1
+            if depth == 0: break
+        j += 1
+    blocks.append({'start': m.start(), 'end': j + 1, 'title': m.group(2),
+                   'body': text[m.start():j + 1]})
 
-print(f"  {len(blocks)} menuentry blocks in {cfg}")
+def paths(body):
+    k = re.search(r'^\s*linux\s+(\S+)', body, re.M)
+    i = re.search(r'^\s*initrd\s+(\S+)', body, re.M)
+    d = re.search(r'^\s*devicetree\s+(\S+)', body, re.M)
+    return (k.group(1) if k else None,
+            i.group(1) if i else None,
+            d.group(1) if d else None)
 
-def kernel_of(block):
-    for l in lines[block[0]:block[1]]:
-        m = re.search(r'/boot/vmlinuz-(\S+)', l)
-        if m:
-            return m.group(1)
-    return None
+def exists(p):
+    return True if p is None else os.path.exists(R + p)
 
-keep_block, remove = None, []
+dead, keep, nokernel = [], [], []
 for b in blocks:
-    title = lines[b[0]]
-    if '"[10]' not in title:
-        continue
-    k = kernel_of(b)
-    exists = bool(k) and os.path.exists('/boot/vmlinuz-' + k)
-    if keep in title and exists:
-        keep_block = b
+    k, i, d = paths(b['body'])
+    if k is None:
+        nokernel.append(b)          # Windows, diagnostics, Ubuntu's own entry: never touched
+    elif not exists(k):
+        dead.append(b)
     else:
-        why = 'kernel deleted' if not exists else 'superseded'
-        remove.append((b, title.strip(), why))
+        keep.append(b)
 
-if keep_block:
-    print(f"  keeping : {lines[keep_block[0]].strip()[:100]}")
-else:
-    print(f"  WARNING: no [10] entry matching {keep!r} with an existing kernel")
-    print("           nothing will be removed -- check the menu by hand")
+print(f"  {len(blocks)} entries: {len(keep)} bootable, {len(dead)} naming a missing kernel, "
+      f"{len(nokernel)} without a kernel line")
+
+if mode == '--list' or mode == '--dry-run':
+    for b in blocks:
+        k, i, d = paths(b['body'])
+        if k is None:      state = 'no kernel line   (kept)'
+        elif not exists(k): state = 'KERNEL MISSING   (would go)'
+        else:              state = 'ok'
+        print(f"    [{state}] {b['title'][:66]}")
+        if k: print(f"          {k}")
+
+# a menu with no bootable A16 entry left is worse than a cluttered one
+if dead and not keep:
+    print("  refusing: every entry with a kernel points at a missing file; that cannot be right")
+    sys.exit(1)
+
+if mode == '--list':
+    sys.exit(0)
+if not dead:
+    print("  nothing to remove -- every entry naming a kernel has one on the disk")
+    sys.exit(0)
+if mode == '--dry-run':
+    print(f"\n  would remove {len(dead)} entr{'y' if len(dead)==1 else 'ies'}:")
+    for b in dead: print(f"    - {b['title'][:70]}")
+    print("  run with --apply to do it (backup taken first)")
     sys.exit(0)
 
-for b, t, why in remove:
-    print(f"  remove  : [{why}] {t[:88]}")
-
-if not remove:
-    print("  nothing to remove")
-    sys.exit(0)
-
-if mode != '--apply':
-    print(f"  dry run: {len(remove)} entries would be removed, no writes")
-    sys.exit(0)
-
-bak = cfg + '.a16prune'
-shutil.copy2(cfg, bak)
-drop = set()
-for _blk, _title, _why in remove:
-    drop.update(range(_blk[0], _blk[1]))
-open(cfg, 'w').write('\n'.join(l for i, l in enumerate(lines) if i not in drop))
-print(f"  wrote {cfg}  (backup {bak})")
-rc = subprocess.run(['grub-script-check', cfg]).returncode
-print(f"  grub-script-check: {'PASS' if rc == 0 else 'FAIL -- restore ' + bak}")
-print(f"  menu now: {sum(1 for l in open(cfg) if l.startswith('menuentry'))} entries")
+# ---- apply
+out, prev = [], 0
+for b in dead:
+    out.append(text[prev:b['start']]); prev = b['end']
+out.append(text[prev:])
+new = ''.join(out)
+new = re.sub(r'\n{3,}', '\n\n', new)
+open(menu, 'w').write(new)
+print(f"  removed {len(dead)} entr{'y' if len(dead)==1 else 'ies'}; {len(keep) + len(nokernel)} remain")
 PY
+rc=$?
+[ "$MODE" = "--apply" ] && [ "$rc" = 0 ] || exit $rc
+
+# only rewrite if something actually changed; keep a backup in every case
+BAK="$MENU.a16prune-$STAMP"
+NOW="$(grep -cE '^[[:space:]]*menuentry' "$MENU")"
+if [ "$NOW" -lt "$BEFORE" ]; then
+	cp -f "$MENU" "$BAK" && printf '  backup: %s\n' "${BAK##"$R"}"
+	if command -v grub-script-check >/dev/null 2>&1; then
+		if grub-script-check "$MENU" 2>/dev/null; then printf '  grub-script-check: ok\n'
+		else printf '  grub-script-check complained -- restore %s if in doubt\n' "${BAK##"$R"}"; fi
+	fi
+	printf '  entries now: %s (was %s)\n' "$(grep -cE '^[[:space:]]*menuentry' "$MENU")" "$BEFORE"
+fi
