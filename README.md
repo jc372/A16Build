@@ -3,6 +3,13 @@
 Turn a Windows-only Zenbook A16 into a working **Ubuntu + linux-next** machine. Follow the
 steps in order. You do not need a second computer.
 
+> **Status: the from-scratch route is untested.** Everything here was worked out on this machine
+> *after* it already had Ubuntu and the build toolchain installed. The patch set, the build, and
+> the kernel that comes out of it are verified on the hardware — the path that starts from a clean
+> install, including `a16-port.sh`, the toolchain pool and the USB payload, has **not** been run
+> end to end. Treat a first attempt as a rehearsal, and run `a16-port.sh --verify` before building:
+> it exists to catch payload problems before anything is compiled.
+
 ---
 
 ## What you need

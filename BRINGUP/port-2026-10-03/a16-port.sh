@@ -5,6 +5,10 @@
 # It downloads the linux-next snapshot itself and verifies every hash on the way through, so
 # the only thing that has to travel by hand is this script and the patches.
 #
+# STATUS: the from-scratch path is untested. This was written on a machine that already had
+# Ubuntu and the build toolchain installed, so the fetch/patch/build half is exercised and the
+# fresh-install half is not. --verify is the cheap way to check the payload before building.
+#
 #   bash a16-port.sh --fetch            # download the snapshot and verify it (no changes)
 #   bash a16-port.sh --verify           # apply patches to a scratch tree, check every hash
 #   sudo bash a16-port.sh               # fetch + verify + build + install beside the others
