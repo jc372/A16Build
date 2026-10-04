@@ -20,7 +20,7 @@ steps in order. You do not need a second computer.
 
 | | |
 |---|---|
-| **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`, and installs with `dpkg -i`. You still need Ubuntu on the machine (steps 1–4), and you still add the boot entry yourself. |
+| **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`. Installs with one command — `a16-install-kernel.sh` in step 5 puts the kernel, its modules and the device tree in place and adds the boot entry. You still need Ubuntu on the machine (steps 1–4). |
 | **Build it yourself** | Follow the steps below. Everything you need to build the same kernel from source travels on a USB stick, and the patches are in [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/). |
 
 Both routes end at the same place. The `.deb` is the same kernel this repository builds — the
@@ -236,15 +236,20 @@ install it with `apt`. The *snapshot* never needs the network — that is on the
 
 ### If you installed the `.deb`
 
-`dpkg -i` puts the kernel, its modules and the device tree in place, and its postinst builds the
-initramfs. If yours is an older download, or `update-initramfs` is not installed, make it by hand —
-a missing initramfs is the single most common reason the machine will not start:
+Installing it is one command. It works the version out of the package itself, so nothing below
+needs editing:
 
 ```bash
-sudo update-initramfs -c -k 7.3.0-rc5-next-20261002-ec1
+sudo bash BRINGUP/tools/a16-install-kernel.sh --deb ~/Downloads/linux-image-<version>_<version>_arm64.deb
 ```
 
-Then add the boot entry from step 4, naming `/boot/glymur-a16-7.3.0-rc5-next-20261002-ec1.dtb`.
+That installs the kernel, its modules and the device tree, runs `depmod`, builds the initramfs if the
+package's postinst did not — a missing initramfs is the single most common reason the machine will
+not start — and adds the boot entry with your root UUID, without touching the default. `--check`
+reports what it would do and writes nothing.
+
+By hand instead: `sudo dpkg -i <package>`, then `sudo update-initramfs -c -k <version>` if the
+postinst did not, then the boot entry from step 4, naming `/boot/glymur-a16-<version>.dtb`.
 
 Firmware is a separate matter: Wi-Fi and Bluetooth come from the standard `linux-firmware`
 package, but **audio needs the ADSP images and the topology out of your Windows install**, plus a
