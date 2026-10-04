@@ -129,8 +129,17 @@ that has produced audio, and it is much simpler than the bring-up path that prec
 
    ```bash
    git clone https://github.com/quic-kdybcio/alsa-ucm-conf --branch=topic/zenbooka16
-   cd alsa-ucm-conf/ucm2/Qualcomm/glymur
-   sudo cp *.conf /usr/share/alsa/ucm2/Qualcomm/glymur/
+   cd alsa-ucm-conf/ucm2
+
+   sudo mkdir -p /usr/share/alsa/ucm2/Qualcomm/glymur
+   sudo cp Qualcomm/glymur/*.conf /usr/share/alsa/ucm2/Qualcomm/glymur/
+
+   # ALSA reaches a card's profile through conf.d/<card id>/, so the indirection goes in too:
+   #   conf.d/glymur/            the shipped entry points, one per card name this profile serves
+   #   conf.d/GLYMURASUSZenbo/   this machine's card id, which is what the kernel reports
+   cat /proc/asound/cards
+   sudo cp -r conf.d/glymur /usr/share/alsa/ucm2/conf.d/
+   sudo cp -r conf.d/GLYMURASUSZenbo /usr/share/alsa/ucm2/conf.d/
    ```
 
    Verified commit: **`1b99970a9d5f01d68288c3d09b7ac31f4db5ba4f`** -- *"ucm2: Qualcomm: add ASUS
