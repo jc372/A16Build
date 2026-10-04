@@ -73,15 +73,32 @@ An entry is a block in `grub.cfg` shaped like this:
 ```
 menuentry "[10] A16: next 7.3.0-rc5-next-20261002-ec1" {
     if [ -f /boot/vmlinuz-7.3.0-rc5-next-20261002-ec1 ]; then
-        linux /boot/vmlinuz-7.3.0-rc5-next-20261002-ec1 root=UUID=<your-root-uuid> ro acpi=off console=tty0 loglevel=7
+        linux /boot/vmlinuz-7.3.0-rc5-next-20261002-ec1 root=UUID=<your-root-uuid> ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7
         devicetree /boot/glymur-a16-7.3.0-rc5-next-20261002-ec1.dtb
         initrd /boot/initrd.img-7.3.0-rc5-next-20261002-ec1
     fi
 }
 ```
 
-Copy an entry that already works and change the three filenames. Leave `root=UUID=` and the
-kernel options alone — `acpi=off` is not optional on this machine.
+Copy an entry that already works and change the three filenames. Substitute your own
+`root=UUID=`, and keep **all four** kernel options -- `acpi=off` is not optional on this machine,
+and without `clk_ignore_unused`, `pd_ignore_unused` and `regulator_ignore_unused` the display and
+the PHYs do not come up:
+
+    acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused
+
+
+### Finding your root UUID, and the filenames to use
+
+The entry names files by path and the root by UUID, so both must match your install. Get them from
+a live session -- the installer's "Try Ubuntu" works, and so does booting the stick:
+
+    lsblk -f                       # the ext4 partition's UUID is the one you want
+    sudo blkid | grep ext4
+    ls /boot/vmlinuz-* /boot/initrd.img-* /boot/glymur-a16-*.dtb
+
+The `.deb` installs `/boot/glymur-a16-<version>.dtb`; a kernel built with `a16-port.sh` may install
+a differently named device tree, so read the name off `/boot` rather than assuming it.
 
 **Keep the entry valid or the machine will not boot it.** Two rules that have bitten here:
 
