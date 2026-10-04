@@ -188,10 +188,5 @@ printf '  Nothing was set as the default -- the machine still boots what it boot
 printf '  before, so selecting it is not optional.\n'
 printf '  Confirm you are really on it:  uname -r  ->  %s\n' "$VER"
 printf '  Anything else printed there means the default entry was taken.\n'
-if [ -f "$HERE/a16-grub-prune.sh" ]; then
-	printf '  After it boots and you are happy with it, clear the dead entries:\n'
-	printf '      sudo bash %s/a16-grub-prune.sh --apply\n' "$HERE"
-else
-	printf '  To clear dead menu entries later, get a16-grub-prune.sh from the same\n'
-	printf '  release page (or BRINGUP/tools/ in the repository) and run it there.\n'
-fi
+printf '\n  Later, retire an entry you no longer want with:\n'
+printf '      sudo bash %s/a16-grub-entry.sh remove %s\n' "${HERE##"$R"}" "$VER"
