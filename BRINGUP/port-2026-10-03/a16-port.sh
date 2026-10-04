@@ -57,11 +57,38 @@ missing=""
 for t in wget tar patch make gcc gawk flex bison bc depmod rsync; do
 	command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
 done
+PKGS="build-essential wget tar patch gawk flex bison bc kmod rsync"
 if [ -n "$missing" ]; then
 	say "missing:$missing"
-	say "install them with:  sudo apt install -y build-essential wget tar patch gawk flex bison bc kmod rsync"
-	[ "$MODE" = full ] || die "install the packages above and re-run"
-	command -v apt >/dev/null 2>&1 && sudo apt install -y build-essential wget tar patch gawk flex bison bc kmod rsync || die "cannot install prerequisites"
+	# A toolchain pool can travel on the stick exactly like the snapshot does, which removes
+	# the last thing the build needs a network for. See the README for generating it.
+	POOL="$HERE/a16-pool"
+	if [ -d "$POOL" ] && ls "$POOL"/*.deb >/dev/null 2>&1; then
+		n=$(ls "$POOL"/*.deb | wc -l)
+		say "installing from the pool on the stick: $POOL ($n packages)"
+		[ "$(id -u)" = 0 ] || die "installing prerequisites needs root: re-run with sudo"
+		if command -v dpkg-scanpackages >/dev/null 2>&1; then
+			( cd "$POOL" && dpkg-scanpackages . /dev/null 2>/dev/null | gzip -9c > Packages.gz )
+			echo "deb [trusted=yes] file:$POOL ./" > /etc/apt/sources.list.d/a16-pool.list
+			apt update >/dev/null 2>&1
+			# shellcheck disable=SC2086
+			if apt install -y $PKGS; then
+				say "pool installed"
+			else
+				say "local repo route failed -- installing the debs directly"
+				dpkg -i "$POOL"/*.deb || dpkg -i "$POOL"/*.deb || die "pool install failed"
+			fi
+		else
+			say "no dpkg-scanpackages (dpkg-dev) -- installing the debs directly, twice for ordering"
+			dpkg -i "$POOL"/*.deb || true
+			dpkg -i "$POOL"/*.deb || die "pool install failed"
+		fi
+		for t in $missing; do command -v "$t" >/dev/null 2>&1 || say "still missing: $t"; done
+	else
+		say "install them with:  sudo apt install -y $PKGS"
+		[ "$MODE" = full ] || die "install the packages above and re-run"
+		command -v apt >/dev/null 2>&1 && sudo apt install -y $PKGS || die "cannot install prerequisites"
+	fi
 else
 	say "all present"
 fi
