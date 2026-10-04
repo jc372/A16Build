@@ -16,7 +16,7 @@ steps in order. You do not need a second computer.
 
 | | |
 |---|---|
-| **USB-A hub** | The machine has no USB-A ports. The hub must have one, and the keyboard, mouse and stick plug into it. |
+| **USB-A hub** | The machine has no USB-A ports, and **its USB-C ports cannot be used on this version at all**. The hub must have a USB-A port; the keyboard, mouse and any USB stick plug into that. |
 | **Wired keyboard** | Whether the internal keyboard and touchpad work in the live session depends on the kernel the nightly ships — see step 3. Have one available. |
 | **Wired mouse** | Same reason. |
 | **USB stick or SD card, 8 GB+** | The installer image goes on either — the machine's own SD card works, and is one less USB-C device to worry about. A second stick if you want the payload separate. |
@@ -105,8 +105,9 @@ only falls back to `apt` when it is not.
    images do not carry the support this machine needs. If you use Rufus, choose **DD image mode**,
    and **check the checksum**.
 
-2. **Secure Boot off first** (**F2** at power-on → firmware setup), and put the stick **on the
-   hub**, not in a USB-C port: a USB-C device is not seen during the install.
+2. **Secure Boot off first** (**F2** at power-on → firmware setup). Any USB device goes **on the
+   hub** — USB-C cannot be used on this version, so a stick in a USB-C port is not seen. The SD
+   card is unaffected and uses the machine's own slot.
 
 3. Start the machine with the stick in, pressing **Esc** at power-on for the **boot options** and
    picking the stick.
