@@ -208,3 +208,45 @@ wpctl status        # sink should now read "Built-in Audio (MultiMedia2 Playback
 Confirmed 2026-10-03: `Dummy Output` was replaced by `Built-in Audio (MultiMedia2 Playback (*))`
 and a `MultiMedia4 Capture` source, with the device moving from `[alsa]` to `[alsa:pcm]`.
 The rule lives in the user's config, so it survives reboots.
+
+---
+
+## If the speakers are silent after a boot
+
+Work down this list before treating it as a fault. The first item accounts for most of it, and it
+is easy to misread: PipeWire shows the stream as attached and `[active]` even when nothing is
+being fed to the card.
+
+1. **Is audio actually flowing?** A stream on the sink is not the same as an open PCM. Check:
+
+   ```bash
+   grep state /proc/asound/card0/pcm1p/sub0/status     # empty = nothing is playing
+   fuser /dev/snd/pcmC0D1p                             # empty = no process holds it
+   ```
+
+   With a video genuinely playing these are non-empty. If they are empty, start playback and look
+   again — a paused player looks identical to a broken one from the outside.
+
+2. **Desktop and application volume.** `wpctl get-volume @DEFAULT_AUDIO_SINK@`, and the player's
+   own slider. The sink volume is not the whole story.
+
+3. **The amplifier path, read while audio is playing.** This control is derived from the audio
+   path rather than set by hand — writes to it do not stick, so it reports what is really
+   connected:
+
+   ```bash
+   amixer -c 0 cget numid=95      # WSA_CODEC_DMA_RX_0 Audio Mixer MultiMedia2
+   ```
+
+   While something is playing it should read `on,on`. Read on an idle card it can legitimately
+   read `on,off`, which is not a fault.
+
+4. **Then the kernel log**, for the boot in question:
+
+   ```bash
+   journalctl -b -1 -k --no-pager | grep -iE 'wsa|soundwire|q6apm|gpr'
+   ```
+
+   `SWR bus clsh detected` appears on this machine in boots that work and in boots that do not, so
+   on its own it explains nothing. `CMD timeout ... opcode` likewise appears in every boot. Do not
+   treat either line as the cause without a comparison boot that lacks it.
