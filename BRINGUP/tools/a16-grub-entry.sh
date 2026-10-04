@@ -144,8 +144,8 @@ check|add)
 		if [ "$SANDBOX" = 0 ] && command -v update-initramfs >/dev/null 2>&1; then
 			update-initramfs -c -k "$VER" || update-initramfs -u -k "$VER" || true
 		fi
-		[ -f "$INITRD" ] || { [ "$SANDBOX" = 1 ] || warn "still missing -- run: sudo update-initramfs -c -k $VER"; }
-	}
+		[ -f "$INITRD" ] || warn "still missing -- run: sudo update-initramfs -c -k $VER"
+	fi
 	BAK="$MENU.a16-$STAMP"
 	cp -f "$MENU" "$BAK" && ok "menu backed up to ${BAK##"$R"}"
 	{ echo; echo "# ---- added by a16-grub-entry.sh $STAMP ----"; entry_text "$UUID"; } >> "$MENU"
