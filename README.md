@@ -3,6 +3,12 @@
 Turn a Windows-only Zenbook A16 into a working **Ubuntu + linux-next** machine. Follow the
 steps in order. You do not need a second computer.
 
+> **Built with [Hermes](https://hermes-agent.nousresearch.com) driving a strong model, and a good
+> AI model is your friend here.** Bringing up an unlisted ARM laptop means reading kernel source,
+> running one experiment at a time, and keeping notes that survive the next failure — a long grind
+> where a capable agent that can hold the whole picture is worth a great deal. This repository is
+> the record of one such bring-up.
+
 > **Status: the from-scratch route is untested.** Everything here was worked out on this machine
 > *after* it already had Ubuntu and the build toolchain installed. The patch set, the build, and
 > the kernel that comes out of it are verified on the hardware — the path that starts from a clean
