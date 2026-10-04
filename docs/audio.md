@@ -47,6 +47,69 @@ concerned, once both ends are paired. This page is about the internal speakers.
 
 ---
 
+## The firmware is not in this repository, and cannot be
+
+Audio does not work on a fresh install. The ADSP and CDSP stay `offline`, no sound card appears, and
+the desktop shows **"dummy output"**. Three things are needed, and **none of them can be shipped
+here**:
+
+| What | Why it cannot ship | Where it comes from |
+|---|---|---|
+| `qcom/glymur/ASUSTeK/UX3607OA/qcadsp8480.mbn`, `qccdsp8480.mbn`, `adsp_dtbs.elf`, `cdsp_dtbs.elf` | Qualcomm proprietary firmware taken out of the Windows driver packages | **your own machine's Windows install** |
+| the audio topology (`GLYMUR-ASUS-Zenbook-A16-UX3607OA-tplg.bin`) | same category -- vendor payload | the SoC-matching topology shipped in `linux-firmware`, installed under the name the kernel asks for |
+| the UCM profile | not ours | `quic-kdybcio/alsa-ucm-conf`, branch `topic/zenbooka16` |
+
+Wi-Fi, Bluetooth and the GPU are **not** affected -- those blobs come from the standard
+`linux-firmware` package. This is audio only.
+
+If the blobs are missing, the kernel says so verbatim:
+
+```
+remoteproc1 (adsp): qcom/glymur/ASUSTeK/UX3607OA/qcadsp8480.mbn
+remoteproc2 (cdsp): qcom/glymur/ASUSTeK/UX3607OA/qccdsp8480.mbn
+qcom-apm gprsvc:service:2:1: Direct firmware load for
+    qcom/glymur/GLYMUR-ASUS-Zenbook-A16-UX3607OA-tplg.bin failed with error -2
+snd-x1e80100 sound: ASoC: failed to instantiate card -2
+```
+
+### How we pulled it over
+
+**1. On the Windows side** (Windows or WSL -- it only reads the Windows install, never the Linux
+one). `BRINGUP/tools/extract-windows-a16-firmware.sh` walks
+`C:\Windows\System32\DriverStore\FileRepository`, keeps the payload files of every Qualcomm
+package whose name carries this SoC's id (`8480`), and skips driver code (`.sys`/`.inf`/`.dll`) and
+the Windows userspace. Report first, then copy:
+
+```bash
+DRY_RUN=1 OUT=/mnt/c/Users/<you>/a16-firmware bash BRINGUP/tools/extract-windows-a16-firmware.sh
+         OUT=/mnt/c/Users/<you>/a16-firmware bash BRINGUP/tools/extract-windows-a16-firmware.sh
+```
+
+It writes a directory tree plus `MANIFEST.tsv` (what each file is, its package, its sha256) and
+`sha256sums.txt`.
+
+**2. Carry the four DSP files to the machine**, under `~/a16-payload/a16-local-firmware/`, with
+`sha256sums.txt` beside them. Then, on the A16:
+
+```bash
+sudo bash ~/a16-payload/a16-install-firmware.sh    # verifies the hashes, installs into
+                                                   # /lib/firmware/qcom/glymur/ASUSTeK/UX3607OA/,
+                                                   # and starts the ADSP and CDSP live
+sudo bash ~/a16-payload/a16-install-tplg.sh        # installs a topology under the name the card
+                                                   # asks for (override the source with
+                                                   # A16_TPLG_SRC=... if you have your own)
+```
+
+Both scripts are idempotent and log to the EFI partition (`/boot/efi/A16-*.log`) so the evidence
+survives a crash. `a16-install-tplg.sh` removes cleanly with
+`sudo rm /lib/firmware/qcom/glymur/GLYMUR-ASUS-Zenbook-A16-UX3607OA-tplg.bin.zst`.
+
+**3. The UCM profile**, from the branch that actually has this machine in it -- see step 3 below.
+**4. The desktop rule** that gets PipeWire off ACP and out of "dummy output" -- see step 4 below.
+
+The firmware payload we extracted is deliberately **not** committed here: it is Qualcomm/ASUS
+proprietary material and this is a public repository. `retired/firmware/README.md` records what each
+piece is and where it legally comes from.
 ## The three steps that actually produced sound (2026-10-03, working)
 
 Recorded from the message that supplied it. This is the first configuration on this machine

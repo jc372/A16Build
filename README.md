@@ -248,7 +248,7 @@ Windows as in step 4.
 | Working | Not working |
 |---|---|
 | Internal panel (2880x1800) | 3D GPU — software rendering only, upstream issue |
-| External monitor (USB-C and HDMI) | Internal speakers |
+| External monitor (USB-C and HDMI) | Internal speakers -- **needs firmware from your own Windows install**, which this repo cannot ship; see [docs/audio.md](docs/audio.md) | |
 | Bluetooth | Dock USB / ethernet after a suspend |
 | Wi-Fi | |
 | Suspend power draw (2.4 W while asleep -- PCIe L2; see [docs/suspend-power.md](docs/suspend-power.md)) | |
