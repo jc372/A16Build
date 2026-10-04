@@ -32,9 +32,9 @@ Invoke-WebRequest -Uri $u -OutFile "E:\linux-next-7.3.0-rc5-next-20261002.tar.gz
 Get-FileHash "E:\linux-next-7.3.0-rc5-next-20261002.tar.gz" -Algorithm SHA256
 ```
 
-That is 261 MB. Fetching it here is what lets the whole build happen with **no network at
-all** on the installed machine — which matters, because Wi-Fi only works after this kernel
-is running.
+That is 261 MB. Carrying it on the stick saves downloading it on the installed machine — but it
+is not the only thing the build needs. The toolchain (`build-essential`, `gawk`, `flex`, `bison`,
+`bc`, `kmod`, `rsync`) comes from `apt`, and that needs a network once. See step 5.
 
 ---
 
