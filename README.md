@@ -3,7 +3,8 @@
 Turn a Windows-only Zenbook A16 into a working **Ubuntu + linux-next** machine. Follow the
 steps in order. You do not need a second computer.
 
-> **Hermes, and a good model, are your friend — I used ChatGPT 6 and DeepSeek.**
+> **[Hermes](https://hermes-agent.nousresearch.com), and a good model, are your friend — I used
+> ChatGPT 6 and DeepSeek.**
 > **Especially when working through issues.**
 
 > **Status: the from-scratch route is untested.** Everything here was worked out on this machine
