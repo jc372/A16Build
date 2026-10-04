@@ -16,6 +16,18 @@ steps in order. You do not need a second computer.
 
 ---
 
+## Two ways to get there
+
+| | |
+|---|---|
+| **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`, and installs with `dpkg -i`. You still need Ubuntu on the machine (steps 1–4), and you still add the boot entry yourself. |
+| **Build it yourself** | Follow the steps below. Everything you need to build the same kernel from source travels on a USB stick, and the patches are in [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/). |
+
+Both routes end at the same place. The `.deb` is the same kernel this repository builds — the
+patches, the manifest and the hashes are here so you can check that.
+
+---
+
 ## What you need
 
 | | |
