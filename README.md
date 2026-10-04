@@ -13,7 +13,7 @@ steps in order. You do not need a second computer.
 | **Wired keyboard** | Whether the internal keyboard and touchpad work in the live session depends on the kernel the nightly ships — see step 3. Have one available. |
 | **Wired mouse** | Same reason. |
 | **USB stick, 8 GB+** | The installer image, plus a second one if you want the payload on its own stick. |
-| **Ethernet, or another connection** | Needed twice: **during the install** to set the clock (step 3), and **after it** to install the build toolchain from `apt` (step 5). Wi-Fi only works once the new kernel is running. |
+| **Ethernet, or another connection** | Needed **during the install** to set the clock (step 3), and **after it** for the build toolchain — unless you carry the toolchain pool on the stick (step 2). Wi-Fi only works once the new kernel is running. |
 
 Windows stays installed throughout. Do not erase it.
 
@@ -34,13 +34,15 @@ Get-FileHash "E:\linux-next-7.3.0-rc5-next-20261002.tar.gz" -Algorithm SHA256
 
 That is 261 MB. Carrying it on the stick saves downloading it on the installed machine — but it
 is not the only thing the build needs. The toolchain (`build-essential`, `gawk`, `flex`, `bison`,
-`bc`, `kmod`, `rsync`) comes from `apt`, and that needs a network once. See step 5.
+`bc`, `kmod`, `rsync`) comes from `apt`, which needs a network once — **unless you also carry the
+toolchain pool** described in step 2.
 
 ---
 
 ## Step 2 — Put the payload on the same stick
 
-Copy these four things from this repository to the root of the stick, next to the tarball:
+Copy these four things from this repository to the root of the stick, next to the tarball. The
+fifth is optional and explained underneath:
 
 | Copy this | From |
 |---|---|
@@ -48,12 +50,31 @@ Copy these four things from this repository to the root of the stick, next to th
 | `patches/` (whole directory) | [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/) |
 | `config-seed` | [`BRINGUP/port-2026-10-03/config-seed`](BRINGUP/port-2026-10-03/config-seed) |
 | `MANIFEST.sha256` | [`BRINGUP/port-2026-10-03/MANIFEST.sha256`](BRINGUP/port-2026-10-03/MANIFEST.sha256) |
+| `a16-pool/` — *optional, see below* | the build toolchain packages, so step 5 needs no network |
 
 If the hash from step 1 does not match the snapshot line in `MANIFEST.sha256`, **stop**. (If
 that line still starts with `#`, no hash has been recorded yet; `a16-port.sh` will tell you so
 rather than pretending it checked.)
 
 Your stick now holds everything needed to build the kernel.
+
+### Optional: the build toolchain, so nothing needs the network
+
+The build needs `build-essential gawk flex bison bc kmod rsync`, and a desktop install does not
+have them. Carrying them on the stick removes the last network requirement. Generate the pool on
+a machine with the **same architecture (arm64) and the same Ubuntu release**, WSL included:
+
+```bash
+sudo apt-get install --download-only --reinstall -y \
+     -o Dir::Cache::archives=/mnt/e/a16-pool \
+     build-essential gawk flex bison bc kmod rsync
+```
+
+Copy `a16-pool/` to the stick. `a16-port.sh` installs from it when it is there — as a temporary
+local repository if `dpkg-scanpackages` exists, otherwise by installing the files directly — and
+only falls back to `apt` when it is not.
+
+
 
 ---
 
@@ -157,11 +178,10 @@ on your stick is the one this port was tested against.
 
 The build takes a while (a full kernel). Everything it does is logged to `~/a16-port/`.
 
-**One thing needs the network after all:** the build toolchain — `build-essential`, `gawk`, `flex`,
-`bison`, `bc`, `kmod`, `rsync`. If the installed system does not already have them, `a16-port.sh`
-will say so and they have to come from `apt`. A desktop install does not include them, so keep the
-ethernet (or another connection) available for that one step, or install them before you go
-offline. The *snapshot* needs no network — that is on the stick.
+**The build toolchain is the only thing that may still need the network** — `build-essential`,
+`gawk`, `flex`, `bison`, `bc`, `kmod`, `rsync`. If you carried `a16-pool/` on the stick (step 2),
+`a16-port.sh` installs from it and needs nothing. Otherwise it says what is missing and you
+install it with `apt`. The *snapshot* never needs the network — that is on the stick.
 
 ---
 
