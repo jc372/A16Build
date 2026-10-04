@@ -230,6 +230,7 @@ Windows as in step 4.
 | External monitor (USB-C and HDMI) | Internal speakers |
 | Bluetooth | Dock USB / ethernet after a suspend |
 | Wi-Fi | |
+| Internal speakers (with the audio profile — see [docs/audio.md](docs/audio.md)) | |
 | Suspend and resume, with the fans spinning down | |
 
 ---
