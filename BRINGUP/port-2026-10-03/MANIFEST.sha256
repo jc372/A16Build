@@ -21,4 +21,4 @@ fc32b4e7966cbb641e2fd7369b81b7663bcb7dbc88fe17d7e56aa9e8ba016bd8  patches/0007-x
 5eb8e9c35f484e5175babe8bcb1e705686b0d48cf871f80258d7ec8cb4ced6a4  patches/0013-dpu-drop-stuck-flush.patch
 
 # the prebuilt kernel package (arm64, built from this patch set)
-a5da4e275a901fb27cc832fe6f6d764ab7fa1abed3a36301c5d3c2f6f18e1bf5  linux-image-7.3.0-rc5-next-20261002-ec1_7.3.0-rc5-next-20261002-ec1_arm64.deb
+52704a0af3bcb01de02beaf8d4d1fe29dbf9de228a538d33f8abc8fb36a20ecf  linux-image-7.3.0-rc5-next-20261002-ec1_7.3.0-rc5-next-20261002-ec1_arm64.deb
