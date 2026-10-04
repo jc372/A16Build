@@ -31,6 +31,10 @@ RELEASE_TAG=kernel-7.3.0-rc5-next-20261002-ec1
 REPO=jc372/A16Build
 R="${A16_ROOT:-}"; [ -n "$R" ] && SANDBOX=1 || SANDBOX=0
 ROOT() { printf '%s%s' "$R" "$1"; }
+# Under sudo, $HOME is /root -- search the operator's home, or a package sitting in
+# ~/a16-deb is invisible and the script downloads the release instead of using it.
+UH="$HOME"
+if [ -n "${SUDO_USER:-}" ] && [ -d "/home/${SUDO_USER}" ]; then UH="/home/${SUDO_USER}"; fi
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 MODE=setup; DEB=""; DO_GRUB=1; REINSTALL=0
@@ -60,9 +64,11 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # ---------------------------------------------------------------- 1. the package
 step "1. kernel package"
 if [ -z "$DEB" ]; then
-	# newest first: with several packages lying around, the one you just built is the one meant
-	DEB="$(ls -t "$HERE"/linux-image-*.deb ./linux-image-*.deb "$HOME"/a16-deb/linux-image-*.deb \
-		 /tmp/linux-image-*.deb 2>/dev/null | head -1)"
+	# newest first: with several packages lying around, the one you just built is the one meant.
+	# /tmp only as a last resort -- a stray download there is newer than a build and would win.
+	DEB="$(ls -t "$HERE"/linux-image-*.deb ./linux-image-*.deb "$UH"/a16-deb/linux-image-*.deb \
+		 "$UH"/linux-image-*.deb 2>/dev/null | head -1)"
+	[ -n "$DEB" ] || DEB="$(ls -t /tmp/linux-image-*.deb 2>/dev/null | head -1)"
 fi
 if [ -z "$DEB" ] && [ "$MODE" != check ] && [ "$SANDBOX" = 0 ] && have wget; then
 	NAME="linux-image-${VER_DEFAULT}_${VER_DEFAULT}_arm64.deb"
@@ -76,7 +82,13 @@ if [ -n "$DEB" ] && [ -f "$DEB" ]; then
 	PKG="$(dpkg-deb -f "$DEB" Package 2>/dev/null || true)"
 	VERP="$(dpkg-deb -f "$DEB" Version 2>/dev/null || true)"
 else
-	[ "$MODE" = check ] || die "no kernel package found (--deb PATH, or put it beside this script)"
+	[ "$MODE" = check ] || {
+		warn "no kernel package found. Looked in:"
+		for d in "$HERE" . "$UH/a16-deb" "$UH" /tmp; do printf '        %s\n' "$d"; done
+		printf '  packages visible to this search:\n'
+		ls -t "$UH"/a16-deb/*.deb 2>/dev/null | head -5 | sed 's/^/        /'
+		die "pass one explicitly: --deb /path/to/linux-image-<ver>.deb"
+	}
 	warn "no package found locally -- would fetch linux-image-${VER_DEFAULT}_${VER_DEFAULT}_arm64.deb"
 	PKG="linux-image-$VER_DEFAULT"; VERP="$VER_DEFAULT"
 fi
