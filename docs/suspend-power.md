@@ -182,3 +182,57 @@ cannot be what costs 2.4 W.
 every subsystem we could remove from the equation was removed without changing the number. The
 gap is in the platform's power management, and it is a firmware/driver matter -- not a
 configuration mistake, and not something to keep chasing with more 45-minute runs.
+
+## What Windows has that we do not (why 2.4 W is a software ceiling)
+
+Windows on this same machine idles to near-nothing. That is not a contradiction of the
+measurements above -- it means the ceiling is software, and it is identifiable.
+
+Windows does not use the device tree. It uses **ACPI**: `_LPI` (Low Power Idle) for the CPU/SoC
+idle states, and per-device power resources (`_PR0`/`_PR3`) for the rails. Those are exactly the
+two things our DT omits:
+
+```
+glymur.dtsi                     0 idle-states, 0 domain-idle-states
+42 other Qualcomm DTS files     both
+x1e80100.dtsi (the reference)   also neither
+```
+
+And thirteen rails are unmodelled, so the kernel can never gate them, awake or asleep:
+
+```
+qcom-pcie 1bf0000.pcie: supply vdda, vddpe-3v3 not found, using dummy regulator   <- Wi-Fi PHY rails
+qcom-pcie 1b40000.pcie: supply vdda not found, using dummy regulator             <- NVMe PHY rail
+adreno 3d00000.gpu:     supply vdd, vddcx not found, using dummy regulator
+i2c_hid_of:             supply vdd, vddl not found, using dummy regulator   (x8, HID devices)
+```
+
+`cpuidle` registers only `WFI` and a shallow `cpu-sleep-0`, consistent with a DT that declares no
+idle states at all, and PSCI cannot even configure the mode it wants:
+`psci: [Firmware Bug]: failed to set PC mode: -3`.
+
+This also explains the two "symptoms" from earlier as consequences rather than mysteries: a PCIe
+PHY whose rail is a dummy regulator cannot reach L2, and a HS-PHY whose rail never drops cannot
+reach L2 either.
+
+### How to find out what Windows is actually doing
+
+1. **Windows, simplest and most direct** (admin prompt):
+   - `powercfg /a` -- which sleep states it believes it has, and whether *Hibernate* is one
+   - `powercfg /sleepstudy` -- writes an HTML report of every Modern Standby session with the
+     battery drain per session **and the components involved**. This settles whether Windows idles
+     at ~0 W or is hibernating after a timeout, and may name the device that blocks the low state
+   - `powercfg /batteryreport` -- the overnight numbers
+   - `powercfg /q SCHEME_CURRENT SUB_SLEEP` -- hibernate timeout, if any
+2. **The ACPI tables themselves** -- the spec to transcribe into DT. Boot any kernel with ACPI
+   enabled, `apt install acpica-tools`, then `sudo acpidump -o acpi.dump` and `iasl -d` it. What
+   matters: `_LPI` (idle state entry/exit latency, residency and min-residency per state) and each
+   device's `_PR0`/`_PR3` power-resource list.
+
+### What the fix would be, if pursued
+
+DT work, in the pattern used everywhere else in this port: add `idle-states`/`domain-idle-states`
+to `glymur.dtsi` with values taken from the firmware's `_LPI`, and add the missing `*-supply`
+properties so the PCIe/GPU/HID rails can be gated. Both are upstream-shaped changes, both need the
+ACPI dump to be written correctly, and neither is a configuration knob. It is a project -- but a
+bounded one, and the only route from 2.4 W to something like Windows.
