@@ -70,6 +70,18 @@ that has produced audio, and it is much simpler than the bring-up path that prec
    sudo cp *.conf /usr/share/alsa/ucm2/Qualcomm/glymur/
    ```
 
+   Verified commit: **`1b99970a9d5f01d68288c3d09b7ac31f4db5ba4f`** -- *"ucm2: Qualcomm: add ASUS
+   Zenbook A16 (UX3607OA)"*, 2026-08-31. That branch is where the A16 profile lives:
+
+   | File | What it is |
+   |---|---|
+   | `ASUS-Zenbook-A16-UX3607OA.conf` | This machine's profile |
+   | `ZenbookA16-HiFi.conf` | Its verb, referenced by the above |
+   | `HiFi.conf`, `GLYMUR-CRD.conf`, `Slim7x-HiFi.conf`, `LENOVO-Slim-7x.conf` | The shared GLYMUR / X1E80100 / Slim-7x profiles the branch also carries |
+
+   **Verified working 2026-10-03**: a 440 Hz tone at 5% amplitude (about -26 dB) played through
+   `aplay -D hw:0,1` and was audible. Start quiet and raise it from there.
+
 ### Why the earlier attempts failed
 
 - The profiles shipped by `alsa-ucm-conf` for `Qualcomm/glymur` are the **X1E80100 reference**
@@ -91,3 +103,12 @@ that has produced audio, and it is much simpler than the bring-up path that prec
 such service pushes all four WSA mix digital volumes to 90 (+6 dB) pre-amplifier, which is a
 speaker-damage risk and is not needed for audio to work. The working enable sequence runs the
 codec digital volumes at 81/77 (about 0 dB).
+
+### Leftovers to be aware of
+
+Early attempts installed profiles from another project's tweak tree directly into
+`/usr/share/alsa/ucm2/Qualcomm/glymur/` (`GLYMUR-A16.conf`, `MicFeBe.conf`, `SpeakerFeBe.conf`
+and a copied `HiFi.conf`). The branch's files superseded the ones that mattered and audio works,
+so they were left in place rather than deleted; if the profile is ever reinstalled from scratch,
+install **only** `topic/zenbooka16` and do not mix the two sets. Earlier copies of each file are
+beside them as `*.prebranch` and `*.orig`.
