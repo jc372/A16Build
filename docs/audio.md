@@ -44,3 +44,50 @@ by patching a config or rebuilding a module.
 
 Bluetooth *audio* is a userspace matter (BlueZ + PipeWire) and does work as far as the transport is
 concerned, once both ends are paired. This page is about the internal speakers.
+
+---
+
+## The three steps that actually produced sound (2026-10-03, working)
+
+Recorded from the message that supplied it. This is the first configuration on this machine
+that has produced audio, and it is much simpler than the bring-up path that preceded it.
+
+1. **Run the latest Debian `qcom-firmware-extractor`.** It pulls the ADSP and related blobs out
+   of the Windows install into `/lib/firmware/qcom/glymur/` (plus `ASUSTeK/UX3607OA/` with
+   `qcadsp8480.mbn`, `qccdsp8480.mbn`, `adsp_dtbs.elf`, `cdsp_dtbs.elf`).
+
+2. **Run the second script it comes with**, then **copy the topology by hand** to
+   `/lib/firmware/qcom/glymur/GLYMUR-ASUS-Zenbook-A16-UX3607OA-tplg.bin`. The manual copy is
+   not optional in practice: the machine driver requests that exact name and will not find
+   anything named otherwise.
+
+3. **Take the UCM profile for this machine from Konrad Dybcio's branch**, not from the generic
+   Qualcomm profile and not from another project's tweak tree:
+
+   ```bash
+   git clone https://github.com/quic-kdybcio/alsa-ucm-conf --branch=topic/zenbooka16
+   cd alsa-ucm-conf/ucm2/Qualcomm/glymur
+   sudo cp *.conf /usr/share/alsa/ucm2/Qualcomm/glymur/
+   ```
+
+### Why the earlier attempts failed
+
+- The profiles shipped by `alsa-ucm-conf` for `Qualcomm/glymur` are the **X1E80100 reference**
+  (`GLYMUR-CRD`), not this laptop. They import, but they do not match this card's PCM layout.
+- Installing a profile from another project's tweak tree (`GLYMUR-A16.conf` obtained elsewhere)
+  did not produce sound either.
+- The card is matched on its ALSA id `GLYMURASUSZenbo` (short) while the driver name is
+  `GLYMUR-ASUS-Zenbook-A16-UX3607O`, so any profile has to be reachable under both.
+
+### What the machine had to be right for this to work
+
+- SoundWire enumerates **four WSA8845 amplifiers** (`sdw:1:0:0217:0204:00:{0,1}`,
+  `sdw:4:0:0217:0204:00:{0,1}`) and two masters (`sdw-master-1-0`, `sdw-master-4-0`).
+- The ADSP remoteproc is running and PDR delivered `msm/adsp/audio_pd`.
+- The card exposes `MultiMedia2 Playback`; before any profile is applied it fails with
+  `ASoC: no backend DAIs enabled for MultiMedia2 Playback`, and playback opens fail `-22`.
+
+**Do not install a `wsa-mix-boost.service` or a saved `asound.state` from a tweak tree.** One
+such service pushes all four WSA mix digital volumes to 90 (+6 dB) pre-amplifier, which is a
+speaker-damage risk and is not needed for audio to work. The working enable sequence runs the
+codec digital volumes at 81/77 (about 0 dB).
