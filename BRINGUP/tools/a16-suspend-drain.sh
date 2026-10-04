@@ -68,6 +68,34 @@ deep|s2idle)
   printf 'sleep mode now: %s\n' "$(mode)"
   printf 'test it:  mark; close the lid for ~20 min; report   -- and compare with the other mode\n'
   ;;
+unbind|bind)
+  # Unbinding the PCI function powers the Wi-Fi chip down while leaving the whole stack
+  # loaded -- unlike 'modprobe -r ath12k', which fails with "in use" because ath12k_wifi7
+  # sits on top of it. Reversible with the matching 'bind'.
+  [ "$(id -u)" = 0 ] || { echo "need root: sudo $0 $1"; exit 1; }
+  BDF=${A16_WIFI_BDF:-0004:01:00.0}
+  DRV=/sys/bus/pci/drivers/ath12k_wifi7_pci
+  [ -d "$DRV" ] || { echo "no $DRV -- is the Wi-Fi driver built as ath12k_wifi7_pci?"; exit 1; }
+  dev=$(ls -d "$DRV"/0000* 2>/dev/null | head -1)
+  dev=${dev:-$DRV/$BDF}
+  case "$1" in
+    unbind)
+      [ -e "$dev" ] || { echo "$BDF is not bound to ath12k_wifi7_pci"; exit 1; }
+      echo "$BDF" > "$DRV/unbind" || { echo "unbind failed"; exit 1; }
+      sleep 2
+      printf 'unbound %s from ath12k_wifi7_pci\n' "$BDF"
+      printf '  wlan interfaces now: %s\n' "$(nmcli -t -f DEVICE,TYPE device 2>/dev/null | grep -c wifi) wifi device(s)"
+      printf '  link power state  : %s\n' "$(cat /sys/bus/pci/devices/$BDF/power_state 2>/dev/null || echo n/a)"
+      printf 're-bind with:  sudo %s bind\n' "$0"
+      ;;
+    bind)
+      echo "$BDF" > "$DRV/bind" || { echo "bind failed"; exit 1; }
+      sleep 5
+      printf 'bound %s back to ath12k_wifi7_pci\n' "$BDF"
+      printf '  wlan interfaces now: %s wifi device(s)\n' "$(nmcli -t -f DEVICE,TYPE device 2>/dev/null | grep -c wifi)"
+      ;;
+  esac
+  ;;
 state|*)
   printf '  sleep mode : %s   (%s)\n' "$(mode)" "$(cat /sys/power/mem_sleep 2>/dev/null)"
   printf '  energy now : %s Wh\n' "$(awk "BEGIN{printf \"%.2f\", $(energy || echo 0)/1e6}")"
