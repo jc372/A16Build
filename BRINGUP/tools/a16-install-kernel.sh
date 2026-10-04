@@ -33,11 +33,12 @@ R="${A16_ROOT:-}"; [ -n "$R" ] && SANDBOX=1 || SANDBOX=0
 ROOT() { printf '%s%s' "$R" "$1"; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-MODE=setup; DEB=""; DO_GRUB=1
+MODE=setup; DEB=""; DO_GRUB=1; REINSTALL=0
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--check)   MODE=check ;;
 		--no-grub) DO_GRUB=0 ;;
+		--reinstall) REINSTALL=1 ;;
 		--deb)     DEB="${2:-}"; shift ;;
 		-h|--help) sed -n '2,26p' "$0"; exit 0 ;;
 		*) echo "unknown option: $1 (try --help)"; exit 2 ;;
@@ -86,14 +87,21 @@ BOOT="$(ROOT /boot)"; MODS="$(ROOT /lib/modules/$VER)"
 
 # ---------------------------------------------------------------- 2. install (skip if present)
 step "2. install"
-if [ -f "$BOOT/vmlinuz-$VER" ] && [ -d "$MODS" ]; then
+if [ -f "$BOOT/vmlinuz-$VER" ] && [ -d "$MODS" ] && [ "$REINSTALL" = 0 ]; then
 	ok "$VER is already installed (vmlinuz and modules present) -- not reinstalling"
+	skip "use --reinstall to install over it anyway (a backup is taken first)"
 elif [ "$MODE" = check ]; then
 	todo "would run: dpkg -i ${DEB:-<package>}"
 elif [ "$SANDBOX" = 1 ]; then
 	skip "sandbox: dpkg is not run (it would write the real /boot and /usr/lib/modules)"
 else
 	have kmod || { apt-get install -y kmod >/dev/null 2>&1 || warn "could not install kmod"; }
+	# The package's postinst regenerates the initramfs, and this may be the kernel you are
+	# running: keep a copy of the current kernel and initramfs first, so a failure mid-reinstall
+	# leaves something to go back to.
+	for f in "$BOOT/vmlinuz-$VER" "$BOOT/initrd.img-$VER"; do
+		[ -f "$f" ] && cp -f "$f" "$f.a16bak-$STAMP" && ok "backed up ${f##"$R"} -> ${f##"$R"}.a16bak-$STAMP"
+	done
 	dpkg -i "$DEB" || die "dpkg -i failed -- read the message above"
 	ok "installed"
 fi
