@@ -19,7 +19,7 @@ steps in order. You do not need a second computer.
 | **USB-A hub** | The machine has no USB-A ports. The hub must have one, and the keyboard, mouse and stick plug into it. |
 | **Wired keyboard** | Whether the internal keyboard and touchpad work in the live session depends on the kernel the nightly ships — see step 3. Have one available. |
 | **Wired mouse** | Same reason. |
-| **USB stick, 8 GB+** | The installer image, plus a second one if you want the payload on its own stick. |
+| **USB stick or SD card, 8 GB+** | The installer image goes on either — the machine's own SD card works, and is one less USB-C device to worry about. A second stick if you want the payload separate. |
 | **Ethernet, or another connection** | Needed **during the install** to set the clock (step 3), and **after it** for the build toolchain — unless you carry the toolchain pool on the stick (step 2). Wi-Fi only works once the new kernel is running. |
 
 Windows stays installed throughout. Do not erase it.
@@ -100,7 +100,8 @@ only falls back to `apt` when it is not.
 > internal input works, note the nightly's date.
 
 
-1. Write the **latest Ubuntu nightly arm64 image** to a USB stick. Use a nightly: released
+1. Write the **latest Ubuntu nightly arm64 image** to a USB stick **or the machine's SD card** —
+   either works. Use a nightly: released
    images do not carry the support this machine needs. If you use Rufus, choose **DD image mode**,
    and **check the checksum**.
 
