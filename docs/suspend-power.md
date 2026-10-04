@@ -26,6 +26,52 @@ Measured, not assumed:
 | Fans | **No.** `fan1_input 0`, `fan2_input 0`, 33-38 C |
 | The `session.suspend-timeout-seconds = 0` in the WirePlumber rule | **Not the cause.** Amps stay `active` regardless; they are released by the routing switch, not by the sound server |
 
+## `deep` — tried, and it is not available on this firmware
+
+`/sys/power/mem_sleep` advertises `[s2idle] deep` and `deep` had never been entered. On
+2026-10-04 08:55:30 it was, and this is what it does:
+
+```
+08:55:33  Disabling non-boot CPUs ...
+08:55:33  psci: CPU17 killed ... CPU1 killed      <- SYSTEM_SUSPEND is genuinely attempted
+08:55:33  Enabling non-boot CPUs ...              <- and bounced straight back
+08:55:33  Detected PIPT I-cache on CPU1 ... CPU17 is up
+08:55:34  PM: suspend exit
+08:55:34  PM: suspend entry (s2idle)              <- logind retried; THIS is what slept
+09:36:47  PM: suspend exit                        <- 41 min, 1.62 Wh, 2.36 W
+```
+
+The CPUs go down and come back within the same second, with no error line -- the firmware simply
+does not complete the transition. The lid was still shut, so logind re-issued suspend and the
+kernel took s2idle, which then slept normally. **The measured 2.36 W is s2idle; `deep` was never
+given a sleep to be judged on.** This is consistent with `psci: [Firmware Bug]: failed to set PC
+mode: -3` at boot, and with the sibling project's note that this kernel advertises `deep` but
+only `s2idle` is tested.
+
+Nothing about `deep` can be fixed from userspace, and it is safe to test: s2idle is re-applied at
+every boot by `/etc/tmpfiles.d/a16-mem-sleep.conf`, so a hang or hard reset returns to the working
+mode by itself.
+
+## Corroboration from the hardware: coil whine
+
+With the lid shut, an audible **coil whine** is present -- a switching regulator under load. That
+is what a powered PCIe link and a re-initialised Wi-Fi chip sound like, and it agrees with the
+L2 findings above.
+
+## An unrelated bug found on the way
+
+Every Wi-Fi disconnect taints the kernel:
+
+```
+WARNING: net/mac80211/airtime.c:532 at ieee80211_get_rate_duration.isra.0+0x144/0x3d0 [mac80211]
+CPU#14 PID:1872 Comm: wpa_supplicant   Tainted: G  W  E
+  ieee80211_get_rate_duration <- ieee80211_rate_expected_tx_airtime <- sta_set_sinfo
+  <- __sta_info_destroy_part2 <- __sta_info_flush <- ieee80211_set_disassoc <- ieee80211_mgd_deauth
+```
+
+Upstream mac80211, hit while the station info is torn down on deauth. Functional impact nil; it
+does mark the kernel tainted (`[W]`), which matters when reading any later oops.
+
 ## What it is
 
 `qcom-pcie` fails to put the links into the PCIe low-power state, logged at **every** resume:
@@ -59,18 +105,29 @@ suspend draw has never been measured on their machine.
 1. **Baseline.** `sudo bash BRINGUP/tools/a16-suspend-drain.sh mark`, shut the lid ~30 min,
    `report`. That gives Wh and W for the current s2idle path. Everything after is compared
    against it.
-2. **`deep`, which has never once run.** `/sys/power/mem_sleep` advertises `[s2idle] deep`;
-   `deep` has been entered 0 times, because every attempt before the `0007` xhci guard aborted
-   with `-22` before reaching it. `sudo bash .../a16-suspend-drain.sh deep`, then repeat step 1.
-   This is the single biggest lever if the firmware implements SYSTEM_SUSPEND properly.
-   *Caveat, from the sibling project's notes: they found PCI config-space access in
-   `dpm_suspend_noirq()` lethal on this SoC, and a hard reset is a possible outcome. Keep the
-   known-good GRUB entry reachable and do not run it with unsaved work.*
-3. **Attribute the 2.4 W if `deep` does not help.** With root:
-   `sudo sort -rk7 /sys/kernel/debug/wakeup_sources | head -12` (a source with a large
-   `total_time` or a non-zero `active_since` is holding the system out of its idle state), and
-   compare PCIe states across a suspend. Their tree also carries
-   `patches/glymur-suspend-noirq-knobs-DIAGNOSTIC.patch` for exactly this measurement.
+2. ~~**`deep`**~~ -- **DONE 2026-10-04: not available on this firmware.** It is attempted (CPUs
+   go down via PSCI) and does not complete; logind retries and s2idle does the sleeping. See the
+   section above. The baseline from step 1 stands as the number to beat, and it reproduces in
+   45 minutes.
+3. **Attribute the 2.36 W -- the Wi-Fi link first.** The evidence points at PCIe, and the Wi-Fi
+   link is the one that can be removed without losing the root filesystem:
+
+   ```bash
+   sudo bash ~/A16Build/BRINGUP/tools/a16-suspend-drain.sh mark    # with Wi-Fi up: 2.36 W
+   # then, before the next measurement:
+   nmcli radio wifi off && sudo modprobe -r ath12k
+   ```
+
+   If the rate falls well below 2.36 W, the Wi-Fi link is the largest single contributor and
+   `patches/rc5-20261002/0017-LOCAL-COMPAT-A16-Wi-Fi-and-Bluetooth-power-sequencing.patch` (their
+   tree) is the next thing to port. If it does not move, the NVMe link and the two USB PHYs are in
+   the same trail: `dwc3-qcom a800000.usb: port-1 HS-PHY not in L2`, `a600000.usb: port-1 HS-PHY
+   not in L2`.
+
+   For finer attribution, with root:
+   `sudo sort -rk7 /sys/kernel/debug/wakeup_sources | head -12` -- a source with a large
+   `total_time`, or a non-zero `active_since`, is holding the system out of its idle state. Their
+   tree also carries `patches/glymur-suspend-noirq-knobs-DIAGNOSTIC.patch` for this measurement.
 4. **Wi-Fi/BT power sequencing.** Their tree carries
    `patches/rc5-20261002/0017-LOCAL-COMPAT-A16-Wi-Fi-and-Bluetooth-power-sequencing.patch`
    as a local compat patch; port it the usual way if the links are implicated.
