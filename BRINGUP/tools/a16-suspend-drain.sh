@@ -105,6 +105,35 @@ unbind|bind)
       ;;
   esac
   ;;
+usb|usbauto|usbon)
+  # The USB controllers and their USB/DP PHYs sit at power/control=on, so they never
+  # runtime-suspend. The xHCI host is therefore still HC_STATE_RUNNING when system suspend
+  # begins -- which is exactly the -22 that 0007 skips over -- and the controller and PHYs stay
+  # powered for the whole sleep, which is what the regulator whine by the USB-A port is.
+  # 'usbauto' lets them idle-suspend (the point of the experiment), 'usbon' restores, 'usb' reports.
+  [ "$(id -u)" = 0 ] || { echo "need root: sudo $0 $1"; exit 1; }
+  DEVS="a400000.usb a600000.usb a800000.usb 88e1000.phy fa3000.phy fa5000.phy fd5000.phy fde000.phy xhci-hcd.1.auto"
+  case "${1:-usb}" in
+    usbauto) want=auto ;;
+    usbon)   want=on   ;;
+    *)       want=""   ;;
+  esac
+  if [ -n "$want" ]; then
+    printf 'setting power/control=%s on the USB controllers and PHYs\n' "$want"
+    for d in $DEVS; do
+      p=/sys/bus/platform/devices/$d/power/control
+      [ -e "$p" ] && echo "$want" > "$p" 2>/dev/null
+    done
+    sleep 8
+  fi
+  for d in $DEVS; do
+    p=/sys/bus/platform/devices/$d
+    [ -e "$p" ] && printf '  %-16s status=%-10s control=%-5s delay=%s\n' "$d" \
+      "$(cat $p/power/runtime_status 2>/dev/null)" "$(cat $p/power/control 2>/dev/null)" \
+      "$(cat $p/power/autosuspend_delay_ms 2>/dev/null)"
+  done
+  printf 'measure now:  mark; shut the lid ~45 min; report   (a big drop means this was the cost)\n'
+  ;;
 state|*)
   printf '  sleep mode : %s   (%s)\n' "$(mode)" "$(cat /sys/power/mem_sleep 2>/dev/null)"
   printf '  energy now : %s Wh\n' "$(awk "BEGIN{printf \"%.2f\", $(energy || echo 0)/1e6}")"
