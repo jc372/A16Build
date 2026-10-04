@@ -21,10 +21,10 @@ Windows stays installed throughout. Do not erase it.
 
 ## Step 1 — In Windows, before anything else
 
-1. **Turn BitLocker off** and wait for it to finish decrypting.
-2. **Shrink the Windows partition** from Windows (Disk Management) to leave unallocated space
-   for Ubuntu. Leave the space unformatted.
-3. **Download linux-next onto the USB stick.** Open PowerShell and run:
+1. **Shrink the Windows partition** from Windows (Disk Management) to leave unallocated space
+   for Ubuntu. Leave the space unformatted. If anything has to happen first — BitLocker, for
+   instance — Windows says so when you try.
+2. **Download linux-next onto the USB stick.** Open PowerShell and run:
 
 ```powershell
 $u = "https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/snapshot/linux-next-next-20261002.tar.gz"
