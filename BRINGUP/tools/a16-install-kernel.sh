@@ -60,9 +60,9 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # ---------------------------------------------------------------- 1. the package
 step "1. kernel package"
 if [ -z "$DEB" ]; then
-	for c in "$HERE"/linux-image-*.deb ./linux-image-*.deb "$HOME"/a16-deb/linux-image-*.deb /tmp/linux-image-*.deb; do
-		[ -f "$c" ] && DEB="$c" && break
-	done
+	# newest first: with several packages lying around, the one you just built is the one meant
+	DEB="$(ls -t "$HERE"/linux-image-*.deb ./linux-image-*.deb "$HOME"/a16-deb/linux-image-*.deb \
+		 /tmp/linux-image-*.deb 2>/dev/null | head -1)"
 fi
 if [ -z "$DEB" ] && [ "$MODE" != check ] && [ "$SANDBOX" = 0 ] && have wget; then
 	NAME="linux-image-${VER_DEFAULT}_${VER_DEFAULT}_arm64.deb"
