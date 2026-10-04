@@ -13,7 +13,7 @@ steps in order. You do not need a second computer.
 | **Wired keyboard** | Whether the internal keyboard and touchpad work in the live session depends on the kernel the nightly ships — see step 3. Have one available. |
 | **Wired mouse** | Same reason. |
 | **USB stick, 8 GB+** | The installer image, plus a second one if you want the payload on its own stick. |
-| **Ethernet (optional)** | Only for the clock — see step 3. The kernel build itself needs no network. |
+| **Ethernet, or another connection** | Needed twice: **during the install** to set the clock (step 3), and **after it** to install the build toolchain from `apt` (step 5). Wi-Fi only works once the new kernel is running. |
 
 Windows stays installed throughout. Do not erase it.
 
