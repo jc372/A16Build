@@ -1,0 +1,62 @@
+--- a/drivers/soundwire/qcom.c
++++ b/drivers/soundwire/qcom.c
+@@ -581,25 +581,6 @@
+ 	return SDW_CMD_IGNORED;
+ }
+ 
+-static int qcom_swrm_get_alert_slave_dev_num(struct qcom_swrm_ctrl *ctrl)
+-{
+-	u32 val, status;
+-	int dev_num;
+-
+-	ctrl->reg_read(ctrl, SWRM_MCP_SLV_STATUS, &val);
+-
+-	for (dev_num = 1; dev_num <= SDW_MAX_DEVICES; dev_num++) {
+-		status = (val >> (dev_num * SWRM_MCP_SLV_STATUS_SZ));
+-
+-		if ((status & SWRM_MCP_SLV_STATUS_MASK) == SDW_SLAVE_ALERT) {
+-			ctrl->status[dev_num] = status & SWRM_MCP_SLV_STATUS_MASK;
+-			return dev_num;
+-		}
+-	}
+-
+-	return -EINVAL;
+-}
+-
+ static void qcom_swrm_get_device_status(struct qcom_swrm_ctrl *ctrl)
+ {
+ 	u32 val;
+@@ -616,6 +597,33 @@
+ 		ctrl->status[i] = s;
+ 	}
+ }
++/*
++ * In multi-slave topologies (such as Woofer + Tweeter WSA8845 smart amplifiers on one SoundWire
++ * bus) decoding SWRM_MCP_SLV_STATUS across ALL devices is mandatory before handing status to the
++ * SoundWire core. If only the alerting dev_num's slot is written into ctrl->status, sibling slaves
++ * remain unpopulated (SDW_SLAVE_UNATTACHED) in that array, and sdw_handle_slave_status() then
++ * falsely demotes them to UNATTACHED -- which tears down port routing in the wsa884x driver and
++ * permanently silences that speaker channel. Observed on this machine as two of four amplifiers
++ * "UNATTACHED" with the sibling pair on the same SoundWire master still "Attached".
++ *
++ * Ported for this tree from the FixItFoundry A16 work:
++ *   0002-soundwire-qcom-alert-status-and-recovery-fix.patch (Jesse Casco)
++ * The rest of that patch concerns their own experimental rework and is not carried here.
++ */
++static int qcom_swrm_get_alert_slave_dev_num(struct qcom_swrm_ctrl *ctrl)
++{
++	int dev_num, alert_dev = -EINVAL;
++
++	qcom_swrm_get_device_status(ctrl);
++
++	for (dev_num = 1; dev_num <= SDW_MAX_DEVICES; dev_num++) {
++		if (ctrl->status[dev_num] == SDW_SLAVE_ALERT && alert_dev < 0)
++			alert_dev = dev_num;
++	}
++
++	return alert_dev;
++}
++
+ 
+ static void qcom_swrm_set_slave_dev_num(struct sdw_bus *bus,
+ 					struct sdw_slave *slave, int devnum)
