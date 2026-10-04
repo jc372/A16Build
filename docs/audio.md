@@ -112,3 +112,36 @@ and a copied `HiFi.conf`). The branch's files superseded the ones that mattered 
 so they were left in place rather than deleted; if the profile is ever reinstalled from scratch,
 install **only** `topic/zenbooka16` and do not mix the two sets. Earlier copies of each file are
 beside them as `*.prebranch` and `*.orig`.
+
+### Step 4 (desktop): tell PipeWire to use UCM, not ACP
+
+ALSA working is not enough — the desktop still shows **"Dummy Output"** afterwards, because
+PipeWire drives the card through the legacy **ACP** path and ACP has no profile for a machine
+it does not know:
+
+    api.alsa.use-acp = "true"      <- ACP, so no profiles -> no sink -> Dummy Output
+
+No reboot is needed; a WirePlumber rule and a restart is the whole fix:
+
+```ini
+# ~/.config/wireplumber/wireplumber.conf.d/51-a16-ucm.conf
+monitor.alsa.rules = [
+  {
+    matches = [ { api.alsa.card.name = "~GLYMUR.*" } ]
+    actions = { update-props = {
+        api.alsa.use-acp = false
+        api.alsa.use-ucm = true
+        session.suspend-timeout-seconds = 0
+      } }
+  }
+]
+```
+
+```bash
+systemctl --user restart wireplumber
+wpctl status        # sink should now read "Built-in Audio (MultiMedia2 Playback (*))"
+```
+
+Confirmed 2026-10-03: `Dummy Output` was replaced by `Built-in Audio (MultiMedia2 Playback (*))`
+and a `MultiMedia4 Capture` source, with the device moving from `[alsa]` to `[alsa:pcm]`.
+The rule lives in the user's config, so it survives reboots.
