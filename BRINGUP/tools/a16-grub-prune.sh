@@ -30,9 +30,14 @@ if [ "$MODE" = "--apply" ] && [ "${A16_ALLOW_NONROOT:-0}" != 1 ]; then
 	[ "$(id -u)" = 0 ] || { echo "FATAL: --apply needs root: sudo bash $0 --apply"; exit 1; }
 fi
 
-MENU=""
+MENU=""; best_score=-1
 for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
-	[ -f "$c" ] && MENU="$c" && break
+	[ -f "$c" ] || continue
+	score=0
+	case "$c" in *ubuntu*) score=$((score+100));; esac
+	score=$((score + $(grep -cE '^[[:space:]]*menuentry' "$c" 2>/dev/null || echo 0)))
+	grep -q 'linux /boot/vmlinuz' "$c" 2>/dev/null && score=$((score+10))
+	[ "$score" -gt "$best_score" ] && { best_score="$score"; MENU="$c"; }
 done
 [ -n "$MENU" ] || { echo "FATAL: no GRUB menu found under ${R}/boot/efi or ${R}/boot/EFI"; exit 1; }
 

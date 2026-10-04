@@ -27,10 +27,10 @@ set -u
 R="${A16_ROOT:-}"; [ -n "$R" ] && SANDBOX=1 || SANDBOX=0
 ROOT() { printf '%s%s' "$R" "$1"; }
 STAMP="$(date +%Y%m%d-%H%M%S 2>/dev/null || echo nostamp)"
-ACTION="${1:-list}"; shift 2>/dev/null || true
-VER=""; DTB=""; TITLE=""; FORCE=0
+ACTION=""; VER=""; DTB=""; TITLE=""; FORCE=0
 while [ $# -gt 0 ]; do
 	case "$1" in
+		add|remove|list|check) [ -z "$ACTION" ] && ACTION="$1" ;;
 		--dtb)   DTB="${2:-}"; shift ;;
 		--title) TITLE="${2:-}"; shift ;;
 		--force) FORCE=1 ;;
@@ -38,6 +38,7 @@ while [ $# -gt 0 ]; do
 	esac
 	shift
 done
+ACTION="${ACTION:-list}"
 
 step() { printf '\n=== %s ===\n' "$*"; }
 ok()   { printf '  [ok]   %s\n' "$*"; }
@@ -49,12 +50,19 @@ if [ "$ACTION" != list ] && [ "$ACTION" != check ] && [ "${A16_ALLOW_NONROOT:-0}
 fi
 
 # ------------------------------------------------------------------ locate the pieces
-menufile() {
-	local c
+menufile() {   # the menu the machine actually boots from, not merely the first one found:
+	local c best="" best_score=-1 score n why     # 'EFI/Boot/grub.cfg' sorts first but is the
 	for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
-		[ -f "$c" ] && { printf '%s' "$c"; return 0; }
+		[ -f "$c" ] || continue                  # removable-media fallback
+		score=0; why=""
+		case "$c" in *ubuntu*) score=$((score+100)); why="ubuntu path";; esac
+		n="$(grep -cE '^[[:space:]]*menuentry' "$c" 2>/dev/null || echo 0)"
+		score=$((score+n)); why="$why, $n entries"
+		grep -q 'linux /boot/vmlinuz' "$c" 2>/dev/null && { score=$((score+10)); why="$why, names kernels"; }
+		printf '  candidate: %-46s %s\n' "${c##"$R"}" "$why" >&2   # stdout carries only the winner
+		[ "$score" -gt "$best_score" ] && { best_score="$score"; best="$c"; }
 	done
-	return 1
+	[ -n "$best" ] && printf '%s' "$best"
 }
 newest_kernel() {  # newest vmlinuz that looks like an A16 linux-next build
 	local f best="" best_t=0 t
@@ -146,6 +154,7 @@ check|add)
 		fi
 		[ -f "$INITRD" ] || warn "still missing -- run: sudo update-initramfs -c -k $VER"
 	fi
+	[ -w "$MENU" ] || die "$MENU is not writable here -- run this with sudo"
 	BAK="$MENU.a16-$STAMP"
 	cp -f "$MENU" "$BAK" && ok "menu backed up to ${BAK##"$R"}"
 	{ echo; echo "# ---- added by a16-grub-entry.sh $STAMP ----"; entry_text "$UUID"; } >> "$MENU"
@@ -166,6 +175,7 @@ remove)
 	resolve
 	MENU="$(menufile)" || die "no GRUB menu found"
 	grep -q "vmlinuz-$VER" "$MENU" || { ok "no entry for $VER in the menu"; exit 0; }
+	[ -w "$MENU" ] || die "$MENU is not writable here -- run this with sudo"
 	BAK="$MENU.a16-$STAMP"
 	cp -f "$MENU" "$BAK" && ok "menu backed up to ${BAK##"$R"}"
 	python3 - "$MENU" "$VER" <<'PY'
