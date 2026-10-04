@@ -128,13 +128,57 @@ suspend draw has never been measured on their machine.
    `sudo sort -rk7 /sys/kernel/debug/wakeup_sources | head -12` -- a source with a large
    `total_time`, or a non-zero `active_since`, is holding the system out of its idle state. Their
    tree also carries `patches/glymur-suspend-noirq-knobs-DIAGNOSTIC.patch` for this measurement.
-4. **Wi-Fi/BT power sequencing.** Their tree carries
-   `patches/rc5-20261002/0017-LOCAL-COMPAT-A16-Wi-Fi-and-Bluetooth-power-sequencing.patch`
-   as a local compat patch; port it the usual way if the links are implicated.
+4. ~~**Wi-Fi/BT power sequencing.**~~ **Not implicated** -- run 3 below unbound the Wi-Fi PCI
+   function entirely and the drain did not move, so their
+   `patches/rc5-20261002/0017-LOCAL-COMPAT-A16-Wi-Fi-and-Bluetooth-power-sequencing.patch` has
+   nothing to fix here.
 
-## What not to conclude
+## Verdict (2026-10-04): the platform's s2idle floor, and it is not configurable
 
-2.4 W for a 66.6 Wh pack is a poor sleep, but it is not a malfunction: the machine slept
-correctly, nothing woke it, and the hardware that was expected to power down -- radios, amps,
-fans -- did. The gap is in PCIe power management, and it is a kernel/driver problem to fix,
-not a configuration mistake to undo.
+Four measurements, each one designed to remove a suspect:
+
+| Run | Change | Rate while asleep |
+|---|---|---|
+| 1 | baseline (nothing changed) | 2.32 W |
+| 2 | audio path powered down via its routing switch | 2.26 W (the audio path itself: **0.05 W**) |
+| 3 | Wi-Fi PCI function unbound, chip powered down | 2.45 W |
+| 4 | USB controllers + PHYs set `control=auto`, and they *did* suspend | 2.46 W |
+| overnight | baseline, 8 h 27 min | 2.4 W |
+
+Runs 3 and 4 are the decisive ones: the Wi-Fi chip was removed from the bus and most of the USB
+stack really did reach `suspended`, and the drain did not move. **Nothing removable accounts for
+it.** Nothing wakes the machine either (one journal entry across 8 h 27 min).
+
+What is left is the platform, and two facts make it final:
+
+```
+/sys/devices/system/cpu/cpu0/cpuidle/   state0 WFI   state1 cpu-sleep-0
+```
+
+Only two idle states, both shallow -- there is no cluster, L3 or DDR idle state exposed, so while
+s2idle holds the system the SoC has nowhere deeper to go. And SYSTEM_SUSPEND (`deep`) is refused by
+the firmware outright (see above). 2.4 W is the floor this firmware and these drivers produce.
+
+**The PCIe L2 timeout is a symptom, not the cause.** It is real and worth fixing upstream
+(`qcom-pcie 1bf0000.pcie: Timeout waiting for L2 entry! LTSSM: 0x11`, and `dwc3-qcom a800000.usb:
+port-1 HS-PHY not in L2`), but unbinding the Wi-Fi function changed nothing measurable, so it
+cannot be what costs 2.4 W.
+
+### Practical consequences
+
+- An overnight sleep costs about **30% of the pack**, every time, and no configuration change will
+  improve it. For a night or longer, `poweroff` is strictly better; boot is ~30 s and costs nothing.
+- **Hibernate is not available and not cheap to add**: `CONFIG_HIBERNATION` is not set in this
+  kernel, there is no swap at all, and the rule of thumb (swap >= RAM) would need ~46 GiB while the
+  root filesystem has 30 GiB free. The image is built from *used* pages, so a ~16 GiB swap file
+  could plausibly suffice -- but it is a kernel rebuild plus swapfile plus resume plumbing, i.e. a
+  project, not an experiment.
+- A real fix belongs upstream: either deeper idle states for this SoC or a working SYSTEM_SUSPEND.
+  Nothing on this machine can be tuned to get there.
+
+### What not to conclude
+
+2.4 W is a poor sleep but not a malfunction. The machine slept correctly, nothing woke it, and
+every subsystem we could remove from the equation was removed without changing the number. The
+gap is in the platform's power management, and it is a firmware/driver matter -- not a
+configuration mistake, and not something to keep chasing with more 45-minute runs.
