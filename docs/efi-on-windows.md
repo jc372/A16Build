@@ -71,11 +71,11 @@ comfortable for editing text files.
 An entry is a block in `grub.cfg` shaped like this:
 
 ```
-menuentry "[10] A16: next 7.3.0-rc5-next-20261002-ec1" {
-    if [ -f /boot/vmlinuz-7.3.0-rc5-next-20261002-ec1 ]; then
-        linux /boot/vmlinuz-7.3.0-rc5-next-20261002-ec1 root=UUID=<your-root-uuid> ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7
-        devicetree /boot/glymur-a16-7.3.0-rc5-next-20261002-ec1.dtb
-        initrd /boot/initrd.img-7.3.0-rc5-next-20261002-ec1
+menuentry "A16: linux-next 7.3.0-rc5-next-20261002-t1" {
+    if [ -f /boot/vmlinuz-7.3.0-rc5-next-20261002-t1 ]; then
+        linux /boot/vmlinuz-7.3.0-rc5-next-20261002-t1 root=UUID=<your-root-uuid> ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7
+        devicetree /boot/glymur-a16-7.3.0-rc5-next-20261002-t1.dtb
+        initrd /boot/initrd.img-7.3.0-rc5-next-20261002-t1
     fi
 }
 ```
