@@ -10,8 +10,8 @@ steps in order. You do not need a second computer.
 | | |
 |---|---|
 | **USB-A hub** | The machine has no USB-A ports. The hub must have one, and the keyboard, mouse and stick plug into it. |
-| **Wired keyboard** | The internal keyboard does not work during the install. |
-| **Wired mouse** | Same. |
+| **Wired keyboard** | Have one. Whether the internal keyboard and touchpad work in the live session **depends on the kernel the nightly ships** — see step 3. Do not count on them. |
+| **Wired mouse** | Same reason. |
 | **USB stick, 8 GB+** | The installer image, plus a second one if you want the payload on its own stick. |
 | **Ethernet (optional)** | Only for the clock — see step 3. The kernel build itself needs no network. |
 
@@ -58,6 +58,20 @@ Your stick now holds everything needed to build the kernel.
 ---
 
 ## Step 3 — Install Ubuntu
+
+> **What works in the live session depends on the kernel the nightly ships.** The internal
+> keyboard, touchpad and touchscreen need a device-tree boot with `acpi=off`; the support for
+> that is now **in linux-next**, so a recent enough nightly should give you working internal
+> input by itself. Earlier nightlies needed a remastered image carrying the A16 device tree, and
+> a plain one booted ACPI with no internal input at all.
+>
+> So: try the plain nightly. If the internal keyboard and touchpad work, you are done — the
+> wired keyboard and mouse are insurance, and worth having plugged in anyway, because the
+> moment you need them is the moment you have no other way to type.
+>
+> This also means **the image you write is a moving target**: the same instructions can behave
+> differently a month later, in either direction. If input works, note the nightly's date.
+
 
 1. Write the **latest Ubuntu nightly arm64 image** to a USB stick. Use a nightly: released
    images do not carry the support this machine needs. If you use Rufus, choose **DD image mode**,
