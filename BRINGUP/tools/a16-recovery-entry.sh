@@ -15,6 +15,10 @@
 #      blacklisted dispcc/gpucc/videocc/phy_qcom_edp/panel too, which are clock-controller
 #      and GDSC providers the rest of the boot needs: that is why it died before systemd.
 #
+# Also removes the last of 7.2 from this machine: the staged ESP payload (/a16boot, 82M:
+# a 7.2 vmlinuz whose initramfs cannot boot this root filesystem, plus old DTBs and a staged
+# old menu) is moved to the archive, and the diagnostics entry stops probing the 7.2 kernel.
+# It is moved rather than deleted, and only if no surviving entry still boots from it.
 # Retires the old full-blacklist failsafe (archived), and makes the EFI/BOOT fallback default
 # to the recovery entry: a visible, safe landing instead of a hang.
 
@@ -103,6 +107,27 @@ broken = [t for t, b in after if (mm := re.search(r'^\s*linux\s+(\S+)', b, re.M)
 print(f"      -> {len(after)} entries; default '{d[:44]}' -> {os.path.basename(k)}; missing-kernel: {len(broken)}")
 PY
 done
+
+echo
+# --- retire the 7.2 staged payload: nothing on this machine boots it any more -----------
+# The entry that used it (the staged-7.2 framebuffer one) is retired above, so the payload
+# is dead weight -- 82M on the ESP of a 7.2 kernel whose initramfs cannot boot this root
+# filesystem.  It is MOVED, not deleted, so it can be put back.
+STAGE=/boot/efi/a16boot
+if [ -d "$STAGE" ]; then
+	# guard: refuse to move it while any surviving entry actually boots from it
+	live=$(grep -lE '^[[:space:]]*(linux|initrd)[[:space:]]+/a16boot/' /boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/BOOT/grub.cfg 2>/dev/null)
+	if [ -n "$live" ]; then
+		echo "  [skip] an entry still boots /a16boot/: $live"
+	elif [ "$APPLY" != 1 ]; then
+		echo "  [check] would move $STAGE ($(du -sh $STAGE | cut -f1)) to $ARCH/a16boot/ and free it from the ESP"
+	else
+		mkdir -p "$ARCH"
+		mv "$STAGE" "$ARCH/a16boot" && echo "  moved $STAGE -> $ARCH/a16boot ($(df -h /boot/efi | tail -1 | awk '{print $4}') free on the ESP now)"
+	fi
+else
+	echo "  $STAGE: already gone"
+fi
 
 echo
 if [ "$APPLY" = 1 ]; then
