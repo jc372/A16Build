@@ -43,6 +43,13 @@ for r in vreg_l2b_e0 vreg_l4c_e0 vreg_l9b_e0 vreg_bob1_b_e0; do
   [ -d "$d" ] && echo "  $r: state=$(cat $d/state 2>/dev/null) $(cat $d/microvolts 2>/dev/null) uV"
 done
 
+echo "--- the device tree the firmware/kernel was actually given"
+if [ -r /sys/firmware/fdt ]; then
+	cp -f /sys/firmware/fdt /home/jc/a16-payload/camera/acpi/fdt.firmware.dtb 2>/dev/null && \
+		echo "  saved /sys/firmware/fdt ($(stat -c%s /sys/firmware/fdt) bytes) -> acpi/fdt.firmware.dtb"
+	strings -n 8 /sys/firmware/fdt 2>/dev/null | grep -iE "ov0|ovti|camera|cci|csiphy|camss|sen" | sort -u | head -10 | sed "s/^/    /"
+else echo "  (no /sys/firmware/fdt)"; fi
+
 echo "--- ACPI tables (a boot without acpi=off is the only one that has them)"
 if [ -d /sys/firmware/acpi/tables ]; then
 	O=/home/jc/a16-payload/camera/acpi; mkdir -p "$O"
