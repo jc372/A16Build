@@ -1,0 +1,83 @@
+THE AUDIO DSP AND THE INITRAMFS
+2026-10-05
+
+SYMPTOM
+  No internal sound at all, and not a routing problem: the card did not exist.
+
+      $ cat /proc/asound/cards
+      --- no soundcards ---
+
+  Bluetooth audio still worked, which is why headphones were fine and the speakers
+  were not -- Bluetooth does not go through the audio DSP.
+
+CAUSE
+  The audio DSP (adsp) never booted: it asks for its firmware while the initramfs is
+  still the root, and the firmware lives on the real root, which is not mounted yet.
+
+      line 592  Run /init as init process
+      line 688  remoteproc remoteproc1: Direct firmware load for
+                qcom/glymur/ASUSTeK/UX3607OA/qcadsp8480.mbn failed with error -2
+      line 691  remoteproc remoteproc1: request_firmware failed: -2
+      line 911  EXT4-fs (nvme0n1p17): mounted filesystem f8e005e9-...
+      line 940  systemd[1]: running
+
+  -2 is ENOENT, about a file that has been on disk since 2026-09-16.  Without the
+  ADSP there is no SoundWire codec and no sound card.
+
+  `qcom_q6v5_pas` takes the firmware filename from the device tree, not from modinfo,
+  so initramfs-tools cannot discover it and does not copy it:
+
+      $ modinfo -F firmware /lib/modules/.../qcom_q6v5_pas.ko
+      (nothing)
+
+IT WAS THE INITRAMFS, NOT THE KERNEL
+  The same t2 kernel booted with sound, then booted without it, with only the
+  initramfs rebuilt in between:
+
+      boot -7   t2   line 732   Booting fw image ...qcadsp8480.mbn, size 19867608
+      boot -6   t2   line 688   Direct firmware load ... failed with error -2
+
+  and the initrds say the same thing:
+
+      worked   48,432,089 bytes   usr/lib/firmware/qcom/glymur/ASUSTeK/UX3607OA/qcadsp8480.mbn
+      broken   75,175,505 bytes   the firmware is not in there at all
+
+  The broken one was built with a bare `mkinitramfs -o`; the working one with
+  `update-initramfs`.  How the firmware got into the working one is NOT explained:
+  no hook anywhere, the module does not declare it, CONFIG_EXTRA_FIRMWARE is empty,
+  and it is not in modules.builtin.modinfo.  It was most likely placed deliberately
+  at some point, by a step that is not in this repository.
+
+FIX
+  `tools/a16-audio-adsp-initramfs.sh` installs a hook that copies the board firmware
+  into the initramfs, because relying on the unexplained mechanism that worked once
+  is not a fix.  It keeps a copy of the initrd it replaces, and reports PASS or FAIL
+  by listing the result.
+
+      sudo bash a16-audio-adsp-initramfs.sh status     what is in each initrd
+      sudo bash a16-audio-adsp-initramfs.sh fix        install the hook, regenerate
+      sudo bash a16-audio-adsp-initramfs.sh revert     take it out again
+
+CONFIRMED
+  Rebooted 2026-10-05 10:29, kernel 7.3.0-rc5-next-20261002-t2:
+
+      remoteproc1: Booting fw image ...qcadsp8480.mbn, size 19867608
+      remoteproc1: remote processor adsp is now up
+      remoteproc2: remote processor cdsp is now up
+
+      $ cat /proc/asound/cards
+       0 [GLYMURASUSZenbo]: glymur - GLYMUR-ASUS-Zenbook-A16-UX3607O
+
+      snd_soc_wsa884x loaded (the speaker amplifiers)
+
+  The initramfs rebuilt by the fix is 48,432,086 bytes -- the size of the one that
+  worked -- and carries the firmware:
+
+      entries  3998
+      qcadsp8480.mbn  1
+
+LESSON
+  A module that takes its firmware from the device tree will be probed inside the
+  initramfs and find nothing, and the failure looks like absent hardware rather than
+  a missing file.  Check /proc/asound/cards first: if there are no cards at all, this
+  is a probe-time failure, not a routing or mixer problem.
