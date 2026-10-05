@@ -299,16 +299,18 @@ Windows as in step 4.
 
 ## What works, and what does not
 
-| Working | Not working |
-|---|---|
-| Internal panel (2880x1800) | Camera -- needs a device tree description and a userspace stack |
-| External monitor (USB-C and HDMI) | Dock USB / ethernet after a suspend (usually fine; occasionally needs a replug) |
-| Bluetooth | Audio profile for the internal speakers -- built from your own Windows install, which this repo cannot ship; see [docs/audio.md](docs/audio.md) |
-| Wi-Fi | |
-| Internal speakers, with that profile | |
-| Suspend power draw (2.4 W while asleep -- PCIe L2; see [docs/suspend-power.md](docs/suspend-power.md)) | |
-| Suspend and resume, with the fans spinning down | |
-| 3D GPU (Adreno X2-90, via freedreno and turnip) | |
+Everything is usable day to day except the camera. Two things work and cannot be relied on.
+
+| Working | Unreliable | Not working |
+|---|---|---|
+| Internal panel (2880x1800) | Suspend and resume -- it works, but the battery drains while asleep (about 2.4 W, where it should be well under 1 W; see [docs/suspend-power.md](docs/suspend-power.md)) and the screen does not always come back. Switching to a text console (`ctrl-alt-f3`) and back usually brings it up | Camera -- needs a device tree description and a userspace stack |
+| Two external monitors, each in its own way: a Gigabyte over USB-C, which needs the link-rate cap carried in `0012`, and an MSI over HDMI, because its own repeater never trains at any rate | USB and ethernet on a dock after a suspend -- usually fine, occasionally needs a replug | |
+| Bluetooth | | |
+| Wi-Fi | | |
+| Internal speakers, with the audio profile built from your own Windows install -- see [docs/audio.md](docs/audio.md) | | |
+| Keyboard, touchpad, stylus, fans and keyboard backlight -- the embedded controller | | |
+| USB, and an external mouse and keyboard | | |
+| 3D GPU (Adreno X2-90, via freedreno and turnip) | | |
 
 ---
 
