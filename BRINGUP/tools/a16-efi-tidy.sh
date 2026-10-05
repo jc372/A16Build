@@ -108,8 +108,13 @@ if menu.endswith('ubuntu/grub.cfg'):
                 out = (out[:anchor.start()] + add + out[anchor.start():]) if anchor else (out + "\n" + add)
                 print(f"    + carried the t1 entry over from the snapdragon menu")
 
+# the [N] prefixes are the menu's old numbering; entries are named now, not numbered
+out = re.sub(r'^menuentry\s+"\[\d+\]\s*', 'menuentry "', out, flags=re.M)
+print("    -> stripped the [N] prefixes from the entry titles")
+
 # the default must still name an entry that survives
 want = keep_u if menu.endswith('ubuntu/grub.cfg') else keep_b
+want = re.sub(r'^\[\d+\]\s*', '', want)
 if any(t == want for t, _ in [(x.group(1), x.group(2)) for x in keep]):
     out = re.sub(r'^set default=.*$', f'set default="{want}"', out, count=1, flags=re.M)
     print(f"    -> default set to '{want[:60]}'")
