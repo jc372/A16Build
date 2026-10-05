@@ -263,7 +263,7 @@ SENSOR = """
 
 &cci1_i2c1 {
 	camera@36 {
-		compatible = "ovti,ov02c10";
+		compatible = "ovti,ov08x40";
 		reg = <0x36>;
 
 		reset-gpios = <&tlmm 239 GPIO_ACTIVE_LOW>;

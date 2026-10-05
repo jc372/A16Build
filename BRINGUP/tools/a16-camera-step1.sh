@@ -23,7 +23,7 @@ HERE="/home/jc/a16-payload/camera"
 DTB_SRC="$HERE/glymur-a16-camera1.dtb"
 DTB_DST=/boot/glymur-a16-camera1.dtb
 KVER="7.3.0-rc5-next-20261002-t2"
-TITLE="A16: camera step 1 (CCI1 + OV02C10 sensor, t2 kernel)"
+TITLE="A16: camera step 1 (CCI1 + front sensor, t2 kernel)"
 GRUB_TOOL=/home/jc/A16Build/BRINGUP/tools/a16-grub-entry.sh
 REPORT="$HERE/a16-camera-report.sh"
 REPORT_DST=/usr/local/sbin/a16-camera-report.sh
@@ -67,9 +67,9 @@ verify_dtb() {
 		echo "  [fail] cannot decompile $f -- not a device tree?"
 		return 1
 	fi
-	local need="cci@ac16000 camera@36 ovti,ov02c10 0x124f800 glymur-camss glymur-csi2-phy remote-endpoint"
+	local need="cci@ac16000 camera@36 ovti,ov08x40 0x124f800 glymur-camss glymur-csi2-phy remote-endpoint"
 	# cci1 + the sensor + the rail container + the mclk rate must all be there
-	for what in "cci@ac16000" "camera@36" "ovti,ov02c10" "0x124f800" "qcom,glymur-camss" "qcom,glymur-csi2-phy" "remote-endpoint"; do
+	for what in "cci@ac16000" "camera@36" "ovti,ov08x40" "0x124f800" "qcom,glymur-camss" "qcom,glymur-csi2-phy" "remote-endpoint"; do
 		if printf '%s' "$out" | grep -q -- "$what"; then echo "  [ok]   $f contains $what"
 		else echo "  [fail] $f does NOT contain $what -- wrong build?"; return 1; fi
 	done

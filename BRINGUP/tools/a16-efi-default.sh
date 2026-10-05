@@ -15,7 +15,7 @@
 set -u
 T2_TITLE='A16: linux-next 7.3.0-rc5-next-20261002-t2'
 OLD_TITLE='A16: camera step 1 (CCI1 + OV08X40 sensor, t2 kernel)'
-NEW_TITLE='A16: camera step 1 (CCI1 + OV02C10 sensor, t2 kernel)'
+NEW_TITLE='A16: camera step 1 (CCI1 + front sensor, t2 kernel)'
 MENUS="/boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/ubuntu_snapdragon/grub.cfg"
 # only this menu's default is set.  The ubuntu menu's 'set default=3' is the operator's
 # standing entry and is deliberately left exactly as it is.
@@ -90,7 +90,7 @@ for m in $MENUS; do
 	if [ "$need_title" = 1 ]; then
 		sed -i "s|$OLD_TITLE|$NEW_TITLE|g" "$m"
 		if grep -qF "$NEW_TITLE" "$m"; then
-			echo "  [ok] camera entry title now says OV02C10"
+			echo "  [ok] camera entry title now is neutral"
 		else
 			echo "  [fail] the title did not change -- it is only a label, leaving the file alone"
 		fi
