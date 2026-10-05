@@ -141,3 +141,43 @@ values are 3000000 + n*32000 uV.
 Device tree re-verified after the change: one PMH0104 container, three supplies on
 the sensor, cci1 and the endpoint unchanged, and the patch (now 398 lines)
 reproduces the tree byte for byte from the pre-camera sources.
+
+## The first step-2 attempt panicked the camera entry: an initramfs is not one archive
+
+The installer's first version assembled the camera initramfs by hand -- unpack with
+`cpio -i`, swap the module, pack with `cpio -o -H newc`.  The camera entry then
+panicked with "unable to mount root fs".  Mechanism, measured:
+
+    stock  initramfs  48432086 bytes      (reported by file(1) as "ASCII cpio archive")
+    rebuilt initramfs  2645504 bytes      47 members
+
+A modern initramfs-tools image is a **concatenation**: this one starts with an
+uncompressed cpio (a small early tree) and continues with the real tree as zstd
+(`COMPRESS=zstd` in `/etc/initramfs-tools/initramfs.conf`).  `file` reports the first
+magic, so it looked like a plain archive; `cpio -i` stops at the first `TRAILER!!!`,
+so the unpack captured the early tree only.  The repack was therefore a fragment with
+no `/init` and none of the root filesystem's modules, and a kernel that finds an
+initramfs without `/init` and no driver for the root disk reports exactly that panic.
+
+The old check ("the members I extracted are all in what I repacked") could not see it,
+because the extraction itself had stopped early.  The fix is to build with the
+machine's own generator and to check against the *stock* image:
+
+* `mkinitramfs -o <out> $KVER` with the same hooks that built today's initramfs --
+  including `a16-qcom-firmware`, which the ADSP needs and which a hand-rolled archive
+  would silently have dropped;
+* the rebuilt module supplied two ways for that one build (swapped into `/lib/modules`
+  for the duration, and a transient hook overwriting it inside the image), because the
+  order in which mkinitramfs copies modules against running hooks is an implementation
+  detail; the stock module is restored and the hook removed immediately after, with a
+  trap covering an interrupted run;
+* verified with `lsinitramfs` (concatenation-aware): no member of the stock image may
+  be missing from the new one, `/init` must be present by name, every copy of the
+  module inside must hash to the staged one, the size may not fall below half the
+  stock's, and the stock image must still hash to what it did before the build;
+* on any failure the camera entry is reverted to the stock initramfs before the script
+  exits, so it cannot be left pointing at an image that will not boot.
+
+The usual entries were never affected -- same device tree, same initramfs, same module
+-- which is why the machine came back with no intervention.  That was the point of
+putting the module inside a camera-only initramfs in the first place.

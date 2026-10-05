@@ -274,6 +274,41 @@ value on its step grid.  Then CAMSS + CSIPHY4 for the app itself.
   The vendor's 3400000 uV sits between two steps; 3392000 and 3424000 are legal.
 - Still open: the third boot.  Pass = no dummy-regulator lines, `rpmh-regulator`
   registering ldo4/ldo7 for I_E0, and 21-0036 reading a chip id.
+
+# Step 2, first attempt: kernel panic.  The initramfs is not one archive.
+
+What happened: the camera entry panicked with "unable to mount root fs".  The cause
+was mine and it is measured, not guessed -- the installer's hand-rolled rebuild
+produced a **2645504 byte** initramfs against the stock one's **48432086 bytes**.
+
+Why: a modern initramfs-tools image is a concatenation.  This machine's starts with
+an uncompressed cpio holding a small early tree and continues with the real tree as
+zstd (`COMPRESS=zstd` in /etc/initramfs-tools/initramfs.conf).  `file` reports the
+first magic, so it looked like a plain cpio; `cpio -i` stops at the first `TRAILER!!!`
+so the unpack got 47 members out of the whole image; the repack was therefore a
+47-member fragment with no `/init` and none of the root filesystem's modules -- and
+a kernel with no init in the initramfs and no driver for the root disk says exactly
+"unable to mount root fs".
+
+The check that was supposed to catch this compared "the members I extracted" against
+"the members I repacked", so it could not see that the extraction itself had
+stopped early.  A check phrased from the *stock* image's contents would have caught
+it; that is what the new verification does, with `lsinitramfs` (which understands
+the concatenated layout) comparing the stock member list against the new one, plus
+`/init` by name, the module's hash inside the image, and the integrity of the stock
+image itself.
+
+Fix: the camera initramfs is now built by `mkinitramfs` -- the same generator, same
+hooks (including `a16-qcom-firmware`, which the ADSP needs) -- with the rebuilt
+module supplied two ways for one build (swapped into /lib/modules for the duration,
+and a transient hook that overwrites it inside the image), then verified.  The stock
+module is restored and the hook removed before anything else happens, and a trap
+does the same if the run is interrupted.  On any failure the camera entry goes back
+to the stock initramfs, so it cannot be left armed on an image that does not boot.
+
+The escape route held: the usual entries boot the same tree, the same initramfs and
+the same module they did before, which is why the machine came back with no
+intervention.
 - The machine's initramfs is an **uncompressed SVR4 cpio** ("ASCII cpio archive",
   48432086 bytes), not zstd or gzip, which is what `file` reports for it.  Detecting
   the archive kind by magic bytes (`od -An -tx1 -N6`) rather than by `file`'s wording

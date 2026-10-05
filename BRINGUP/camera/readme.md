@@ -106,15 +106,29 @@ Read the install output.  These lines are the ones that matter:
     [ok]   vermagic matches the installed module
     [ok]   module_layout CRC matches
     [ok]   the module carries the PMH0104 LDOs (vreg table 256 bytes = 7 rails)
-    [ok]   the repack kept all N paths
-    [ok]   the camera entry now boots /boot/initrd.img-<version>-camera1
+    [ok]   the stock initramfs is byte-identical to before the build
+    [ok]   members: N, none of the stock's N missing
+    [ok]   the new initramfs has its /init
+    [ok]   all N copy/copies inside hash to the staged module
+    [ok]   camera entry now boots initrd.img-<version>-camera1
 
-Then reboot and pick the camera entry.  What the run does: it rebuilds a second
-initramfs for the camera entry with the new `qcom-rpmh-regulator` inside, installs
-the device tree that names the three supplies, and points the camera entry at that
-initramfs.  The module is not put into /lib/modules and no other menu entry is
-changed, so the usual entries boot the same device tree, the same initramfs and
-the same module as before.
+Then reboot and pick the camera entry.  The run builds a second initramfs for the
+camera entry with the rebuilt `qcom-rpmh-regulator` inside, using `mkinitramfs` and
+the same hooks that built the initramfs the machine boots today, installs the device
+tree that names the three supplies, and points the camera entry at that initramfs.
+The module is not put into /lib/modules and no other menu entry is changed, so the
+usual entries boot the same device tree, the same initramfs and the same module as
+before.
+
+Two things to know before you run it:
+
+* every run leaves a log at `~/a16-payload/camera/logs/step2-<timestamp>.log`, so
+  the output is still there afterwards if the terminal scrolls away;
+* if any check fails, the camera entry is put back on the stock initramfs before the
+  script exits, so it is never left pointing at an initramfs that cannot boot.
+
+Why the archive is built with `mkinitramfs` rather than assembled by hand, and what
+happened the one time it was: `patches/0020-dts-camera-cci-ov08x40/RESULT.md`.
 
 Pass in `~/a16-payload/camera/logs/boot-<id>.log`: no `using dummy regulator` lines
 for the sensor, `rpmh-regulator` registering ldo4 and ldo7, and the chip id read
