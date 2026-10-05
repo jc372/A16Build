@@ -1,9 +1,7 @@
-# The A16 EC driver — terms, and why the gaps are the gaps
+# A16 EC driver — reference
 
-2026-10-05. Companion to
-`BRINGUP/patches/asus-zenbook-a16-a14-ec-v3/` — that directory holds the
-maintainer-facing result and the patches. This file holds the background, so the
-result file can stay short. For us, not for a maintainer.
+2026-10-05. Why `evidence/FINAL-RESULT.txt` says what it says: what the terms
+mean, and why the gaps are the gaps. For us — not for a maintainer.
 
 ## MAILBOX
 
