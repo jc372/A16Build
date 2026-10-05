@@ -31,7 +31,7 @@ ad7faf6149b56468c7666898f54fb7045fc54eeae5e87b86d2993e92e5ccc3f7  ../../patches/
 7f709c7f2aa738d1592f686440a810311855245b6dc194e055d4c830a00233b4  ../../patches/0017-dts-hdmi-bridge-tert-gdsc/0017-dts-hdmi-bridge-tert-gdsc.patch
 56824b6dcb8ef6ac0d5bf72ba16a89192b14e17f88c3c78cc1132f30c5690d76  ../../patches/0018-dts-rtc-uefi-rtc-info/0018-dts-rtc-uefi-rtc-info.patch
 7be5b05d4608928439efea71d2f1b9067a5e451ef9071a20e5e478ee3329685d  ../../patches/0019-drm-msm-gmu-attach-plumbing/0019-drm-msm-gmu-attach-plumbing.patch
-a368080aa62c6f488af4058094e693003a2b48f0ce4e52c35815b2c9175162be  ../../patches/0020-dts-camera-cci-ov08x40/0020-dts-camera-cci-ov08x40.patch
+f7a2fb3d76f185cd1167cd27cd2bb04833523f88863eada191a5bd0e9a3b5d95  ../../patches/0020-dts-camera-cci-ov08x40/0020-dts-camera-cci-ov08x40.patch
 1c6996224e5ac3755dcf0ac438abac9470d6e4aee03471f9b0b1d4762824d919  ../../patches/0021-regulator-qcom-rpmh-pmh0104-camera-ldos/0021-regulator-qcom-rpmh-pmh0104-camera-ldos.patch
 
 # the prebuilt kernel package (arm64, built from this patch set)

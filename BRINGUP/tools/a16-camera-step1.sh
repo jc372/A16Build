@@ -171,14 +171,19 @@ check|install)
 [Unit]
 Description=A16 camera step 1 evidence (only when the camera device tree is loaded)
 Documentation=file:///home/jc/a16-payload/camera/readme-camera-step1.md
-After=multi-user.target
-Wants=multi-user.target
+After=sysinit.target
+Wants=sysinit.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=no
-ExecStartPre=/bin/sleep 15
+# Two passes, on purpose.  The first lands a few seconds after the device tree has
+# been walked, so the evidence is on disk before anything that could hang; the
+# second, a minute later, catches the settled state (probes that retried, clients
+# that bound late).  The script appends, so both are in one file.
+ExecStartPre=/bin/sleep 10
 ExecStart=/usr/local/sbin/a16-camera-report.sh
+ExecStartPost=/bin/sh -c 'sleep 45; /usr/local/sbin/a16-camera-report.sh'
 SuccessExitStatus=0 1
 UNIT
 	systemctl daemon-reload >/dev/null 2>&1

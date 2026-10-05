@@ -172,28 +172,13 @@ PIN_BLOCK = (
     + cci_state("cci1_1_sleep", "cci1-1-sleep-state", "gpio235", "gpio236", "bias-pull-down;")
 )
 
-REGULATORS = """	/* --- glymur camera step1: the front camera's always-on rail ----------
-	 * CAMF_RES_MTP.bin, this machine's own power sequence for the front camera
-	 * device, votes three rails in this order: BUCK_BOOST1_B_E0 = 3400000 uV,
-	 * LDO4_I0 = 1800000 uV, LDO7_I0 = 2800000 uV.  Only the first is described
-	 * here, because only the first can be driven by the regulator driver this
-	 * kernel runs: BUCK_BOOST1_B is PMH0101's bob1 (pmic-id B_E0), which the
-	 * installed qcom-rpmh-regulator module knows.
-	 *
-	 * The two PMH0104 LDOs cannot be described yet: the installed module's
-	 * pmh0104_vreg_data holds smps1..4 only (160 bytes = 4 entries + terminator),
-	 * so a rail node for I_E0 would fail with "Unknown regulator ldo4" and
-	 * whatever consumed it would defer forever.  That is patch 0021 plus a module
-	 * rebuild, which is step 2 -- until then the sensor's dovdd/dvdd are left
-	 * undeclared and the kernel hands out dummy regulators for them.
-	 */
-	vreg_bob1_b_e0: bob1 {
-		regulator-name = "vreg_bob1_b_e0";
-		regulator-min-microvolt = <3400000>;
-		regulator-max-microvolt = <3400000>;
-		regulator-initial-mode = <RPMH_REGULATOR_MODE_AUTO>;
-	};
-"""
+# The camera rail node that used to be inserted into regulators-0 is GONE on
+# purpose.  It was PMH0101 bob1 at 3400000 uV, which is not on that rail's
+# step grid: "unsupportable voltage constraints 3416000-3384000uV", the rail
+# failed to register, devres unregistered every other rail of that container
+# with it, and every consumer of PMH0101 deferred -- the wifi's PCIe rail
+# (l15b), the USB rails, i2c slaves.  No PCIe, no wifi, no USB-A, on two
+# boots.  Step 1 now declares no rails at all; see RESULT.md of patch 0020.
 
 REGULATORS_CAMERA_PMIC = """	/* --- glymur camera step1: the PMH0104 rails, for step 2 ---------------
 	 * Kept in the tree because these are the rails the machine actually has and
@@ -233,14 +218,15 @@ SENSOR = """
  *   reset gpio 239            CAMF_RES_MTP.bin   TLMMGPIO 0xEF
  *   MCLK4 19.2 MHz            CAMF_RES_MTP.bin   cam_cc_mclk4_clk, value 19200000
  *   i2c address 0x36          SCFG_FRONT_MTP.bin + bus_info.primary.slave_config
- *   avdd -> bob1 at 3.4 V     CAMF_RES_MTP.bin   BUCK_BOOST1_B_E0 = 3400000 uV
+ *   rails                     CAMF_RES_MTP.bin votes BUCK_BOOST1_B_E0 (3.4 V),
+ *                             LDO4_I0 (1.8 V), LDO7_I0 (2.8 V)
  *
- * dovdd and dvdd are deliberately NOT declared: the rails the machine uses for
- * them are PMH0104 ldo4/ldo7, and the regulator driver this kernel runs cannot
- * describe that PMIC's LDOs yet (see the note on the rails above).  Leaving the
- * properties out makes the kernel hand out dummy regulators, which report success
- * and change nothing -- so the sensor probe still runs, and the next step is
- * judged on the chip id, not on a deferred probe.
+ * NO supply is declared, on purpose.  The first attempt named avdd = PMH0101
+ * bob1 and the constraint was unsatisfiable, which took the whole PMH0101
+ * container -- and with it the wifi's PCIe rail and the USB rails -- down.  The
+ * rails are step 2, with the regulator module that can drive them; until then
+ * the kernel hands out dummy regulators for all three, which report success and
+ * change nothing, so the probe still runs and the chip-id read is the result.
  *
  * There is no remote-endpoint yet on purpose: CAMSS and CSIPHY4 are a later
  * step, so a failure here can only be the CCI or the sensor.  The endpoint still
@@ -268,7 +254,7 @@ SENSOR = """
 		assigned-clocks = <&camcc CAM_CC_MCLK4_CLK>;
 		assigned-clock-rates = <19200000>;
 
-		avdd-supply = <&vreg_bob1_b_e0>;
+		/* no supplies: see the note above the sensor node */
 
 		port {
 			ov08x40_out_ep: endpoint {
@@ -328,10 +314,10 @@ def edit_dtsi(lines):
 
 
 def edit_board(lines):
-    # 1. the camera's always-on rail, inside the PMH0101 container (B_E0)
-    _, end = find_block(lines, r"^\tregulators-0 \{", "regulators-0 (the PMH0101 container)")
-    lines = lines[:end] + REGULATORS.split("\n") + lines[end:]
-    # 2. the PMH0104 container the machine really uses, for step 2
+    # 1. the PMH0104 container the machine really uses -- NOT inserted, see the
+    #    note at the top of this file.  Its rails cannot bind on this kernel and
+    #    nothing consumes them, so the failure stays contained; it is kept only as
+    #    the record of what the board has.
     _, end = find_block(lines, r"^&apps_rsc \{", "&apps_rsc")
     lines = lines[:end] + REGULATORS_CAMERA_PMIC.split("\n") + lines[end:]
     # 3. the reset pin group inside &tlmm

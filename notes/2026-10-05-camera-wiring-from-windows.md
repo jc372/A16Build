@@ -177,3 +177,57 @@ PMH0104 LDOs exist (then dovdd/dvdd can be wired to ldo4/ldo7 at 1.8/2.8 V), and
 then CAMSS + CSIPHY4, which is the rest of Qualcomm's v1 series and is already in the
 driver.
 
+# Step 1, first run: the CCI works, and one rail node cost wifi and USB-A
+
+Two boots were taken (journal boots `-2` and `-1`, boot ids 95315f56 and 92653271, 29
+seconds each).  Both are in the journal and the failure is unambiguous.
+
+**What worked.**  The CCI registered: an i2c client sits at 0x36 on the cci1 master 1
+adapter and its probe reached the supply lookup --
+
+    i2c 21-0036: deferred probe pending: i2c: wait for supplier
+                 /soc@0/rsc@18900000/regulators-0/bob1
+
+-- so the address, the interrupt (859), the CCI_1 clock, the `cci1_1` pinctrl on
+gpio235/236 and the endpoint parse are all right.  That is most of step 1, obtained
+by accident, from the boot that went wrong.
+
+**What broke it.**  The patch declared the camera's always-on rail, PMH0101 bob1 at
+the vendor's 3400000 uV, inside `regulators-0` -- the container that holds the rails
+the *board* depends on:
+
+    vreg_bob1_b_e0: unsupportable voltage constraints 3416000-3384000uV
+    regulators-0: bob1: devm_regulator_register() failed, ret=-22
+    regulators-0: probe with driver qcom-rpmh-regulator failed with error -22
+    ...deferred probe pending: i2c: wait for supplier .../regulators-0/ldo15
+
+PMH0101's BOB range is stepped and 3400000 uV is not on the grid, so the constraint
+was unsatisfiable.  A failing child fails its container, devres unregistered every
+other rail of `regulators-0` with it (l8b/l15b = the wifi's PCIe rails, the USB
+rails, the rest), and every consumer deferred: no PCIe link, no ath12k, no xhci.  The
+desktop came up fine, because the display does not need PMH0101.  To the user: "no
+camera and we lost wifi and USB".  Reboot into the usual entry and everything is
+back, which is what boot 0 shows (wifi at 192.168.60.100, Keychron dongle enumerated).
+
+**What changed because of it.**  0020 now declares no regulators at all; the sensor's
+avdd/dovdd/dvdd are undeclared, so the kernel hands out dummy regulators and the
+probe still runs.  The rails move to step 2, where the PMH0104 container is one this
+board has no other consumers in -- a mistake there stays local.
+
+**Two rules worth keeping**, both cheap to apply:
+
+* a rail node is never a local change.  If it is in the same container as rails the
+  board needs, a bad value takes all of them out, and the damage shows up as
+  unrelated hardware (wifi, USB) going missing.
+* a vendor rail voltage is not a legal constraint.  Check it against the driver's
+  `REGULATOR_LINEAR_RANGE` (min, min_sel, max_sel, step) before writing it, or the
+  probe fails with `unsupportable voltage constraints`.
+
+Also worth knowing: the collector service is what leaves the evidence, and in a boot
+that is rebooted after 29 seconds it never ran.  It now runs twice -- 10 s and 55 s
+after sysinit -- so the first pass is on disk before anything that could hang.
+
+**And the expectation to set with the user**: step 1 cannot put a camera in the app.
+No CAMSS, no csiphy4, no /dev/video.  That is step 3, and it is the rest of the same
+Qualcomm series.
+
