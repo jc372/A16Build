@@ -9,17 +9,17 @@ Everything is usable day to day except the camera. Two things work and cannot be
 
 | What | State | Notes |
 |---|---|---|
-| Internal panel | Working | 2880x1800, at 60 or 120 Hz. 120 is the panel's preferred mode, so a fresh session comes up at 120 -- pick 60 in Settings if you would rather have that |
-| External monitors | Working | Two of them, and each works differently: a Gigabyte over USB-C, which needs the link-rate cap carried in `0012`, and an MSI over HDMI, because its own repeater never trains at any rate |
-| Bluetooth | Working | Earbuds connected over A2DP |
+| Internal panel | Working | 2880x1800, at 60 or 120 Hz |
+| External monitors | Working | Two at once, each in its own way: a Gigabyte over USB-C and an MSI over HDMI |
+| Bluetooth | Working | Earbuds over A2DP |
 | Wi-Fi | Working | |
-| Internal speakers | Working | Need the audio profile built from your own Windows install -- see [docs/audio.md](docs/audio.md) |
+| Internal speakers | Working | With the audio profile -- see [docs/audio.md](docs/audio.md) |
 | Keyboard, touchpad, stylus, fans, keyboard backlight | Working | The embedded controller |
 | USB | Working | External mouse and keyboard, and a dock |
 | 3D GPU | Working | Adreno X2-90, via freedreno and turnip |
-| Suspend and resume | Unreliable | It works, but the battery drains while asleep -- about 2.4 W, where it should be well under 1 W, see [docs/suspend-power.md](docs/suspend-power.md) -- and the screen does not always come back. `ctrl-alt-f3` and back usually brings it up |
+| Suspend and resume | Unreliable | Works, but the battery drains while asleep -- about 2.4 W, see [docs/suspend-power.md](docs/suspend-power.md) -- and the screen does not always come back |
 | Dock USB and ethernet after a suspend | Unreliable | Usually fine; occasionally needs a replug |
-| Camera | Not working | Needs a device tree description and a userspace stack |
+| Camera | Not working | No driver yet |
 
 ---
 
