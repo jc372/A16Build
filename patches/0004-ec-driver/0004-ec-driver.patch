@@ -1,7 +1,129 @@
-diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asus-glymur-ec.c
---- a/drivers/platform/arm64/asus-glymur-ec.c	1969-12-31 19:00:00.000000000 -0500
-+++ b/drivers/platform/arm64/asus-glymur-ec.c	2026-09-22 08:42:42.402976378 -0400
-@@ -0,0 +1,592 @@
+From mboxrd@z Thu Jan  1 00:00:00 1970
+Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+	(No client certificate requested)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 51932443E52;
+	Wed, 23 Sep 2026 10:14:34 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
+ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
+	t=1790158485; cv=none; b=Eon+cITHmuLgzo06hUpv2U8Xi7zOV81LytO71IQFEoETD0VYHgtlhVKX89YuneSxSnwoc7XKA7RXyanGjG86r7ssMZMVVEh0c3urR7JYUG/OIWLSjuFpucCC1wB2V1Aunii4J+rqud0IPsAAhEKHO/bVgLlgVymrjvasiBHrn9Q=
+ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
+	s=arc-20240116; t=1790158485; c=relaxed/simple;
+	bh=cnb5pRLdKRfbzmXyBVuo8h30JO/mUys4FsZ2gweXgHQ=;
+	h=From:Date:Subject:MIME-Version:Content-Type:Message-Id:References:
+	 In-Reply-To:To:Cc; b=ZiRRYP8yZ4QRbWDlETJmt44t34SzOF7YuA+IkUaXskpQIh7Mxn5KoeWHjsgkgN9WdoQv3xl8ToAs79LIIk3oFF1deVdx+QPRLah7EQbd5vhHLqmfyB8CyJZkJyljx+VVh8YE4xOf9kqJh5oAk1Ejq8QlgclW+FENnI7JlbGAQrE=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Td2516U/; arc=none smtp.client-ip=100.103.45.18
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Td2516U/"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 32D651F00898;
+	Wed, 23 Sep 2026 10:14:27 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1790158473;
+	bh=wTYzCi8Tu0ja5Z53yrBoeUsrxn33W/47pPhQDaw+Ya0=;
+	h=From:Date:Subject:References:In-Reply-To:To:Cc;
+	b=Td2516U/lMmKzhNbfnEnLQtzxG21AYzKdEgOvp8JasvDqJ07jmkfmxZslcRMIdjMp
+	 TxRtrqLjj7hdsctcI8ig33yXE9wnW6Q30yJBA3FiqI1l4dFBaLy6pGiNVJ5rDjovRB
+	 JyihIPzU5NLafAVfDFRz0vlPf9qvH9fQF3A8cmcjUY7rdY7qQr/63V2GuFv/88aLGW
+	 bksFgfTg/Dfpf4WTZImENSgBlWvMwXoJs5adYqPJL7thjfghK+Ci2ve5DsCe7gU0b2
+	 Ev7ERg9atSqN3wSck2PfWT3bNLuYxHKb0jzUtoISrjjs2qgTjL7op9nbj2Ca9rdVfL
+	 MVeAfyjxSwuJg==
+From: Konrad Dybcio <konradybcio@kernel.org>
+Date: Wed, 23 Sep 2026 12:14:14 +0200
+Subject: [PATCH v3 2/3] platform: arm64: Add a driver for the EC found on
+ ASUS Glymur machines
+Precedence: bulk
+X-Mailing-List: devicetree@vger.kernel.org
+List-Id: <devicetree.vger.kernel.org>
+List-Subscribe: <mailto:devicetree+subscribe@vger.kernel.org>
+List-Unsubscribe: <mailto:devicetree+unsubscribe@vger.kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Message-Id: <20260923-topic-asus_ec-v3-2-2bf3bb9da879@oss.qualcomm.com>
+References: <20260923-topic-asus_ec-v3-0-2bf3bb9da879@oss.qualcomm.com>
+In-Reply-To: <20260923-topic-asus_ec-v3-0-2bf3bb9da879@oss.qualcomm.com>
+To: Rob Herring <robh@kernel.org>, Krzysztof Kozlowski <krzk+dt@kernel.org>, 
+ Conor Dooley <conor+dt@kernel.org>, Konrad Dybcio <konradybcio@kernel.org>, 
+ Hans de Goede <hansg@kernel.org>, 
+ =?utf-8?q?Ilpo_J=C3=A4rvinen?= <ilpo.jarvinen@linux.intel.com>, 
+ Bryan O'Donoghue <bryan.odonoghue@linaro.org>, 
+ Guenter Roeck <linux@roeck-us.net>, Bjorn Andersson <andersson@kernel.org>, 
+ Abel Vesa <abelvesa@kernel.org>
+Cc: devicetree@vger.kernel.org, linux-kernel@vger.kernel.org, 
+ platform-driver-x86@vger.kernel.org, linux-hwmon@vger.kernel.org, 
+ linux-arm-msm@vger.kernel.org, 
+ Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+X-Mailer: b4 0.16.0
+X-Developer-Signature: v=1; a=ed25519-sha256; t=1790158456; l=18043;
+ i=konrad.dybcio@oss.qualcomm.com; s=20230215; h=from:subject:message-id;
+ bh=9vTAVqSbrVE+cDcqn1ulW2Oa5FcHhmhr8hH1qj8HdNQ=;
+ b=3sYJPqnez9IBENtk9hF7ZpO9325QXXE727k1EiqCaoGRgia6ZnZ6kP11aG8nShzFRAeIavn/o
+ w78OtrSbCWXC9+RhKJKYzFfUjddQrw8GVuLWS0i67j+OquYtBLlbj9v
+X-Developer-Key: i=konrad.dybcio@oss.qualcomm.com; a=ed25519;
+ pk=iclgkYvtl2w05SSXO5EjjSYlhFKsJ+5OSZBjOkQuEms=
+
+From: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+
+Some Qualcomm Snapdragon X2 Elite (Extreme)-based ASUS laptops (at
+least the Zenbook A14 and A16) expose a custom, somewhat
+Qualcomm reference-derived EC interface. Introduce a driver to
+communicate with said EC, allowing for fan speed reporting, keyboard
+backlight setting and receiving of a number of miscellaneous sideband
+events.
+
+Assisted-by: LLM
+Signed-off-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+---
+ drivers/platform/arm64/Kconfig          |  16 +
+ drivers/platform/arm64/Makefile         |   1 +
+ drivers/platform/arm64/asus-glymur-ec.c | 600 ++++++++++++++++++++++++++++++++
+ 3 files changed, 617 insertions(+)
+
+diff --git a/drivers/platform/arm64/Kconfig b/drivers/platform/arm64/Kconfig
+index e32e01b2a9bd..84c475c62990 100644
+--- a/drivers/platform/arm64/Kconfig
++++ b/drivers/platform/arm64/Kconfig
+@@ -33,6 +33,22 @@ config EC_ACER_ASPIRE1
+ 	  laptop where this information is not properly exposed via the
+ 	  standard ACPI devices.
+ 
++config EC_ASUS_GLYMUR
++	tristate "ASUS Zenbook A16 (Qualcomm) Embedded Controller driver"
++	depends on ARCH_QCOM || COMPILE_TEST
++	depends on I2C
++	depends on HWMON
++	depends on INPUT
++	depends on PM
++	depends on THERMAL || THERMAL=n
++	select NEW_LEDS
++	select LEDS_CLASS
++	help
++	  Say M or Y here to enable the EC driver for the Qualcomm Snapdragon-
++	  based ASUS Zenbook A16 (UX3607OA) and similar machines. It provides
++	  temperature sensors readout, fan monitoring, keyboard and EC event
++	  reporting.
++
+ config EC_HUAWEI_GAOKUN
+ 	tristate "Huawei Matebook E Go Embedded Controller driver"
+ 	depends on ARCH_QCOM || COMPILE_TEST
+diff --git a/drivers/platform/arm64/Makefile b/drivers/platform/arm64/Makefile
+index 7681be4a46e9..7122e8ea325f 100644
+--- a/drivers/platform/arm64/Makefile
++++ b/drivers/platform/arm64/Makefile
+@@ -6,6 +6,7 @@
+ #
+ 
+ obj-$(CONFIG_EC_ACER_ASPIRE1)	+= acer-aspire1-ec.o
++obj-$(CONFIG_EC_ASUS_GLYMUR) += asus-glymur-ec.o
+ obj-$(CONFIG_EC_HUAWEI_GAOKUN)	+= huawei-gaokun-ec.o
+ obj-$(CONFIG_EC_LENOVO_YOGA_C630) += lenovo-yoga-c630.o
+ obj-$(CONFIG_EC_LENOVO_THINKPAD_T14S) += lenovo-thinkpad-t14s.o
+diff --git a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asus-glymur-ec.c
+new file mode 100644
+index 000000000000..3e7706e3bdaa
+--- /dev/null
++++ b/drivers/platform/arm64/asus-glymur-ec.c
+@@ -0,0 +1,600 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * The EC firmware on the ASUS Zenbook A16 looks to be derived from the
@@ -15,14 +137,17 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 + */
 +
 +#include <linux/cleanup.h>
++#include <linux/container_of.h>
 +#include <linux/delay.h>
 +#include <linux/device.h>
++#include <linux/dev_printk.h>
 +#include <linux/err.h>
 +#include <linux/hwmon.h>
 +#include <linux/i2c.h>
 +#include <linux/interrupt.h>
 +#include <linux/kernel.h>
 +#include <linux/leds.h>
++#include <linux/lockdep.h>
 +#include <linux/module.h>
 +#include <linux/mutex.h>
 +#include <linux/pm.h>
@@ -32,6 +157,8 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +
 +/* Qualcomm-derived registers (main device @ 0x76) */
 +#define ASUS_QCOM_EC_EVENT_CMD		0x05
++ #define ASUS_QCOM_EC_EVENT_NONE	0x00
++ #define ASUS_QCOM_EC_EVENT_INVALID	0xff
 +
 +#define ASUS_QCOM_EC_SUBCMD_FULL_VER	0x0f
 +#define ASUS_QCOM_EC_FULL_VER_LEN	7
@@ -109,10 +236,11 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +	lockdep_assert_held(&ec->lock);
 +
 +	ret = i2c_smbus_write_i2c_block_data(ec->client, offset, len, buf);
-+	if (ret < 0)
++	if (ret < 0) {
 +		dev_dbg(&ec->client->dev,
 +			"Main device write off %#x len %u failed: %d\n",
 +			offset, len, ret);
++	}
 +
 +	return ret;
 +}
@@ -171,8 +299,7 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +
 +	lockdep_assert_held(&ec->lock);
 +
-+	ret = i2c_smbus_write_i2c_block_data(ec->subdev_client,
-+					     ASUS_EC_REQ_REG,
++	ret = i2c_smbus_write_i2c_block_data(ec->subdev_client, ASUS_EC_REQ_REG,
 +					     sizeof(sel), sel);
 +	if (ret < 0)
 +		return ret;
@@ -193,8 +320,7 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +
 +	lockdep_assert_held(&ec->lock);
 +
-+	ret = i2c_smbus_write_i2c_block_data(ec->subdev_client,
-+					     ASUS_EC_REQ_REG,
++	ret = i2c_smbus_write_i2c_block_data(ec->subdev_client, ASUS_EC_REQ_REG,
 +					     sizeof(sel), sel);
 +	if (ret < 0)
 +		return ret;
@@ -203,7 +329,7 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +					 ASUS_EC_RESP_REG, data);
 +}
 +
-+static int asus_ec_mailbox_cmd(struct asus_ec *ec, u8 cmd, u8 sub, u8 data)
++static int asus_ec_wait_mailbox(struct asus_ec *ec)
 +{
 +	int ret, tries;
 +	u8 status;
@@ -215,12 +341,23 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +				    ASUS_EC_MBOX_REG_CMD, &status);
 +		if (ret < 0)
 +			return ret;
-+		if (status == 0)
-+			break;
++		if (!status)
++			return 0;
 +		usleep_range(5000, 6000);
 +	}
-+	if (tries == 0)
-+		return -EBUSY;
++
++	return -ETIMEDOUT;
++}
++
++static int asus_ec_mailbox_cmd(struct asus_ec *ec, u8 cmd, u8 sub, u8 data)
++{
++	int ret;
++
++	lockdep_assert_held(&ec->lock);
++
++	ret = asus_ec_wait_mailbox(ec);
++	if (ret < 0)
++		return ret == -ETIMEDOUT ? -EBUSY : ret;
 +
 +	ret = asus_ec_writeb(ec, ASUS_EC_PAGE_MAILBOX, ASUS_EC_MBOX_REG_SUBCMD, sub);
 +	if (ret < 0)
@@ -234,18 +371,7 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +	if (ret < 0)
 +		return ret;
 +
-+	for (tries = 5; tries > 0; tries--) {
-+		ret = asus_ec_readb(ec, ASUS_EC_PAGE_MAILBOX,
-+				    ASUS_EC_MBOX_REG_CMD, &status);
-+		if (ret < 0)
-+			return ret;
-+		if (status == 0)
-+			return 0;
-+
-+		usleep_range(5000, 6000);
-+	}
-+
-+	return -ETIMEDOUT;
++	return asus_ec_wait_mailbox(ec);
 +}
 +
 +static int asus_ec_enable_writes(struct asus_ec *ec)
@@ -324,7 +450,8 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +		dev_err_ratelimited(dev, "Failed to read EC event: %d\n", code);
 +		return IRQ_HANDLED;
 +	}
-+	if (code == 0 || code == 0xff)
++	if (code == ASUS_QCOM_EC_EVENT_NONE ||
++	    code == ASUS_QCOM_EC_EVENT_INVALID)
 +		return IRQ_HANDLED;
 +
 +	switch (code) {
@@ -352,12 +479,13 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +		/* TODO: ping SoCCP over the pmic_glink OEM-specific interface */
 +		scoped_guard(mutex, &ec->lock)
 +			ret = asus_qcom_ec_read_ram(ec, ASUS_QCOM_EC_RAM_AC_STATUS, 1, &ac);
-+		if (ret < 0)
++		if (ret < 0) {
 +			dev_warn_ratelimited(dev,
-+					     "Failed to read AC status: %d\n",
-+					     ret);
-+		else
-+			dev_info_ratelimited(dev, "AC event: 0x%x\n", ac);
++						"Failed to read AC status: %d\n",
++						ret);
++		} else {
++			dev_dbg_ratelimited(dev, "AC event: 0x%x\n", ac);
++		}
 +		break;
 +	}
 +	case ASUS_EC_EVT_CHARGE_STATE:
@@ -504,9 +632,10 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +
 +	ec->subdev_client = devm_i2c_new_dummy_device(dev, client->adapter,
 +						      ASUS_EC_SUBDEV_ADDR);
-+	if (IS_ERR(ec->subdev_client))
++	if (IS_ERR(ec->subdev_client)) {
 +		return dev_err_probe(dev, PTR_ERR(ec->subdev_client),
 +				     "Failed to register 0x5b EC device\n");
++	}
 +
 +	ret = asus_ec_enable_writes(ec);
 +	if (ret < 0)
@@ -537,9 +666,10 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +							     ec,
 +							     &asus_ec_hwmon_chip_info,
 +							     NULL);
-+	if (IS_ERR(ec->hwmon_dev))
++	if (IS_ERR(ec->hwmon_dev)) {
 +		return dev_err_probe(dev, PTR_ERR(ec->hwmon_dev),
 +				     "Failed to register hwmon\n");
++	}
 +
 +	return 0;
 +}
@@ -594,26 +724,8 @@ diff -ruN a/drivers/platform/arm64/asus-glymur-ec.c b/drivers/platform/arm64/asu
 +
 +MODULE_DESCRIPTION("ASUS Zenbook A16 (Qualcomm) Embedded Controller driver");
 +MODULE_LICENSE("GPL");
-diff -ruN a/drivers/platform/arm64/Kconfig b/drivers/platform/arm64/Kconfig
---- a/drivers/platform/arm64/Kconfig	2026-10-02 20:19:50.000000000 -0400
-+++ b/drivers/platform/arm64/Kconfig	2026-10-03 15:27:12.790388221 -0400
-@@ -104,3 +104,11 @@
- 	  This driver currently supports Hamoa/Purwa/Glymur reference devices.
- 
- endif # ARM64_PLATFORM_DEVICES
-+
-+config ASUS_GLYMUR_EC
-+	tristate "ASUS Zenbook A16/A14 EC driver"
-+	depends on ARCH_QCOM || COMPILE_TEST
-+	depends on I2C
-+	help
-+	  Embedded controller on the ASUS Zenbook A16/A14 (UX3607OA/UX3407NA).
-+	  Provides the lid switch, power button and thermal sensors.
-diff -ruN a/drivers/platform/arm64/Makefile b/drivers/platform/arm64/Makefile
---- a/drivers/platform/arm64/Makefile	2026-10-02 20:19:50.000000000 -0400
-+++ b/drivers/platform/arm64/Makefile	2026-10-03 15:27:12.790388221 -0400
-@@ -10,3 +10,4 @@
- obj-$(CONFIG_EC_LENOVO_YOGA_C630) += lenovo-yoga-c630.o
- obj-$(CONFIG_EC_LENOVO_THINKPAD_T14S) += lenovo-thinkpad-t14s.o
- obj-$(CONFIG_EC_QCOM_HAMOA) += qcom-hamoa-ec.o
-+obj-$(CONFIG_ASUS_GLYMUR_EC)	+= asus-glymur-ec.o
+
+-- 
+2.55.0
+
+

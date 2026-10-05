@@ -1,0 +1,183 @@
+--- a/drivers/gpu/drm/msm/adreno/adreno_device.c
++++ b/drivers/gpu/drm/msm/adreno/adreno_device.c
+@@ -271,21 +271,26 @@
+ 
+ static int adreno_probe(struct platform_device *pdev)
+ {
+-	if (of_device_is_compatible(pdev->dev.of_node, "amd,imageon") ||
+-	    msm_gpu_no_components())
+-		return msm_gpu_probe(pdev, &a3xx_ops);
++	int ret;
+ 
+-	return component_add(&pdev->dev, &a3xx_ops);
++	if (msm_gpu_use_separate_drm_dev(pdev)) {
++		ret = msm_gpu_probe(pdev);
++		if (ret)
++			return ret;
++	}
++
++	ret = component_add(&pdev->dev, &a3xx_ops);
++	if (ret && msm_gpu_use_separate_drm_dev(pdev))
++		msm_gpu_remove(pdev);
++
++	return ret;
+ }
+ 
+ static void adreno_remove(struct platform_device *pdev)
+ {
+-	struct msm_drm_private *priv = platform_get_drvdata(pdev);
+-
+-	if (priv->kms_init)
+-		component_del(&pdev->dev, &a3xx_ops);
+-	else
+-		msm_gpu_remove(pdev, &a3xx_ops);
++	component_del(&pdev->dev, &a3xx_ops);
++	if (msm_gpu_use_separate_drm_dev(pdev))
++		msm_gpu_remove(pdev);
+ }
+ 
+ static void adreno_shutdown(struct platform_device *pdev)
+@@ -422,6 +427,7 @@
+ 		return;
+ 
+ 	platform_driver_register(&adreno_driver);
++	adreno_gmu_register();
+ }
+ 
+ void __exit adreno_unregister(void)
+@@ -429,5 +435,6 @@
+ 	if (skip_gpu)
+ 		return;
+ 
++	adreno_gmu_unregister();
+ 	platform_driver_unregister(&adreno_driver);
+ }
+--- a/drivers/gpu/drm/msm/msm_drv.c
++++ b/drivers/gpu/drm/msm/msm_drv.c
+@@ -83,9 +83,12 @@
+ 		drm_warn(dev, "Can't use Transparent Hugepage (%d)\n", err);
+ }
+ 
+-bool msm_gpu_no_components(void)
++bool msm_gpu_use_separate_drm_dev(struct platform_device *pdev)
+ {
+-	return separate_gpu_kms;
++	if (!pdev)
++		return separate_gpu_kms;
++
++	return of_device_is_compatible(pdev->dev.of_node, "amd,imageon") || separate_gpu_kms;
+ }
+ 
+ static int msm_drm_uninit(struct device *dev, const struct component_ops *gpu_ops)
+@@ -1047,7 +1050,7 @@
+ static int add_gpu_components(struct device *dev,
+ 			      struct component_match **matchptr)
+ {
+-	struct device_node *np;
++	struct device_node *np, *gmu_np;
+ 
+ 	np = of_find_matching_node(NULL, msm_gpu_match);
+ 	if (!np)
+@@ -1056,6 +1059,11 @@
+ 	if (of_device_is_available(np) && adreno_has_gpu(np))
+ 		drm_of_component_match_add(dev, matchptr, component_compare_of, np);
+ 
++	gmu_np = of_parse_phandle(np, "qcom,gmu", 0);
++	if (of_device_is_available(gmu_np))
++		drm_of_component_match_add(dev, matchptr, component_compare_of, gmu_np);
++
++	of_node_put(gmu_np);
+ 	of_node_put(np);
+ 
+ 	return 0;
+@@ -1064,7 +1072,7 @@
+ static int msm_drm_bind(struct device *dev)
+ {
+ 	return msm_drm_init(dev,
+-			    msm_gpu_no_components() ?
++			    msm_gpu_use_separate_drm_dev(NULL) ?
+ 				    &msm_kms_driver :
+ 				    &msm_driver,
+ 			    NULL);
+@@ -1103,7 +1111,7 @@
+ 			return ret;
+ 	}
+ 
+-	if (!msm_gpu_no_components()) {
++	if (!msm_gpu_use_separate_drm_dev(NULL)) {
+ 		ret = add_gpu_components(master_dev, &match);
+ 		if (ret)
+ 			return ret;
+@@ -1123,10 +1131,25 @@
+ 	return 0;
+ }
+ 
+-int msm_gpu_probe(struct platform_device *pdev,
+-		  const struct component_ops *ops)
++static int msm_gpu_drm_bind(struct device *dev)
++{
++	return msm_drm_init(dev, &msm_gpu_driver, NULL);
++}
++
++static void msm_gpu_drm_unbind(struct device *dev)
++{
++	msm_drm_uninit(dev, NULL);
++}
++
++static const struct component_master_ops msm_gpu_drm_ops = {
++	.bind = msm_gpu_drm_bind,
++	.unbind = msm_gpu_drm_unbind,
++};
++
++int msm_gpu_probe(struct platform_device *pdev)
+ {
+ 	struct msm_drm_private *priv;
++	struct component_match *match = NULL;
+ 	int ret;
+ 
+ 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+@@ -1142,13 +1165,17 @@
+ 	if (ret)
+ 		return ret;
+ 
+-	return msm_drm_init(&pdev->dev, &msm_gpu_driver, ops);
++	ret = add_gpu_components(&pdev->dev, &match);
++	if (ret)
++		return ret;
++
++	return component_master_add_with_match(&pdev->dev, &msm_gpu_drm_ops,
++					       match);
+ }
+ 
+-void msm_gpu_remove(struct platform_device *pdev,
+-		    const struct component_ops *ops)
++void msm_gpu_remove(struct platform_device *pdev)
+ {
+-	msm_drm_uninit(&pdev->dev, ops);
++	component_master_del(&pdev->dev, &msm_gpu_drm_ops);
+ }
+ 
+ static int __init msm_drm_register(void)
+--- a/drivers/gpu/drm/msm/msm_drv.h
++++ b/drivers/gpu/drm/msm/msm_drv.h
+@@ -523,10 +523,8 @@
+ int msm_kms_pm_prepare(struct device *dev);
+ void msm_kms_pm_complete(struct device *dev);
+ 
+-int msm_gpu_probe(struct platform_device *pdev,
+-		  const struct component_ops *ops);
+-void msm_gpu_remove(struct platform_device *pdev,
+-		    const struct component_ops *ops);
++int msm_gpu_probe(struct platform_device *pdev);
++void msm_gpu_remove(struct platform_device *pdev);
+ int msm_drv_probe(struct device *dev,
+ 	int (*kms_init)(struct drm_device *dev),
+ 	struct msm_kms *kms);
+@@ -534,6 +532,6 @@
+ 
+ bool msm_disp_drv_should_bind(struct device *dev, bool dpu_driver);
+ 
+-bool msm_gpu_no_components(void);
++bool msm_gpu_use_separate_drm_dev(struct platform_device *pdev);
+ 
+ #endif /* __MSM_DRV_H__ */

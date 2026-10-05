@@ -1,0 +1,13 @@
+--- a/drivers/gpu/drm/msm/dp/dp_display.c
++++ b/drivers/gpu/drm/msm/dp/dp_display.c
+@@ -1542,6 +1542,10 @@
+ 	if (!dp->power_on)
+ 		return;
+ 
++	/* A failed link enable never started the main link: do not push idle. */
++	if (!dp->power_on)
++		return;
++
+ 	msm_dp_ctrl_push_idle(msm_dp_display->ctrl);
+ }
+ 

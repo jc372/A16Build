@@ -13,21 +13,24 @@
 #
 # the patches, in application order
 5aab4ae758f6f6bcadede84fd1e291dbccd69c5ec6bb365ed7f42329ce81af4f  ../../patches/0001-phy-qcom-edp-v8-sequence/0001-phy-qcom-edp-v8-sequence.patch
-3d38752a7a0799d8dbf15bd02f80f419463e9b1f55234386b2b88b78ee280254  ../../patches/0002-dts-ec-node/0002-dts-ec-node.patch
-7439b28882ef57344ad6c678f47a7e471c2c865c53111df5c235482f037e9b08  ../../patches/0004-ec-driver/0004-ec-driver.patch
+d06badc193f481a8941442447ffe87a5fe66cfd116aa384655bbaa3f6f80a183  ../../patches/0002-dts-ec-node/0002-dts-ec-node.patch
+d1fbd27b6ae9369f67ba7a0792903b1671059b3c152de861d9e52385d00e74b1  ../../patches/0003-dt-bindings-asus-zenbook-a16-ec/0003-dt-bindings-asus-zenbook-a16-ec.patch
+8d0220e7fabbc6bf08a6902479fdf5cf2e6031fb4533099de385a6052574e773  ../../patches/0004-ec-driver/0004-ec-driver.patch
 f7530367e088178601672b405a3460e103368acb651789d3ad1d21d84b13c629  ../../patches/0005-dts-bt-serdev-node/0005-dts-bt-serdev-node.patch
 4f3ecf912cd788dfdac594f4be3f98ce5675f7484a9f2ff4f0e83d3530ce4b92  ../../patches/0006-dts-bt-enable-gpio/0006-dts-bt-enable-gpio.patch
 fc32b4e7966cbb641e2fd7369b81b7663bcb7dbc88fe17d7e56aa9e8ba016bd8  ../../patches/0007-xhci-plat-a16-skip-unsuspended-hcd/0007-xhci-plat-a16-skip-unsuspended-hcd.patch
 50383791f968ccf72f9ed7fbef79d0ddce9112335d72dc1537f818b61abf9e5f  ../../patches/0008-qmp-combo-glymur-v5-for-next-20260914/0008-qmp-combo-glymur-v5-for-next-20260914.patch
+b74ccf36d59191156a35526a75e4874b979dd2c3e36558ef8fb7905f000d0c8d  ../../patches/0009-dp-failed-enable-guard/0009-dp-failed-enable-guard.patch
 512d7e7838ca0fecb7767cb457d937c149bec7bf24760ffe9c96291501c93250  ../../patches/0010-qmp-v8-refresh-pcs-drive-on-training/0010-qmp-v8-refresh-pcs-drive-on-training.patch
 75fb634a2e90ae51538cb1ba412b7bd13ea7f92759d55a57cab9bd85b418831c  ../../patches/0011-msm-dp-lttpr-segment-training/0011-msm-dp-lttpr-segment-training.patch
 94a7927ab3caab6857114c3f9c9b34a7161d5e64004800d2fbc7f8a130d0b563  ../../patches/0012-dp-external-rate-cap/0012-dp-external-rate-cap.patch
 5eb8e9c35f484e5175babe8bcb1e705686b0d48cf871f80258d7ec8cb4ced6a4  ../../patches/0013-dpu-drop-stuck-flush/0013-dpu-drop-stuck-flush.patch
 ad7faf6149b56468c7666898f54fb7045fc54eeae5e87b86d2993e92e5ccc3f7  ../../patches/0014-soundwire-qcom-decode-all-slaves-before-alert-handoff/0014-soundwire-qcom-decode-all-slaves-before-alert-handoff.patch
 873981896d897d7e90375085470792c0d5d297abb3963d09aa4939a8e7c5e70a  ../../patches/0015-drm-msm-a8xx-gate-clx-thinmem-hfi-exchanges/0015-drm-msm-a8xx-gate-clx-thinmem-hfi-exchanges.patch
-0d8d096dc2563447ce23e97059b23e1bdc0a2837060943da55fcb859a4bffa84  ../../patches/0016-drm-msm-attach-a-driver-to-the-gmu/0016-drm-msm-attach-a-driver-to-the-gmu.patch
+85122a01aebcdd5d7fe585ebf2f58083ba1b72e3e77877a2e45b8059619196d9  ../../patches/0016-drm-msm-attach-a-driver-to-the-gmu/0016-drm-msm-attach-a-driver-to-the-gmu.patch
 7f709c7f2aa738d1592f686440a810311855245b6dc194e055d4c830a00233b4  ../../patches/0017-dts-hdmi-bridge-tert-gdsc/0017-dts-hdmi-bridge-tert-gdsc.patch
 56824b6dcb8ef6ac0d5bf72ba16a89192b14e17f88c3c78cc1132f30c5690d76  ../../patches/0018-dts-rtc-uefi-rtc-info/0018-dts-rtc-uefi-rtc-info.patch
+7be5b05d4608928439efea71d2f1b9067a5e451ef9071a20e5e478ee3329685d  ../../patches/0019-drm-msm-gmu-attach-plumbing/0019-drm-msm-gmu-attach-plumbing.patch
 
 # the prebuilt kernel package (arm64, built from this patch set)
 52704a0af3bcb01de02beaf8d4d1fe29dbf9de228a538d33f8abc8fb36a20ecf  linux-image-7.3.0-rc5-next-20261002-ec1_7.3.0-rc5-next-20261002-ec1_arm64.deb

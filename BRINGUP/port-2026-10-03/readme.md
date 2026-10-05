@@ -34,12 +34,14 @@ The patch filenames in this directory are the list. In application order:
 | patch | what it fixes | symptom when absent |
 |-------|---------------|---------------------|
 | `0001-phy-qcom-edp-v8-sequence` | the eDP v8 power-on sequence in `phy-qcom-edp.c` | no internal panel — the link never trains |
-| `0002-dts-ec-node` | the EC node in the board DTS | no EC at `i2c 9-0076` |
-| `0004-ec-driver` | the EC driver — upstream has no such file | no fan control or readings, no keyboard backlight, and the fans run on through suspend |
+| `0002-dts-ec-node` | the EC node in the board DTS (Konrad Dybcio's series, 3/3) | no EC at `i2c 9-0076` |
+| `0003-dt-bindings-asus-zenbook-a16-ec` | the EC binding document (same series, 1/3) | nothing in the build — it is carried because a series should be carried whole, not two thirds of it |
+| `0004-ec-driver` | the EC driver, upstream has no such file (same series, 2/3) | no fan control or readings, no keyboard backlight, and the fans run on through suspend |
 | `0005-dts-bt-serdev-node` | the Bluetooth serdev client node under `&uart14` | `hci0` does not exist at all |
 | `0006-dts-bt-enable-gpio` | the radio's enable line, pin 116 | `hci0` exists and never answers |
 | `0007-xhci-plat-a16-skip-unsuspended-hcd` | the xhci suspend guard | every suspend aborts with `-22` |
 | `0008-qmp-combo-glymur-v5-for-next-20260914` | the Type-C/DP combo PHY | plugging a monitor in **restarts the machine**; the panel needs its DP side too |
+| `0009-dp-failed-enable-guard` | stops a failed link enable from pushing idle | the built kernel has this and the set had it filed as not-used — the proof run caught that |
 | `0010-qmp-v8-refresh-pcs-drive-on-training` | the combo PHY's PCS side, on training | no external display link |
 | `0011-msm-dp-lttpr-segment-training` | link-training segments (`dp_link`, `dp_ctrl`, `dp_display`) | no external display link |
 | `0012-dp-external-rate-cap` | caps the external DP link rate | unstable external link |
@@ -48,6 +50,7 @@ The patch filenames in this directory are the list. In application order:
 | `0016-drm-msm-attach-a-driver-to-the-gmu` | binds the GMU as its own driver | upstream series (RFT at the time of writing): without it the GMU is left without a bound driver, so `3d6c000.gmu` reports `sync_state() pending`. Carries the definitions of `adreno_gmu_register()`/`adreno_gmu_unregister()` that the rest of the tree calls. |
 | `0017-dts-hdmi-bridge-tert-gdsc` | gives the HDMI bridge PHY its `GCC_USB30_TERT_GDSC` power domain | `phy-88e1000.phy.14: phy init failed --> -16`; the HDMI PHY's `com_aux` clock never comes up |
 | `0018-dts-rtc-uefi-rtc-info` | tells `&pmk8850_rtc` to take the time from firmware (`qcom,uefi-rtc-info`; other boards such as `glymur-qcb` set it, this one did not) | the clock comes up from the RTC's own registers instead of the firmware's stored time. This patch was added because the built tree carried the change and nothing in the set explained it — the set could not reproduce the t2 dtb without it. |
+| `0019-drm-msm-gmu-attach-plumbing` | the rest of the five-patch "Attach a driver to the GMU" series (`adreno_device.c`, `msm_drv.c`, `msm_drv.h`) | the GMU is left without a bound driver, so `3d6c000.gmu` reports `sync_state() pending` and three clock controllers wait on it. Added by the proof run, which found the built kernel had four fifths of the series and the set had one patch of five. |
 
 ### Carried — the reverse case: upstream has the code and we gate it off for this part
 
@@ -89,7 +92,9 @@ Three fixes exist here and nowhere in this release:
 ## 4. Things that look like patches but are not
 
 Nothing in `patches/` on this release. Every file there is an ordinary source patch
-against the tree, and `MANIFEST.sha256` records all sixteen of them.
+against the tree, and `MANIFEST.sha256` records all nineteen of them. Applying all
+nineteen to a pristine extract reproduces the built tree file for file, which is
+checked and written up in `../evidence/2026-10-05-patch-set-proof.txt`.
 
 This section exists because an earlier numbering carried scratch names from a DTB-patching
 workflow — paths such as

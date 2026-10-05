@@ -1,0 +1,60 @@
+THE PATCH SET REPRODUCES THE BUILT KERNEL
+2026-10-05
+
+WHAT THIS PROVES
+  Extract the pristine next-20261002 snapshot, apply every patch in patches/ in
+  order, and you get the same source tree the t2 kernel was built from -- file for
+  file.  Until this ran, that was an assumption; two of the patches had already been
+  caught carrying other patches' work, and the set was missing whole changes.
+
+METHOD
+  1. download  snapshot next-20261002 from git.kernel.org  (261 MB)
+  2. extract   to an empty directory -- unbuilt, so it holds source and nothing else
+  3. apply     patches/[0-9]*/*.patch in filename order, patch -p1 --batch --forward
+  4. compare   every file in the extract against the same path in
+               /home/jc/build/next-20261002-repull, byte for byte
+
+  Walking the extract rather than the built tree is the point: the built tree also
+  holds build products, the extract holds only source, so anything that differs is
+  a source difference and cannot be dismissed as a .o file.
+
+RESULT
+  applied cleanly     19 / 19        (0 rejects, 0 fuzz)
+  files compared      96,745
+    identical         96,744
+    differ            0
+  unaccounted         0
+
+  Nothing in the built tree is unexplained by the set, and the set produces nothing
+  the built tree does not have.
+
+WHAT THE FIRST RUN FOUND, BEFORE THE SET WAS FIXED
+  The same test run against the set as it stood found six files unaccounted for:
+
+  adreno_device.c, msm_drv.c, msm_drv.h
+      the built kernel had four fifths of Akhil P Oommen's "Attach a driver to the
+      GMU" series.  The set carried one patch of the five.  Added as
+      0019-drm-msm-gmu-attach-plumbing.
+  dp_display.c
+      the built kernel has the guard that stops a failed link enable from pushing
+      idle.  The set filed that change as not-used.  Added as
+      0009-dp-failed-enable-guard.
+  a6xx_gmu.c
+      our 0016 left a stray closing brace behind -- it applied, and then the file was
+      wrong.  0016's hunk for that file was regenerated from the pristine file.
+  Kconfig
+      one stray blank line, left in the built tree by an earlier edit.  The tree was
+      corrected to match what the set produces.
+
+  A patch that applies is not a patch that is right.  Every one of these applied
+  cleanly on the first run; the comparison is what caught them.
+
+CAVEATS
+  * This compares source.  It does not build the result, so it does not prove the
+    build is byte-reproducible -- the running kernel was checked separately, by
+    comparing the built Image against /boot (identical, fef46d73) and comparing
+    module srcversions (identical for the five modules carrying patches).
+  * GNU patch leaves .orig backups on a mismatch; one such file appears in the
+    extract and not in the built tree.  It is an artefact, not a source difference.
+  * The snapshot must be the one this port targets.  Applying the set to a
+    different snapshot is a different question and is not answered here.
