@@ -110,6 +110,18 @@ check|install)
 		exit 0
 	fi
 
+	# The rails the tree names must exist in this machine's own command DB, or the
+	# module that registers them logs "could not find RPMh address for resource X"
+	# and the rail never comes up -- which cost a boot once already.
+	if [ -r /sys/kernel/debug/cmd-db ]; then
+		bad=0
+		for key in L2B_E0 B1B_E0; do
+			if grep -qw "$key" /sys/kernel/debug/cmd-db; then printf '  [ok]   the command DB has %s\n' "$key"
+			else printf '  [fail] the command DB has no %s -- that rail cannot come up\n' "$key"; bad=1; fi
+		done
+		[ "$bad" = 0 ] || die "refusing to arm a tree whose rails this firmware does not have"
+	else warn "cannot read /sys/kernel/debug/cmd-db -- rail names not checked"; fi
+
 	install -m 0644 "$DTB_SRC" "$DTB_DST" || exit 1
 	sha256sum "$DTB_DST" | awk '{print $1}' > "$DTB_DST.sha256"
 	echo "  [ok]   installed $DTB_DST ($(stat -c%s "$DTB_DST") bytes, sha256 $(cat "$DTB_DST.sha256"))"
