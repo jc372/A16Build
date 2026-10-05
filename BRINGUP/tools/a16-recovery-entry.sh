@@ -27,7 +27,10 @@ UUID=f8e005e9-414c-4c8e-ad68-d1e9fdc208bc
 COMMON="root=UUID=$UUID ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7"
 RECOVERY='A16: recovery - t2, command line, wifi'
 FAILSAFE='A16: failsafe - t2, panel left to firmware framebuffer (msm blacklisted)'
-OLD_FAILSAFE_RE='^(?:\[\d+\]\s*)?A16: next 7\.3 \+ glymur DTB, panel left to firmware'
+# retire BOTH broken failsafes: the stale staged-7.2 one (boots /a16boot/vmlinuz, cannot work)
+# and the 7.3 full-blacklist one (its blacklist removes clock-controller/GDSC providers the
+# boot needs, so it dies before systemd).
+OLD_FAILSAFE_RE='^(?:\[\d+\]\s*)?A16: (?:7\.2 \+ glymur DTB, internal input, panel via firmware framebuffer|next 7\.3 \+ glymur DTB, panel left to firmware)'
 MENUS="/boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/BOOT/grub.cfg"
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
