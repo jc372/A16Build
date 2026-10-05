@@ -1,61 +1,86 @@
-ASUS Zenbook A16/A14 EC driver, v3 (Konrad Dybcio, 2026-09-23)
-Result on hardware.
+ASUS Zenbook A16/A14 EC driver, v3 -- Konrad Dybcio, 2026-09-23
+Tested on hardware.
 
-MACHINE
-  model        ASUS Zenbook A16 (UX3607OA)
-  compatible   asus,zenbook-a16-ux3607oa / qcom,glymur
-  soc          Qualcomm Snapdragon X2 Elite (Glymur)
-  kernel       7.3.0-rc5-next-20261002-t2
-  config       CONFIG_EC_ASUS_GLYMUR=y
+TESTED ON
+  ASUS Zenbook A16 (UX3607OA), Qualcomm Snapdragon X2 Elite (Glymur)
+  linux-next next-20261002, CONFIG_EC_ASUS_GLYMUR=y (built in, not a module)
 
-BINDS
-  i2c 9-0076   -> driver asus-glymur-ec
-  i2c 9-005b      EC subdevice
-  hwmon4          name=asus_glymur_ec
-  led             /sys/class/leds/asus::kbd_backlight
+RESULT
+  The driver binds, and everything the series claims works:
 
-READINGS
-  fan1_input      1920-2040 RPM
-  fan2_input      1320 RPM
-  temp1_input     36-38 C    label CPU
-  temp2_input     38-41 C    label SoC
-  kbd_backlight   1 of 3, and the backlight responds
+    i2c 9-0076 -> asus-glymur-ec     hwmon4   name=asus_glymur_ec
+    i2c 9-005b    EC subdevice       led      asus::kbd_backlight
 
-MAILBOX
-  The driver's own name for this: ASUS_EC_PAGE_MAILBOX 0xc4 is an EC register
-  page holding ASUS_EC_MBOX_REG_CMD 0x30 / SUBCMD 0x31 / DATA 0x32, driven by
-  asus_ec_wait_mailbox() and asus_ec_mailbox_cmd().  It is the EC's paged
-  register window, NOT the kernel mailbox framework -- no linux/mailbox.h, no
-  mbox_chan.  A command is submitted by writing SUBCMD, DATA then CMD, and
-  polling CMD until the EC clears it to zero (five tries, 5 ms apart).
+    fan1  1920-2040 RPM          temp1  36-38 C   (CPU)
+    fan2  1320 RPM               temp2  38-41 C   (SoC)
+    kbd backlight  1 of 3, and the backlight responds
 
-  asus_ec_enable_writes() sends MBOX_CMD_MISC 0x02 / SUBCMD_MISC_ENABLE 0x83 at
-  probe, and the probe aborts if it fails -- so a bound driver is proof it worked.
-  The keyboard backlight level goes through the same mailbox (CMD_KBD 0x01 /
-  SUBCMD_KBD_LVL 0x87); setting it from the desktop works, with no EC write errors
-  in the log.
+  Suspend and resume both reach the EC:
 
-SUSPEND / RESUME NOTIFICATION
-  asus_glymur_ec_suspend   ret=0x0   488.593 us
-  asus_glymur_ec_resume    ret=0x0   439.584 us
+    asus_glymur_ec_suspend   ret=0x0   488.593 us
+    asus_glymur_ec_resume    ret=0x0   439.584 us
 
-  i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07]
-  i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-08]
+    i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07]    0x23 STANDBY_CMD / 0x07 ENTER
+    i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-08]    0x23 STANDBY_CMD / 0x08 EXIT
 
-  0x23   ASUS_QCOM_EC_MODERN_STANDBY_CMD
-  0x07   ASUS_QCOM_EC_MODERN_STANDBY_ENTER
-  0x08   ASUS_QCOM_EC_MODERN_STANDBY_EXIT
-
-  pm_test=devices   suspend_stats success 2 -> 3, fail 0, last_failed_dev empty
-  s2idle            PM: suspend entry 08:10:04, exit 08:10:29, same boot
-                    suspend_stats success 1 -> 2, fail 0
+  A full s2idle cycle completes -- suspend_stats 1 -> 2 on a real suspend, and
+  2 -> 3 under pm_test=devices -- with fail 0 and last_failed_dev empty.
 
 NOT TESTED
-  The event path.  asus_ec_irq() reads the event code from ASUS_QCOM_EC_EVENT_CMD
-  0x05 and logs it at dev_dbg only, so nothing is visible at the default log
-  level, and there is no evidence either way whether the EC raises events on this
-  machine.
+  The event path, and nothing else.
 
-NOT THIS DRIVER'S BUSINESS -- listed here in error before
-  The lid switch and the power button are gpio-keys in the board dts.
-  asus-glymur-ec.c contains no lid or power-button code at all.
+
+==============================================================================
+NOTES
+For me, not for the mail.  What the terms mean and why the gaps are the gaps.
+==============================================================================
+
+MAILBOX
+  "Mailbox" is the driver's own word, not mine.  ASUS_EC_PAGE_MAILBOX 0xc4 is
+  an EC register page; it holds ASUS_EC_MBOX_REG_CMD 0x30, SUBCMD 0x31 and
+  DATA 0x32, and the helpers are asus_ec_wait_mailbox() and
+  asus_ec_mailbox_cmd().  "MBOX" in the identifiers is just his abbreviation.
+
+  It is the EC's paged register window -- the driver reaches the EC through
+  asus_ec_readb(ec, page, reg, &out) / asus_ec_writeb(ec, page, reg, data).
+  It is NOT the kernel mailbox framework: no <linux/mailbox.h>, no mbox_chan,
+  no provider/consumer binding.  "Mailbox" in a kernel context usually means
+  that framework, so if he ever asks for comments on the driver, the name is a
+  fair thing to flag.
+
+  A command is submitted by writing SUBCMD, then DATA, then CMD, and polling
+  CMD until the EC clears it to zero -- five tries, 5 ms apart.  Page 0xc6 is
+  the temperature page, holding the CPU sensor at 0xa6 and the SoC at 0x2a.
+
+SUSPEND AND RESUME
+  These are dev_pm_ops callbacks, not runtime PM.  Each calls
+  asus_glymur_ec_modern_standby(), which is a single i2c_smbus_write_byte_data
+  to 0x76 with 0x23 as command and 0x07 or 0x08 as the value, and returns its
+  result.  The return value is what makes this checkable: the PM core aborts a
+  suspend whose device callback fails, so a completed cycle cannot be hiding a
+  failed EC write.  That is why a clean suspend is itself evidence.
+
+WHY THE EVENT PATH IS THE ONLY GAP
+  asus_ec_irq() reads ASUS_QCOM_EC_EVENT_CMD 0x05 and logs the code with
+  dev_dbg_ratelimited.  Nothing prints at the default log level, so there is no
+  way to tell from a normal boot whether the EC ever raises an event.  Raising
+  the log level would need CONFIG_DYNAMIC_DEBUG and dyndbg on the kernel
+  command line -- more than a test report needs, but possible.
+
+WHY THE MAILBOX IS NOT IN THE "NOT TESTED" LIST
+  asus_ec_enable_writes() sends MBOX_CMD_MISC 0x02 / SUBCMD_MISC_ENABLE 0x83
+  during probe, and the probe aborts if it returns an error.  The driver binds,
+  so that command succeeded.  It is proven, not untested.  The keyboard
+  backlight level goes through the same mailbox (CMD_KBD 0x01 / SUBCMD_KBD_LVL
+  0x87), which is why setting the backlight is also evidence the mailbox works.
+
+WHY THE LID SWITCH AND POWER BUTTON ARE NOT MENTIONED
+  An earlier draft listed them as untested.  They are not his: asus-glymur-ec.c
+  contains no lid or power-button code at all, and the board dts handles both
+  through gpio-keys.  Listing them would imply his driver covers them.
+
+WHY THE TREE DETAILS MATTER TO HIM
+  The board dts file his patch 3/3 touches also carries unrelated local patches
+  of ours -- Bluetooth serdev and regulators, an RTC property, and the HDMI
+  power-domain workaround below -- none of which touch his &i2c9 hunk.  A
+  maintainer reading our tree would see them, so the mail says so.
