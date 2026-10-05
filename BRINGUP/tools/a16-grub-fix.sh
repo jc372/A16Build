@@ -41,10 +41,11 @@ for m in $MENUS; do
 	[ -f "$m" ] || { echo "  (absent)"; continue; }
 	cp -f "$m" "$m.bak-$STAMP" 2>/dev/null || { echo "  [fail] cannot back up -- skipping"; continue; }
 
-	python3 - "$m" "$KVER" "$APPLY" <<'PY'
+	python3 - "$m" "$KVER" "$APPLY" "$STAMP" <<'PY'
 import re, sys, os
 
 menu, kver, apply_ = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+STAMP = sys.argv[4]
 want_k, want_i = f"/boot/vmlinuz-{kver}", f"/boot/initrd.img-{kver}"
 s = open(menu).read()
 default = re.search(r'^set default=(.*)$', s, re.M)
@@ -62,10 +63,15 @@ for b in blocks:
     kp = k.group(1) if k else None
     ip = i.group(1) if i else None
     # the ESP-staged entry names files inside the ESP, not /boot
-    real_k = kp if (kp and (os.path.exists(kp) or kp.startswith("/a16boot"))) else None
-    alive = bool(kp) and os.path.exists(kp) if kp and kp.startswith("/boot") else bool(kp)
-    print(f"    {'OK  ' if alive else 'DEAD'}  {title[:64]:66s} {kp or '-'}")
-    if not alive:
+    if not kp:
+        print(f"    n/a   {title[:64]:66s} (no kernel: loads something else)")
+        continue
+    alive = os.path.exists(kp) if kp.startswith("/boot") else True
+    # an entry whose TITLE is a kernel identity (or says stock/upstream) is not a config
+    # variant: repointing it would make the title a lie, so those are only reported.
+    ident = bool(re.search(r"gmu1|\bt1\b|ec1|X2|qcom-x1e|stock|upstream|no patches", title))
+    print(f"    {'OK  ' if alive else ('DEAD* ' if ident else 'DEAD ')} {title[:62]:64s} {kp}")
+    if not alive and not ident:
         dead.append((b, title, kp, ip))
 
 dups = {t: v for t, v in titles.items() if len(v) > 1}
