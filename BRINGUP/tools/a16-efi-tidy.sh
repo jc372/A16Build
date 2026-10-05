@@ -88,7 +88,26 @@ with open(os.path.join(arch, 'removed-menuentries.txt'), 'a') as f:
 
 out = s
 for b in drop:
-    out = out.replace(b.group(0) + "\n", "", 1)
+    for cand in (b.group(0) + "\n", b.group(0)):
+        if cand in out:
+            out = out.replace(cand, "", 1)
+            break
+out = re.sub(r'\n{3,}', '\n\n', out)
+# keep t1 reachable: its only entry lives in the snapdragon menu, whose firmware entry we
+# remove, so bring the block over into this menu before that happens
+if menu.endswith('ubuntu/grub.cfg'):
+    t1title = 'A16: linux-next 7.3.0-rc5-next-20261002-t1'
+    if t1title not in [x.group(1) for x in blocks]:
+        snap = '/boot/efi/EFI/ubuntu_snapdragon/grub.cfg'
+        if os.path.exists(snap):
+            sb = re.search(r'^menuentry\s+"' + re.escape(t1title) + r'"\s*\{(.*?)^\}', open(snap).read(), re.S | re.M)
+            if sb:
+                add = f'# brought over by a16-efi-tidy.sh from the snapdragon menu\nmenuentry "{t1title}" {{{sb.group(1)}}}\n'
+                # place it just before the t2 entry so the order reads t1 then t2
+                anchor = re.search(r'^menuentry\s+"A16: linux-next 7\.3\.0-rc5-next-20261002-t2"\s*\{', out, re.M)
+                out = (out[:anchor.start()] + add + out[anchor.start():]) if anchor else (out + "\n" + add)
+                print(f"    + carried the t1 entry over from the snapdragon menu")
+
 # the default must still name an entry that survives
 want = keep_u if menu.endswith('ubuntu/grub.cfg') else keep_b
 if any(t == want for t, _ in [(x.group(1), x.group(2)) for x in keep]):
@@ -109,6 +128,12 @@ dd = re.search(r'^set default=(.*)$', cur, re.M).group(1).strip().strip('"')
 tgt = [b for t, b in after if t == dd] or ([after[int(dd)][1]] if dd.isdigit() and int(dd) < len(after) else [])
 kk = re.search(r'^\s*linux\s+(\S+)', tgt[0], re.M).group(1) if tgt else '?'
 print(f"    entries now: {len(after)}   default -> {os.path.basename(kk)}   exists: {os.path.exists(kk) if kk.startswith('/boot') else 'n/a'}")
+broken = []
+for t, b in after:
+    m = re.search(r'^\s*linux\s+(\S+)', b, re.M)
+    if m and m.group(1).startswith('/boot') and not os.path.exists(m.group(1)):
+        broken.append(t[:50])
+print(f"    entries still naming a missing kernel: {len(broken)}" + (f" -> {broken}" if broken else ""))
 PY
 done
 
