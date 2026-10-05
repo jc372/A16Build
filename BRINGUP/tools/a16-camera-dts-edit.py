@@ -274,15 +274,16 @@ SENSOR = """
 		assigned-clocks = <&camcc CAM_CC_MCLK4_CLK>;
 		assigned-clock-rates = <19200000>;
 
-		/* The machine's own rails: the firmware command DB has no I_E0 rails at all
-		 * (L4I_E0 and friends), but it does have L2B_E0 and B1B_E0.  dovdd and dvdd take
-		 * the 1.8 V rail this board declares Unused -- vreg_l2b_e0, and the machine's own
-		 * ACPI PEP catalogue votes LDO2_B_E0 at 1800000 uV.  avdd stays unpowered on
-		 * purpose: the only free 2.8 V-class rail is the board's L7B at 3072000 uV
-		 * (3.072 V), over an OV02C10's 2.8 V spec, and a chip ID read needs the I/O and
-		 * core rails, not the pixels. */
+		/* The machine's own rails:
+ * The machine's own rails: the firmware's command DB aliases L4C_E0 (1.2 V)
+ * 'sen.sp' -- the same address 0x41500 carries both names -- and the board's tree
+ * already declares it as vreg_l4c_e0 in the C_E0 container, declared at 1200000 uV.
+ * That is exactly an OV02C10's dvdd (digital core), so dvdd takes it.  dovdd takes
+ * vreg_l2b_e0 (LDO2_B_E0, 1.8 V), declared Unused in this board's tree and voted
+ * 1800000 uV in the ACPI PEP catalogue.  avdd stays unpowered: the only free
+ * 2.8 V-class rail is the board's L7B at 3072000 uV (3.072 V), over spec. */
 		dovdd-supply = <&vreg_l2b_e0>;
-		dvdd-supply = <&vreg_l2b_e0>;
+		dvdd-supply = <&vreg_l4c_e0>;
 
 
 
