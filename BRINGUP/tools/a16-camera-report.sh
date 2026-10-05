@@ -33,7 +33,7 @@ for p in /proc/device-tree/soc@0/cci@*/*/camera@36 /proc/device-tree/soc@0/cci@*
 	printf '  %s -> %s\n' "${p#/proc/device-tree/}" "$(tr -d '\0' < "$p/compatible" 2>/dev/null)"
 done
 echo
---- the sensor's clock and rails, as the kernel has them
+echo "--- the sensor's clock and rails, as the kernel has them"
 [ -d /sys/kernel/debug ] || mount -t debugfs none /sys/kernel/debug 2>/dev/null
 if [ -r /sys/kernel/debug/clk/clk_summary ]; then
   grep -iE "mclk4|cam_cc_titan_top|cam_cc_cci_1" /sys/kernel/debug/clk/clk_summary | sed 's/^/  /'
@@ -42,7 +42,7 @@ for r in vreg_l2b_e0 vreg_l4c_e0 vreg_l9b_e0 vreg_bob1_b_e0; do
   d=$(grep -rl "$r" /sys/class/regulator/*/name 2>/dev/null | head -1); d=$(dirname "$d" 2>/dev/null)
   [ -d "$d" ] && echo "  $r: state=$(cat $d/state 2>/dev/null) $(cat $d/microvolts 2>/dev/null) uV"
 done
-echo
+
 echo "--- modules of interest (loaded?)"
 for m in i2c_qcom_cci ov02c10 ov08x40 qcom_camss videobuf2_common v4l2_async camcc_glymur pinctrl_glymur qcom_rpmh_regulator; do
 	printf '  %-22s %s\n' "$m" "$(lsmod | awk -v m="$m" '$1==m{print "loaded ("$3" users)"}' | head -1)"
