@@ -4,7 +4,8 @@
 #   report:  sudo bash ~/a16-payload/camera/a16-efi-tidy.sh
 #   apply:   sudo bash ~/a16-payload/camera/a16-efi-tidy.sh --apply
 #
-# Keeps, in the menus: the framebuffer fallback, the normal Ubuntu entry, the diagnostics
+# Keeps, in the menus: the 7.3 failover that leaves the panel to the firmware (msm
+# blacklisted), the normal Ubuntu entry, the diagnostics
 # entry, Windows, t1 (for now), t2, t2+camera, and the ACPI dump entry.
 # Removes: the dead 7.2 ACPI entry (it does not boot), the three rc3-era display variants
 # whose purpose is now served by the plain t2 entry, the duplicated Bluetooth serdev test,
@@ -24,13 +25,13 @@ MENUS="/boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/BOOT/grub.cfg"
 ALLMENUS="/boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/BOOT/grub.cfg /boot/efi/EFI/ubuntu_snapdragon/grub.cfg"
 NEWLABEL='Ubuntu 7.3 linux-next'
 KEEP_DEFAULT_UBUNTU='A16: linux-next 7.3.0-rc5-next-20261002-t2'
-KEEP_DEFAULT_BOOT='[1] A16: 7.2 + glymur DTB, internal input, panel via firmware framebuffer'
+KEEP_DEFAULT_BOOT='[2] A16: next 7.3 + glymur DTB, panel left to firmware (msm/display CCs blacklisted)'
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
 
 cat > /tmp/a16-tidy-remove.txt <<'EOS'
 [0] A16: installed Ubuntu 7.2 staged on the ESP (ACPI) - picture, no internal input
-[2] A16: next 7.3 + glymur DTB, panel left to firmware (msm/display CCs blacklisted)
+[1] A16: 7.2 + glymur DTB, internal input, panel via firmware framebuffer
 [3] A16: next 7.3 + glymur DTB, full display attempt (msm + panel enabled)
 [4] A16: next 7.3 + DTB, msm enabled but panel PHY left unmanaged (keeps a picture, if it holds)
 [8] A16: 7.3 + glymur DTB + Bluetooth serdev test (wcn7850-bt, stubbed rails)
