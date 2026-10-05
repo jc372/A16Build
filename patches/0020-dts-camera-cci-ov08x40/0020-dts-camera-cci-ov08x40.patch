@@ -1,0 +1,422 @@
+--- a/arch/arm64/boot/dts/qcom/glymur.dtsi
++++ b/arch/arm64/boot/dts/qcom/glymur.dtsi
+@@ -5380,6 +5380,89 @@
+ 			#power-domain-cells = <1>;
+ 		};
+ 
++		/* --- glymur camera step1: CCI0/CCI1 ---------------------------------
++		 * Verbatim from Qualcomm's [PATCH 2/6] arm64: dts: qcom: glymur: Add CCI
++		 * definitions for Glymur (2026-09-07, glymur_camss v1).  Addresses,
++		 * interrupts and clocks are that patch's, not inferred:
++		 *   cci0@0x0ac15000  GIC_SPI 456  CAM_CC_CCI_0_CLK
++		 *   cci1@0x0ac16000  GIC_SPI 859  CAM_CC_CCI_1_CLK
++		 * Both stay disabled here; the board file enables cci1 only.
++		 */
++		cci0: cci@ac15000 {
++			compatible = "qcom,glymur-cci", "qcom,msm8996-cci";
++			reg = <0x0 0x0ac15000 0x0 0x1000>;
++
++			interrupts = <GIC_SPI 456 IRQ_TYPE_EDGE_RISING>;
++
++			clocks = <&camcc CAM_CC_CPAS_AHB_CLK>,
++				 <&camcc CAM_CC_CCI_0_CLK>;
++			clock-names = "ahb",
++				      "cci";
++
++			power-domains = <&camcc CAM_CC_TITAN_TOP_GDSC>;
++
++			pinctrl-0 = <&cci0_0_default>, <&cci0_1_default>;
++			pinctrl-1 = <&cci0_0_sleep>, <&cci0_1_sleep>;
++			pinctrl-names = "default", "sleep";
++
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			status = "disabled";
++
++			cci0_i2c0: i2c-bus@0 {
++				reg = <0>;
++				clock-frequency = <400000>;
++				#address-cells = <1>;
++				#size-cells = <0>;
++			};
++
++			cci0_i2c1: i2c-bus@1 {
++				reg = <1>;
++				clock-frequency = <400000>;
++				#address-cells = <1>;
++				#size-cells = <0>;
++			};
++		};
++
++		cci1: cci@ac16000 {
++			compatible = "qcom,glymur-cci", "qcom,msm8996-cci";
++			reg = <0x0 0x0ac16000 0x0 0x1000>;
++
++			interrupts = <GIC_SPI 859 IRQ_TYPE_EDGE_RISING>;
++
++			clocks = <&camcc CAM_CC_CPAS_AHB_CLK>,
++				 <&camcc CAM_CC_CCI_1_CLK>;
++			clock-names = "ahb",
++				      "cci";
++
++			power-domains = <&camcc CAM_CC_TITAN_TOP_GDSC>;
++
++			pinctrl-0 = <&cci1_0_default>, <&cci1_1_default>;
++			pinctrl-1 = <&cci1_0_sleep>, <&cci1_1_sleep>;
++			pinctrl-names = "default", "sleep";
++
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			status = "disabled";
++
++			cci1_i2c0: i2c-bus@0 {
++				reg = <0>;
++				clock-frequency = <400000>;
++				#address-cells = <1>;
++				#size-cells = <0>;
++			};
++
++			cci1_i2c1: i2c-bus@1 {
++				reg = <1>;
++				clock-frequency = <400000>;
++				#address-cells = <1>;
++				#size-cells = <0>;
++			};
++		};
++
++
+ 		mdss: display-subsystem@ae00000 {
+ 			compatible = "qcom,glymur-mdss";
+ 			reg = <0x0 0x0ae00000 0x0 0x1000>;
+@@ -6793,6 +6876,179 @@
+ 					bias-pull-up;
+ 				};
+ 			};
++			/* --- glymur camera step1: camera pinctrl ----------------------------
++			 * cam_mclk0..4 are Qualcomm's [PATCH 3/6] "Add camera MCLK pinctrl";
++			 * the four cci states are [PATCH 2/6].  GPIO numbers and function
++			 * names are the driver's own, checked against
++			 * drivers/pinctrl/qcom/pinctrl-glymur.c: cci_i2c_sda on 101/103/105,
++			 * cci_i2c_scl on 102/104/106, asc_cci on 235/236, cam_asc_mclk4 on
++			 * gpio100.  MCLK4 is the ASC ("always-on camera") clock, which is
++			 * the front camera's -- CAMF_RES_MTP.bin asks for cam_cc_mclk4_clk.
++			 */
++			cam_mclk0_default: cam-mclk0-default-state {
++				pins = "gpio96";
++				function = "cam_mclk";
++				drive-strength = <2>;
++				bias-disable;
++			};
++
++			cam_mclk1_default: cam-mclk1-default-state {
++				pins = "gpio97";
++				function = "cam_mclk";
++				drive-strength = <2>;
++				bias-disable;
++			};
++
++			cam_mclk2_default: cam-mclk2-default-state {
++				pins = "gpio98";
++				function = "cam_mclk";
++				drive-strength = <2>;
++				bias-disable;
++			};
++
++			cam_mclk3_default: cam-mclk3-default-state {
++				pins = "gpio99";
++				function = "cam_mclk";
++				drive-strength = <2>;
++				bias-disable;
++			};
++
++			cam_mclk4_default: cam-mclk4-default-state {
++				pins = "gpio100";
++				function = "cam_asc_mclk4";
++				drive-strength = <2>;
++				bias-disable;
++			};
++
++			cci0_0_default: cci0-0-default-state {
++				sda-pins {
++					pins = "gpio101";
++					function = "cci_i2c_sda";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++
++				scl-pins {
++					pins = "gpio102";
++					function = "cci_i2c_scl";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++			};
++
++			cci0_0_sleep: cci0-0-sleep-state {
++				sda-pins {
++					pins = "gpio101";
++					function = "cci_i2c_sda";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++
++				scl-pins {
++					pins = "gpio102";
++					function = "cci_i2c_scl";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++			};
++
++			cci0_1_default: cci0-1-default-state {
++				sda-pins {
++					pins = "gpio103";
++					function = "cci_i2c_sda";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++
++				scl-pins {
++					pins = "gpio104";
++					function = "cci_i2c_scl";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++			};
++
++			cci0_1_sleep: cci0-1-sleep-state {
++				sda-pins {
++					pins = "gpio103";
++					function = "cci_i2c_sda";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++
++				scl-pins {
++					pins = "gpio104";
++					function = "cci_i2c_scl";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++			};
++
++			cci1_0_default: cci1-0-default-state {
++				sda-pins {
++					pins = "gpio105";
++					function = "cci_i2c_sda";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++
++				scl-pins {
++					pins = "gpio106";
++					function = "cci_i2c_scl";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++			};
++
++			cci1_0_sleep: cci1-0-sleep-state {
++				sda-pins {
++					pins = "gpio105";
++					function = "cci_i2c_sda";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++
++				scl-pins {
++					pins = "gpio106";
++					function = "cci_i2c_scl";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++			};
++
++			cci1_1_default: cci1-1-default-state {
++				sda-pins {
++					pins = "gpio235";
++					function = "asc_cci";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++
++				scl-pins {
++					pins = "gpio236";
++					function = "asc_cci";
++					drive-strength = <2>;
++					bias-pull-up = <2200>;
++				};
++			};
++
++			cci1_1_sleep: cci1-1-sleep-state {
++				sda-pins {
++					pins = "gpio235";
++					function = "asc_cci";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++
++				scl-pins {
++					pins = "gpio236";
++					function = "asc_cci";
++					drive-strength = <2>;
++					bias-pull-down;
++				};
++			};
++
++
+ 		};
+ 
+ 		ctcu@10001000 {
+--- a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
++++ b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
+@@ -16,6 +16,7 @@
+ #include <dt-bindings/input/gpio-keys.h>
+ #include <dt-bindings/input/input.h>
+ #include <dt-bindings/leds/common.h>
++#include <dt-bindings/media/video-interfaces.h>
+ #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+ 
+ /delete-node/ &pmh0104_l_e1;
+@@ -483,6 +484,28 @@
+ 			/* Provides reference voltage for many undescribed components */
+ 			regulator-always-on;
+ 		};
++	/* --- glymur camera step1: the front camera's always-on rail ----------
++	 * CAMF_RES_MTP.bin, this machine's own power sequence for the front camera
++	 * device, votes three rails in this order: BUCK_BOOST1_B_E0 = 3400000 uV,
++	 * LDO4_I0 = 1800000 uV, LDO7_I0 = 2800000 uV.  Only the first is described
++	 * here, because only the first can be driven by the regulator driver this
++	 * kernel runs: BUCK_BOOST1_B is PMH0101's bob1 (pmic-id B_E0), which the
++	 * installed qcom-rpmh-regulator module knows.
++	 *
++	 * The two PMH0104 LDOs cannot be described yet: the installed module's
++	 * pmh0104_vreg_data holds smps1..4 only (160 bytes = 4 entries + terminator),
++	 * so a rail node for I_E0 would fail with "Unknown regulator ldo4" and
++	 * whatever consumed it would defer forever.  That is patch 0021 plus a module
++	 * rebuild, which is step 2 -- until then the sensor's dovdd/dvdd are left
++	 * undeclared and the kernel hands out dummy regulators for them.
++	 */
++	vreg_bob1_b_e0: bob1 {
++		regulator-name = "vreg_bob1_b_e0";
++		regulator-min-microvolt = <3400000>;
++		regulator-max-microvolt = <3400000>;
++		regulator-initial-mode = <RPMH_REGULATOR_MODE_AUTO>;
++	};
++
+ 	};
+ 
+ 	regulators-1 {
+@@ -604,6 +627,33 @@
+ 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+ 		};
+ 	};
++	/* --- glymur camera step1: the PMH0104 rails, for step 2 ---------------
++	 * Kept in the tree because these are the rails the machine actually has and
++	 * these are their voltages, but this container CANNOT bind on the running
++	 * kernel: see the note above.  Expected dmesg on the camera entry:
++	 *     rpmh-regulator ... ldo4: Unknown regulator ldo4   (once per rail)
++	 * Nothing consumes them yet, so the failure is contained.  Do not attach a
++	 * supply to these before the module carrying 0021 is installed.
++	 */
++	regulators-5 {
++		compatible = "qcom,pmh0104-rpmh-regulators";
++		qcom,pmic-id = "I_E0";
++
++		vreg_l4i_e0: ldo4 {
++			regulator-name = "vreg_l4i_e0";
++			regulator-min-microvolt = <1800000>;
++			regulator-max-microvolt = <1800000>;
++			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
++		};
++
++		vreg_l7i_e0: ldo7 {
++			regulator-name = "vreg_l7i_e0";
++			regulator-min-microvolt = <2800000>;
++			regulator-max-microvolt = <2800000>;
++			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
++		};
++	};
++
+ };
+ 
+ &gpu {
+@@ -1156,6 +1206,14 @@
+ 			bias-pull-up;
+ 		};
+ 	};
++	cam_reset4_default: cam-reset4-default-state {
++		pins = "gpio239";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-disable;
++	};
++
++
+ };
+ 
+ &uart14 {
+@@ -1369,3 +1427,61 @@
+ 		regulator-always-on;
+ 	};
+ };
++
++
++/* --- glymur camera step1: cci1 master 1, OV08X40 front sensor (I2C only) ----
++ * Structure and pin mapping follow Qualcomm's [PATCH 5/6] "glymur-crd: Add ov08x40
++ * RGB sensor on CSIPHY4": the sensor hangs off cci1_i2c1 (master 1, the ASC pins
++ * gpio235/236), reset is TLMM 239 active low, MCLK4 runs at 19.2 MHz.
++ *
++ * The machine-specific values are the A16's own, taken from the vendor blobs:
++ *   reset gpio 239            CAMF_RES_MTP.bin   TLMMGPIO 0xEF
++ *   MCLK4 19.2 MHz            CAMF_RES_MTP.bin   cam_cc_mclk4_clk, value 19200000
++ *   i2c address 0x36          SCFG_FRONT_MTP.bin + bus_info.primary.slave_config
++ *   avdd -> bob1 at 3.4 V     CAMF_RES_MTP.bin   BUCK_BOOST1_B_E0 = 3400000 uV
++ *
++ * dovdd and dvdd are deliberately NOT declared: the rails the machine uses for
++ * them are PMH0104 ldo4/ldo7, and the regulator driver this kernel runs cannot
++ * describe that PMIC's LDOs yet (see the note on the rails above).  Leaving the
++ * properties out makes the kernel hand out dummy regulators, which report success
++ * and change nothing -- so the sensor probe still runs, and the next step is
++ * judged on the chip id, not on a deferred probe.
++ *
++ * There is no remote-endpoint yet on purpose: CAMSS and CSIPHY4 are a later
++ * step, so a failure here can only be the CCI or the sensor.  The endpoint still
++ * carries lanes and link frequency because ov08x40's probe parses those before
++ * it touches the bus.
++ */
++&cci1 {
++	/* master 0 defaults in the SoC file; only master 1 is wired on this board */
++	pinctrl-0 = <&cci1_1_default>;
++	pinctrl-1 = <&cci1_1_sleep>;
++
++	status = "okay";
++};
++
++&cci1_i2c1 {
++	camera@36 {
++		compatible = "ovti,ov08x40";
++		reg = <0x36>;
++
++		reset-gpios = <&tlmm 239 GPIO_ACTIVE_LOW>;
++		pinctrl-0 = <&cam_mclk4_default &cam_reset4_default>;
++		pinctrl-names = "default";
++
++		clocks = <&camcc CAM_CC_MCLK4_CLK>;
++		assigned-clocks = <&camcc CAM_CC_MCLK4_CLK>;
++		assigned-clock-rates = <19200000>;
++
++		avdd-supply = <&vreg_bob1_b_e0>;
++
++		port {
++			ov08x40_out_ep: endpoint {
++				bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
++				clock-lanes = <0>;
++				data-lanes = <1 2 3 4>;
++				link-frequencies = /bits/ 64 <400000000>;
++			};
++		};
++	};
++};

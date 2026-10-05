@@ -92,9 +92,17 @@ Three fixes exist here and nowhere in this release:
 ## 4. Things that look like patches but are not
 
 Nothing in `patches/` on this release. Every file there is an ordinary source patch
-against the tree, and `MANIFEST.sha256` records all nineteen of them. Applying all
-nineteen to a pristine extract reproduces the built tree file for file, which is
+against the tree, and `MANIFEST.sha256` records all twenty-one of them. Applying
+`0001`..`0019` to a pristine extract reproduces the built tree file for file, which is
 checked and written up in `../evidence/2026-10-05-patch-set-proof.txt`.
+
+`0020` and `0021` were added afterwards, for the camera, and that proof does not cover
+them: the 19-patch set is what the t2 kernel was built from and what the proof
+measured. `0020` is a device-tree change verified as far as its own test has gone
+(`patches/0020-dts-camera-cci-ov08x40/RESULT.md`), and `0021` is not applied to the
+tree at all — it is the source line the running module was built with and the tree has
+since lost (`patches/0021-regulator-qcom-rpmh-pmh0104-camera-ldos/RESULT.md`). Re-run
+the proof before claiming the set as a whole reproduces the tree.
 
 This section exists because an earlier numbering carried scratch names from a DTB-patching
 workflow — paths such as
