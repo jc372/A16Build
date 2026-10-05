@@ -9,7 +9,8 @@ Everything is usable day to day except the camera. Two things work and cannot be
 
 | Working | Unreliable | Not working |
 |---|---|---|
-| Internal panel (2880x1800) | Suspend and resume -- it works, but the battery drains while asleep (about 2.4 W, where it should be well under 1 W; see [docs/suspend-power.md](docs/suspend-power.md)) and the screen does not always come back. Switching to a text console (`ctrl-alt-f3`) and back usually brings it up | Camera -- needs a device tree description and a userspace stack |
+| | | Camera -- needs a device tree description and a userspace stack |
+| Internal panel (2880x1800) | Suspend and resume -- it works, but the battery drains while asleep (about 2.4 W, where it should be well under 1 W; see [docs/suspend-power.md](docs/suspend-power.md)) and the screen does not always come back. Switching to a text console (`ctrl-alt-f3`) and back usually brings it up | |
 | Two external monitors, each in its own way: a Gigabyte over USB-C, which needs the link-rate cap carried in `0012`, and an MSI over HDMI, because its own repeater never trains at any rate | USB and ethernet on a dock after a suspend -- usually fine, occasionally needs a replug | |
 | Bluetooth | | |
 | Wi-Fi | | |
