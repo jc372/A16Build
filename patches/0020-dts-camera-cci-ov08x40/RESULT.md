@@ -142,42 +142,43 @@ Device tree re-verified after the change: one PMH0104 container, three supplies 
 the sensor, cci1 and the endpoint unchanged, and the patch (now 398 lines)
 reproduces the tree byte for byte from the pre-camera sources.
 
-## The first step-2 attempt panicked the camera entry: an initramfs is not one archive
+## Step 2: three shapes, and the one that is in use
 
-The installer's first version assembled the camera initramfs by hand -- unpack with
-`cpio -i`, swap the module, pack with `cpio -o -H newc`.  The camera entry then
-panicked with "unable to mount root fs".  Mechanism, measured:
+**1. Hand-rolled unpack and repack -- panicked the machine.**  The installer unpacked
+the initramfs with `cpio -i`, swapped the module and packed it again.  The camera entry
+then panicked with "unable to mount root fs", and the numbers say why: 2645504 bytes
+produced against the stock image's 48432086, 47 members, no `/init`.  A modern
+initramfs is a sequence of archives -- this one is an uncompressed cpio followed by the
+real tree as zstd -- and `cpio -i` stops at the first `TRAILER!!!`, so the rebuild kept
+the early tree only.  The check that was meant to catch it compared "what I extracted"
+against "what I repacked" and so could not see that the extraction itself stopped early.
 
-    stock  initramfs  48432086 bytes      (reported by file(1) as "ASCII cpio archive")
-    rebuilt initramfs  2645504 bytes      47 members
+**2. A fresh `mkinitramfs` build -- correct, but a different machine.**  Same generator,
+same hooks, verified: 3928 members, `/init`, the module inside hashing to the staged
+one.  But it selected 2584 modules against the stock image's 3090, and a difference of
+506 modules on a boot path is not something to wave through.
 
-A modern initramfs-tools image is a **concatenation**: this one starts with an
-uncompressed cpio (a small early tree) and continues with the real tree as zstd
-(`COMPRESS=zstd` in `/etc/initramfs-tools/initramfs.conf`).  `file` reports the first
-magic, so it looked like a plain archive; `cpio -i` stops at the first `TRAILER!!!`,
-so the unpack captured the early tree only.  The repack was therefore a fragment with
-no `/init` and none of the root filesystem's modules, and a kernel that finds an
-initramfs without `/init` and no driver for the root disk reports exactly that panic.
+**3. What is in use: the stock image plus one appended archive.**  The camera image is
+the stock image's bytes, with one small archive appended that re-supplies only
+`qcom-rpmh-regulator` at the path the stock image already keeps it at.  The kernel makes
+that work: `unpack_to_rootfs` walks the segments in order and carries on after a
+compressed one (`init/initramfs.c`, the loop around line 542), and `do_name` opens a
+regular file with `O_TRUNC` and truncates it to the new body length (line 392), so the
+later copy replaces the earlier one.  The appended archive is a single hand-built
+record with no directory entries.
 
-The old check ("the members I extracted are all in what I repacked") could not see it,
-because the extraction itself had stopped early.  The fix is to build with the
-machine's own generator and to check against the *stock* image:
+Failure mode: if a future kernel stopped honouring that rule, the camera entry would
+boot the stock module -- no rails, no camera, no panic.  Nothing is installed into
+`/lib/modules` at any point, no hook is left behind, and no other menu entry is touched.
 
-* `mkinitramfs -o <out> $KVER` with the same hooks that built today's initramfs --
-  including `a16-qcom-firmware`, which the ADSP needs and which a hand-rolled archive
-  would silently have dropped;
-* the rebuilt module supplied two ways for that one build (swapped into `/lib/modules`
-  for the duration, and a transient hook overwriting it inside the image), because the
-  order in which mkinitramfs copies modules against running hooks is an implementation
-  detail; the stock module is restored and the hook removed immediately after, with a
-  trap covering an interrupted run;
-* verified with `lsinitramfs` (concatenation-aware): no member of the stock image may
-  be missing from the new one, `/init` must be present by name, every copy of the
-  module inside must hash to the staged one, the size may not fall below half the
-  stock's, and the stock image must still hash to what it did before the build;
-* on any failure the camera entry is reverted to the stock initramfs before the script
-  exits, so it cannot be left pointing at an image that will not boot.
+Verified offline with the real image as a stand-in: the stock bytes are a byte-for-byte
+prefix (`cmp -n`), the appended archive carries exactly the one path and adds no path
+the stock image does not have, its copy hashes to the staged module
+(6ae0320d42730c928042d791def70c8155aad8ba93a72993990c6293733f61f6), `/init` is present,
+and a truncated tail is refused.
 
-The usual entries were never affected -- same device tree, same initramfs, same module
--- which is why the machine came back with no intervention.  That was the point of
-putting the module inside a camera-only initramfs in the first place.
+Two tool traps found on the way, both worth keeping: `lsinitramfs`/`unmkinitramfs`
+print nothing and exit 0 for an archive `mkinitramfs` writes here (so a check built on
+them either refuses a good build or believes any archive), and `cpio -i --to-stdout`
+exits 0 when the member is not in that archive.  The image is read by
+`a16-camera-initrd-segments.py` plus GNU `cpio` instead.

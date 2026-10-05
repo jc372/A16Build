@@ -324,6 +324,33 @@ intervention.
    The 89 MB build came out as `0 cpio` + `12871168 zstd`, 3928 members, and the
    module inside it hashed to the staged one.
 
+# Step 2, final shape: the stock image plus one appended archive
+
+Three shapes were tried, all of them mine.  Hand-rolled unpack/repack lost everything
+after the first archive and panicked the machine.  A fresh `mkinitramfs` build worked
+but chose its own module set -- 2584 modules against the stock image's 3090 -- which is
+not a difference worth having on a boot path.  The third is: the stock image's bytes,
+with one small archive appended that re-supplies only `qcom-rpmh-regulator`.
+
+It works because of how the kernel reads an initramfs (`init/initramfs.c`):
+`unpack_to_rootfs` walks the segments in order and carries on past a compressed one,
+advancing by what the decompressor consumed, and `do_name` opens a regular file with
+`O_TRUNC` and truncates it to the new body length, so a file a later archive provides
+replaces the earlier copy.  Debian's own images rely on the same mechanism.  The
+appended archive is a single hand-built record with no directory entries (a repeated
+directory would have the kernel try to create a path that already exists, and the
+parents are in the stock image anyway), carrying the name spelled exactly as the stock
+image spells it.
+
+So the failure mode is "nothing happened", not "cannot mount root": if a future kernel
+ignored the appended archive, the camera entry would boot the stock module -- no rails,
+no camera, no panic.
+
+Checked offline against the real image used as a stand-in: the stock bytes are a
+byte-for-byte prefix, the appended archive carries exactly the one path, it adds no
+path the stock image does not have, its copy hashes to the staged module, `/init` is
+present, and a truncated tail is refused.
+
 2. **`cpio -i --to-stdout <member>` exits 0 when the member is not in that archive.**
    Extracting the module from the first segment therefore "succeeded" with empty
    output and the check reported a mismatch.  Extract into a file and test `-s`, not

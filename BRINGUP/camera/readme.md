@@ -101,44 +101,32 @@ its service, and leaves the backups next to the menus it edited.
     sudo bash ~/a16-payload/camera/a16-camera-step2.sh --check    # verify, change nothing
     sudo bash ~/a16-payload/camera/a16-camera-step2.sh --remove   # undo
 
+The run gives the camera entry its own initramfs: the stock image's bytes, with one
+small archive appended that re-supplies only the rebuilt `qcom-rpmh-regulator`.  The
+kernel reads an initramfs as a sequence of archives and a later one replaces an
+earlier file (`init/initramfs.c`: `unpack_to_rootfs` carries on past a compressed
+segment, `do_name` opens the file `O_TRUNC`), so the camera boot gets the module with
+the PMH0104 rails while everything else stays byte-for-byte what the machine boots
+today.  Nothing is installed into `/lib/modules`, no hook is left behind, and no other
+menu entry is touched.
+
 Read the install output.  These lines are the ones that matter:
 
-    [ok]   vermagic matches the installed module
-    [ok]   module_layout CRC matches
-    [ok]   the module carries the PMH0104 LDOs (vreg table 256 bytes = 7 rails)
-    [ok]   the stock initramfs is byte-identical to before the build
-    [ok]   the new initramfs walks cleanly -- 0 cpio 12871168 zstd
-    [ok]   members: N in the new image, M in the stock one
-    [ok]   the new initramfs has its /init
-    [ok]   all N kernel modules of the stock image are in the new one
-    [ok]   the module inside the new initramfs is the staged one (6ae0320d...)
+    [ok]   the stock initramfs is untouched
+    [ok]   the camera image starts with the stock image, byte for byte (48432086 bytes)
+    [ok]   appended: exactly usr/lib/modules/.../qcom-rpmh-regulator.ko
+    [ok]   it adds no path the stock image does not already have
+    [ok]   the appended copy is the staged module (6ae0320d...)
+    [ok]   /init is there, from the stock image, untouched
     [ok]   camera entry now boots initrd.img-<version>-camera1
 
-The archive is read by `a16-camera-initrd-segments.py` (which finds where each
-segment starts) plus GNU `cpio` (which lists them).  That pair exists because
-`lsinitramfs` and `unmkinitramfs` print nothing at all, and exit 0, for an archive
-`mkinitramfs` wrote on this machine -- silently -- so a check based on them either
-refuses a good build or, worse, believes any archive.
+Then reboot and pick the camera entry.  Every run leaves a log at
+`~/a16-payload/camera/logs/step2-<timestamp>.log`; if any check fails the camera entry
+is put back on the stock initramfs before the script exits, so it is never left armed
+on an image that cannot boot.  And if a future kernel stopped honouring the appended
+archive, the camera entry would simply behave like the stock boot -- no rails, no
+camera, no panic.
 
-Then reboot and pick the camera entry.  The run builds a second initramfs for the
-camera entry with the rebuilt `qcom-rpmh-regulator` inside, using `mkinitramfs` and
-the same hooks that built the initramfs the machine boots today, installs the device
-tree that names the three supplies, and points the camera entry at that initramfs.
-The module is not put into /lib/modules and no other menu entry is changed, so the
-usual entries boot the same device tree, the same initramfs and the same module as
-before.
-
-Two things to know before you run it:
-
-* every run leaves a log at `~/a16-payload/camera/logs/step2-<timestamp>.log`, so
-  the output is still there afterwards if the terminal scrolls away;
-* if any check fails, the camera entry is put back on the stock initramfs before the
-  script exits, so it is never left pointing at an initramfs that cannot boot.
-
-Why the archive is built with `mkinitramfs` rather than assembled by hand, and what
-happened the one time it was: `patches/0020-dts-camera-cci-ov08x40/RESULT.md`.
-
-Pass in `~/a16-payload/camera/logs/boot-<id>.log`: no `using dummy regulator` lines
-for the sensor, `rpmh-regulator` registering ldo4 and ldo7, and the chip id read
-answered.  The camera still does not appear in the app -- CAMSS and CSIPHY4 are
-step 3.
+Pass in `~/a16-payload/camera/logs/boot-<id>.log`: no `using dummy regulator` lines for
+the sensor, `rpmh-regulator` registering ldo4 and ldo7, and the chip id read answered.
+The camera still does not appear in the app -- CAMSS and CSIPHY4 are step 3.
