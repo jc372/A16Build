@@ -44,6 +44,43 @@ ok()   { printf '  [ok]   %s\n' "$*"; }
 warn() { printf '  [warn] %s\n' "$*"; }
 die()  { printf '  [fail] %s\n' "$*" >&2; exit 1; }
 
+# The initramfs on this machine is an uncompressed SVR4 cpio (48 MB, "ASCII cpio
+# archive" in file(1)'s words).  Detect by magic bytes rather than by file(1)'s
+# wording, which changes between versions, and handle a plain archive as a first
+# class case -- guessing wrong here would produce an initramfs that cannot boot.
+detect_comp() {
+	local magic how tool
+	magic="$(od -An -tx1 -N6 "$1" | tr -d ' \n')"
+	case "$magic" in
+		28b52ffd*)        comp=zstd; tool=zstd ;;
+		1f8b*)            comp=gzip; tool=gzip ;;
+		fd377a58*)        comp=xz;   tool=xz ;;
+		30373037*)        comp=none; tool=cpio ;;
+		*)                comp=none; tool=cpio ;;
+	esac
+	case "$comp" in none) how="uncompressed cpio (SVR4 newc)" ;; *) how="$comp" ;; esac
+	say "  the initramfs is $how"
+	command -v "$tool" >/dev/null || die "$tool is not installed (needed for a $how initramfs)"
+}
+
+unpack_stream() {   # $1 = archive; the cpio stream goes to stdout
+	case "$comp" in
+		none) cat "$1" ;;
+		gzip) gzip -dc "$1" ;;
+		xz)   xz -dc "$1" ;;
+		zstd) zstd -dc "$1" ;;
+	esac
+}
+
+pack_stream() {     # reads a cpio stream on stdin, writes the archive to $1
+	case "$comp" in
+		none) cat > "$1" ;;
+		gzip) gzip -9 -c > "$1" ;;
+		xz)   xz -T0 -c > "$1" ;;
+		zstd) zstd -19 -T0 -q -o "$1" ;;
+	esac
+}
+
 [ "$(id -u)" = 0 ] || die "run me with sudo"
 command -v cpio >/dev/null || die "cpio is not installed"
 [ "$KVER" = "$(uname -r)" ] || die "kernel release changed under me"
@@ -58,21 +95,10 @@ installed_mod="/lib/modules/$KVER/kernel/drivers/regulator/qcom-rpmh-regulator.k
 build_cam_initramfs() {
 	local work comp
 	work="$(mktemp -d /tmp/a16cam-initrd.XXXXXX)"
-	case "$(file -b "$initrd")" in
-		*Zstandard*) comp=zstd ;;
-		*gzip*)      comp=gzip ;;
-		*XZ*)        comp=xz ;;
-		*)           die "unknown initramfs compression: $(file -b "$initrd")" ;;
-	esac
-	say "  unpacking $initrd ($comp)"
-	(
-		cd "$work"
-		case "$comp" in
-			zstd) zstd -dc "$initrd" | cpio -idm --quiet ;;
-			gzip) gzip -dc "$initrd" | cpio -idm --quiet ;;
-			xz)   xz -dc  "$initrd" | cpio -idm --quiet ;;
-		esac
-	) || die "could not unpack the initramfs"
+	detect_comp "$initrd"
+	say "  unpacking $initrd"
+	( cd "$work" && unpack_stream "$initrd" | cpio -idm --quiet ) \
+		|| die "could not unpack the initramfs"
 
 	# every copy of the module inside the initramfs, wherever it lives
 	mapfile -t found < <(cd "$work" && find . -name 'qcom-rpmh-regulator.ko' -type f | sed 's|^\./||')
@@ -92,30 +118,15 @@ build_cam_initramfs() {
 
 	# a hand-rolled repack must not drop a single member: compare the path lists
 	list_orig="$(mktemp)"; list_new="$(mktemp)"
-	case "$comp" in
-		zstd) zstd -dc "$initrd"      | cpio -it --quiet 2>/dev/null | sort > "$list_orig" ;;
-		gzip) gzip -dc "$initrd"      | cpio -it --quiet 2>/dev/null | sort > "$list_orig" ;;
-		xz)   xz -dc  "$initrd"       | cpio -it --quiet 2>/dev/null | sort > "$list_orig" ;;
-	esac
+	unpack_stream "$initrd" | cpio -it --quiet 2>/dev/null | sort > "$list_orig"
 
 	say "  repacking -> $cam_initrd"
-	(
-		cd "$work"
-		find . -print0 | cpio --null -o -H newc --quiet 2>/dev/null | \
-			case "$comp" in
-				zstd) zstd -19 -T0 -q -o "$cam_initrd" ;;
-				gzip) gzip -9 -c > "$cam_initrd" ;;
-				xz)   xz -T0 -c > "$cam_initrd" ;;
-			esac
-	) || die "could not repack the initramfs"
+	( cd "$work" && find . -print0 | cpio --null -o -H newc --quiet 2>/dev/null | pack_stream "$cam_initrd" ) \
+		|| die "could not repack the initramfs"
 	chmod 0644 "$cam_initrd"
 
 	# the comparison itself: every path the stock initramfs had must still be there
-	case "$comp" in
-		zstd) zstd -dc "$cam_initrd" | cpio -it --quiet 2>/dev/null | sort > "$list_new" ;;
-		gzip) gzip -dc "$cam_initrd" | cpio -it --quiet 2>/dev/null | sort > "$list_new" ;;
-		xz)   xz -dc  "$cam_initrd" | cpio -it --quiet 2>/dev/null | sort > "$list_new" ;;
-	esac
+	unpack_stream "$cam_initrd" | cpio -it --quiet 2>/dev/null | sort > "$list_new"
 	missing="$(comm -23 "$list_orig" "$list_new")"
 	if [ -n "$missing" ]; then
 		printf '  [fail] the repack dropped %s path(s), first few:\n%s\n' \
@@ -130,11 +141,7 @@ build_cam_initramfs() {
 	# prove the module inside the new initramfs is byte-for-byte the staged one
 	local want got
 	want="$(sha256sum "$MOD" | awk '{print $1}')"
-	got="$(case "$comp" in
-		zstd) zstd -dc "$cam_initrd" ;;
-		gzip) gzip -dc "$cam_initrd" ;;
-		xz)   xz -dc  "$cam_initrd" ;;
-	esac | cpio -i --to-stdout "${found[0]}" 2>/dev/null | sha256sum | awk '{print $1}')"
+	got="$(unpack_stream "$cam_initrd" | cpio -i --to-stdout "${found[0]}" 2>/dev/null | sha256sum | awk '{print $1}')"
 	[ "$want" = "$got" ] || die "the module inside $cam_initrd does not match the staged one"
 	ok "inside the camera initramfs the module is the staged one ($got)"
 }

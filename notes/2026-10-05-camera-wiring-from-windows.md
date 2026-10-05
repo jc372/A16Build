@@ -274,4 +274,11 @@ value on its step grid.  Then CAMSS + CSIPHY4 for the app itself.
   The vendor's 3400000 uV sits between two steps; 3392000 and 3424000 are legal.
 - Still open: the third boot.  Pass = no dummy-regulator lines, `rpmh-regulator`
   registering ldo4/ldo7 for I_E0, and 21-0036 reading a chip id.
+- The machine's initramfs is an **uncompressed SVR4 cpio** ("ASCII cpio archive",
+  48432086 bytes), not zstd or gzip, which is what `file` reports for it.  Detecting
+  the archive kind by magic bytes (`od -An -tx1 -N6`) rather than by `file`'s wording
+  is what fixed the first install attempt: `file`'s phrasing differs between versions
+  and a plain archive has no compression case at all if you only code for zstd/gzip/xz.
+  The installer now handles none/gzip/xz/zstd as first-class kinds and keeps the
+  archive kind it found.
 
