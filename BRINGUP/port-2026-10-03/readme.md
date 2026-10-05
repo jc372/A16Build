@@ -29,18 +29,24 @@ patches in it, it reports your own work back as "already upstream" and is worthl
 
 ### Carried — upstream lacks them and the patches apply cleanly
 
+The patch filenames in this directory are the list. In application order:
+
 | patch | what it fixes | symptom when absent |
 |-------|---------------|---------------------|
-| `0015-qmp-combo-glymur-v5` | Type-C/DP combo PHY | external monitor plug-in **restarts the machine** |
-| `0010-xhci-plat-a16-skip-unsuspended-hcd` | USB host, same path | part of the same monitor failure |
-| `0017-qmp-v8-refresh-pcs-drive-on-training` | combo PHY PCS on training | external display link |
-| `0018-msm-dp-lttpr-segment-training` | eDP link training segments | external display link |
-| `0011-dt-bindings-asus-zenbook-a16-ec` | EC binding documentation | EC does not bind |
-| `0012-platform-arm64-asus-glymur-ec` | the EC driver (upstream has no such file) | no lid switch, power button, internal input bus |
-| `0013-arm64-dts-glymur-zenbook-a16-ec` | the EC node in the DTS | no EC at `i2c 9-0076` |
-| `0014-ath12k-a16-no-soc-global-reset-on-resume` | ath12k resume | Wi-Fi does not survive resume |
-| `0016-ath12k-refuse-device-after-failed-resume` | ath12k error path | bad state after a failed resume |
+| `0001-phy-qcom-edp-v8-sequence` | the eDP v8 power-on sequence in `phy-qcom-edp.c` | no internal panel — the link never trains |
+| `0002-dts-ec-node` | the EC node in the board DTS | no EC at `i2c 9-0076` |
+| `0004-ec-driver` | the EC driver — upstream has no such file | no fan control or readings, no keyboard backlight, and the fans run on through suspend |
+| `0005-dts-bt-serdev-node` | the Bluetooth serdev client node under `&uart14` | `hci0` does not exist at all |
+| `0006-dts-bt-enable-gpio` | the radio's enable line, pin 116 | `hci0` exists and never answers |
+| `0007-xhci-plat-a16-skip-unsuspended-hcd` | the xhci suspend guard | every suspend aborts with `-22` |
+| `0008-qmp-combo-glymur-v5-for-next-20260914` | the Type-C/DP combo PHY | plugging a monitor in **restarts the machine**; the panel needs its DP side too |
+| `0010-qmp-v8-refresh-pcs-drive-on-training` | the combo PHY's PCS side, on training | no external display link |
+| `0011-msm-dp-lttpr-segment-training` | link-training segments (`dp_link`, `dp_ctrl`, `dp_display`) | no external display link |
+| `0012-dp-external-rate-cap` | caps the external DP link rate | unstable external link |
+| `0013-dpu-drop-stuck-flush` | drops a stuck DPU flush | the external display path hangs |
+| `0014-soundwire-qcom-decode-all-slaves-before-alert-handoff` | decodes every SoundWire slave before the alert handoff | the sound card does not come up |
 | `0016-drm-msm-attach-a-driver-to-the-gmu` | binds the GMU as its own driver | upstream series (RFT at the time of writing): without it the GMU is left without a bound driver, so `3d6c000.gmu` reports `sync_state() pending`. Carries the definitions of `adreno_gmu_register()`/`adreno_gmu_unregister()` that the rest of the tree calls. |
+| `0017-dts-hdmi-bridge-tert-gdsc` | gives the HDMI bridge PHY its `GCC_USB30_TERT_GDSC` power domain | `phy-88e1000.phy.14: phy init failed --> -16`; the HDMI PHY's `com_aux` clock never comes up |
 
 ### Carried — the reverse case: upstream has the code and we gate it off for this part
 
@@ -50,19 +56,19 @@ patches in it, it reports your own work back as "already upstream" and is worthl
 
 ### Needs a rebase before it can be carried
 
-| patch | conflicts |
-|-------|-----------|
-| `0015-ath12k-a16-reattach-driver-after-kept-device-resume` | 7 hunks |
-| `0016-dp-external-rate-and-failed-enable-guard` | 2 hunks |
-| `0017-ath12k-idempotent-thermal-cleanup` | 2 hunks |
-| `0018-ath12k-keep-mhi-up-across-suspend` | 3 hunks |
+Nothing in this set. The ath12k resume patches that used to be listed here are not
+carried on this release at all — the machine does not need them to suspend, and they
+were never re-based against this snapshot.
 
 ### Not carried
 
-* `0008` msm skip-push-idle — **already upstream**; against a pristine tree the patch
-  reports *already applied*.
-* `0001`, `0003`, `0019`, `0020` — not source patches; see §4.
-* the ath12k resume group is optional on a machine that does not suspend.
+* `0003-dp-panel-hbr3` and `0009-dp-external-rate-and-failed-enable-guard` — kept in
+  `not-used/` with their reasons. The panel works without the HBR3 force, and the
+  failed-enable guard collides with `0012` (both edit `dp_panel.c` near line 196; if it
+  is ever wanted it must go in *before* `0012`).
+* No ath12k patch is carried on this release.
+* `CLK_GLYMUR_GPUCC` is not a patch — it is upstream's own default, and §6 explains why
+  losing it costs the display.
 
 ## 3. What upstream is missing, stated positively
 
@@ -74,18 +80,22 @@ Three fixes exist here and nowhere in this release:
 2. **The eDP v8 power-on sequence.** Upstream's `drivers/phy/qualcomm/phy-qcom-edp.c`
    contains none of `prepare_power_on_v8`, `configure_tx_pre_pll_v8`,
    `finish_power_on_v8`, `configure_rate_pcs_v8`. Its v8 path only works for 4-lane
-   8.1 Gbps; this machine is 2-lane 5.4 Gbps and the link does not train. `0006` applies
-   cleanly; `0007` needs a rebase.
+   8.1 Gbps; this machine is 2-lane 5.4 Gbps and the link does not train. `0001` carries
+   the sequence and applies cleanly against this snapshot.
 3. **The combo-PHY behaviour the external display needs.** Plugging a monitor in
    restarts the machine without it.
 
 ## 4. Things that look like patches but are not
 
-`0001`, `0003`, `0019` and `0020` report "target absent" because their paths are scratch
-names from a DTB-patching workflow — for example
-`glymur-asus-zenbook-a16-ux3607oa.dts` -> `glymur-a16-bt-test.dts` — not tree paths. They
-are not part of the source build. Where one encodes a real device-tree delta, it is
-carried as an ordinary patch against the tree's DTS (§5).
+Nothing in `patches/` on this release. Every file there is an ordinary source patch
+against the tree, and `MANIFEST.sha256` records all fifteen of them.
+
+This section exists because an earlier numbering carried scratch names from a DTB-patching
+workflow — paths such as
+`glymur-asus-zenbook-a16-ux3607oa.dts` -> `glymur-a16-bt-test.dts` — which are not tree
+paths and never belonged in a source build. Those files are not part of this set. Where one
+encoded a real device-tree delta, it is carried as an ordinary patch against the tree's
+DTS (`0002`, `0005`, `0006`, `0017`).
 
 ## 5. Bluetooth
 
