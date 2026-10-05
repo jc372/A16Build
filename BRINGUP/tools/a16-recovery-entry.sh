@@ -95,9 +95,6 @@ out = (out[:anchor.start()] + add + out[anchor.start():]) if anchor else (out.rs
 # the BOOT fallback should land on recovery (visible, safe); ubuntu keeps the plain t2
 want = 'A16: linux-next 7.3.0-rc5-next-20261002-t2' if 'vmlinuz-7.3.0-rc5-next-20261002-t2' in s and 'A16: linux-next' in s else rec
 out = re.sub(r'^set default=.*$', f'set default="{want}"', out, count=1, flags=re.M)
-out = re.sub(r'\n{3,}', '\n\n', out)
-open(menu + '.new', 'w').write(out); os.replace(menu + '.new', menu)
-
 # the diagnostics entry no longer has a staged payload to show, and no longer probes 7.2
 out = re.sub(r'^[ \t]*search --no-floppy --file --set=a16esp /a16boot/vmlinuz\n', '', out, flags=re.M)
 out = out.replace('      echo "  staged ESP payload found on: $a16esp"\n', '')
@@ -107,6 +104,9 @@ out = out.replace('7.3.0-rc3-next-20260914', '7.3.0-rc5-next-20261002-t2')
 out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/(?:vmlinuz|initrd\.img)-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
 out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/initrd\.img-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
 out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/vmlinuz-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
+
+out = re.sub(r'\n{3,}', '\n\n', out)
+open(menu + '.new', 'w').write(out); os.replace(menu + '.new', menu)
 
 cur = open(menu).read()
 after = re.findall(r'^menuentry\s+"([^"]+)"\s*\{(.*?)^\}', cur, re.S | re.M)
