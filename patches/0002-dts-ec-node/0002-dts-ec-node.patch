@@ -1,6 +1,6 @@
 --- a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
 +++ b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
-@@ -670,8 +670,19 @@
+@@ -688,8 +688,19 @@
  
  	status = "okay";
  
@@ -22,11 +22,3 @@
  };
  
  &i2c10 {
-@@ -861,6 +872,7 @@
- };
- 
- &pmk8850_rtc {
-+	qcom,uefi-rtc-info;
- 	qcom,no-alarm;
- };
- 

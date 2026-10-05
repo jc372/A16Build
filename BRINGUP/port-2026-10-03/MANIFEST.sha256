@@ -13,7 +13,7 @@
 #
 # the patches, in application order
 5aab4ae758f6f6bcadede84fd1e291dbccd69c5ec6bb365ed7f42329ce81af4f  ../../patches/0001-phy-qcom-edp-v8-sequence/0001-phy-qcom-edp-v8-sequence.patch
-e8af3222000d09694ca7415dbf826fdcadb5fce1f770dc0d7e3bb530693c393d  ../../patches/0002-dts-ec-node/0002-dts-ec-node.patch
+3d38752a7a0799d8dbf15bd02f80f419463e9b1f55234386b2b88b78ee280254  ../../patches/0002-dts-ec-node/0002-dts-ec-node.patch
 7439b28882ef57344ad6c678f47a7e471c2c865c53111df5c235482f037e9b08  ../../patches/0004-ec-driver/0004-ec-driver.patch
 f7530367e088178601672b405a3460e103368acb651789d3ad1d21d84b13c629  ../../patches/0005-dts-bt-serdev-node/0005-dts-bt-serdev-node.patch
 4f3ecf912cd788dfdac594f4be3f98ce5675f7484a9f2ff4f0e83d3530ce4b92  ../../patches/0006-dts-bt-enable-gpio/0006-dts-bt-enable-gpio.patch
