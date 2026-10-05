@@ -98,7 +98,7 @@ step_patches() {
   sec "4. the patch set"
   [ -d "$PATCH_DIR" ] || die "no patch directory at $PATCH_DIR"
   local p base
-  for p in "$PATCH_DIR"/*.patch; do
+  for p in "$PATCH_DIR"/[0-9]*/*.patch; do
     [ -f "$p" ] || continue
     base="$(basename "$p")"
     # already applied? a reverse dry-run succeeds exactly when it is
@@ -158,7 +158,7 @@ case "$MODE" in
              "$([ -s "$TAR" ] && echo present || echo would-download)" \
              "$([ -f "$TREE/Makefile" ] && echo present || echo would-extract)" \
              "$([ -f "$TREE/.config" ] && echo present || echo would-seed)" \
-             "$(ls -1 "$PATCH_DIR"/*.patch 2>/dev/null | wc -l) files" | tee -a "$LOG" ;;
+             "$(ls -1 "$PATCH_DIR"/[0-9]*/*.patch 2>/dev/null | wc -l) files" | tee -a "$LOG" ;;
   --install) step_install ;;
   --all)   preflight; step_tarball; step_tree; step_config; step_patches; step_build; step_install ;;
   *)       preflight; step_tarball; step_tree; step_config; step_patches; step_build ;;

@@ -125,7 +125,7 @@ the EC with `ret=0x0`:
     suspend_stats   success 3, fail 0, last_failed_dev empty
     s2idle          PM: suspend entry 08:10:04, exit 08:10:29, same boot
 
-Machine, numbers and raw runs: `BRINGUP/patches/asus-zenbook-a16-a14-ec-v3/`.
+Machine, numbers and raw runs: `patches/asus-zenbook-a16-a14-ec-v3/`.
 
 v3 is built in (`CONFIG_EC_ASUS_GLYMUR=y`), so there is no `.ko`, unlike the v1
 build described above. The tree uses his Kconfig symbol rather than

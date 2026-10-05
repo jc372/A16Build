@@ -40,7 +40,7 @@ FIX
   single power-domain specifier is enough for genpd_dev_pm_attach() to power the
   domain on at attach -- with no dependency on the unused USB controller.
 
-      patch  patches/0017-dts-hdmi-bridge-tert-gdsc.patch
+      patch  patches/0017-dts-hdmi-bridge-tert-gdsc/0017-dts-hdmi-bridge-tert-gdsc.patch
       dtb    164631 bytes, sha256 8a9bc3d9587bdabd   (was 164611, 878e76d80eff172f)
 
 RESULT
