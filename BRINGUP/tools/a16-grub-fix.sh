@@ -79,6 +79,12 @@ dups = {t: v for t, v in titles.items() if len(v) > 1}
 if apply_:
     # repoint dead entries at the current kernel, keeping each entry's own cmdline
     out = s
+    # drop the later copy of any duplicated title FIRST: the repoints below rewrite the
+    # block text, so matching against it afterwards would find nothing.
+    for t, v in dups.items():
+        for b in v[1:]:
+            out = out.replace(b.group(0) + "\n", "", 1)
+            print(f"    -> removed the duplicate menuentry '{t[:48]}'")
     for b, title, kp, ip in dead:
         # line by line: the guard, the linux line and the initrd line each carry a path,
         # and a blind replace on the whole block would hit the guard first.
@@ -95,11 +101,6 @@ if apply_:
         new_block = f"# a16-grub-fix.sh: kernel repointed from {kp} ({STAMP})\n" + "\n".join(fixed)
         out = out.replace(b.group(0), new_block, 1)
         print(f"    -> repointed '{title[:48]}' to {kver}")
-    # drop the later copy of any duplicated title
-    for t, v in dups.items():
-        for b in v[1:]:
-            out = out.replace(b.group(0) + "\n", "", 1)
-            print(f"    -> removed the duplicate menuentry '{t[:48]}'")
     if out != s:
         open(menu + ".new", "w").write(out)
         os.replace(menu + ".new", menu)
