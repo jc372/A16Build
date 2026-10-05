@@ -118,16 +118,26 @@ absent, by design — no CAMSS in step 1.
 
 Step 1 did its job.  What stands between the tree and the chip id is power.
 
-## Step 2, for the next round
+## Third run: the supplies are attached (not yet booted)
 
-    rebuild qcom-rpmh-regulator with 0021 (through the ABI gate, one module), so
-    PMH0104's ldo4 and ldo7 exist at all; then declare the rails in the PMH0104
-    container ONLY -- it carries no board rails, so a mistake stays local:
-        avdd  -> ldo7  2.8 V
-        dovdd -> ldo4  1.8 V
-        dvdd  -> ldo4  1.8 V      (the reference board ties dvdd to dovdd)
-    and the BOB, if at all, at a value that is on its step grid.
+The three supplies now name the machine's own rails, in the PMH0104 container:
 
-Same entry, same one line, and the log should then show
-`sensor driver : BOUND (ov08x40)`.  CAMSS + CSIPHY4 — the camera actually appearing
-in the app — is step 3.
+    avdd-supply  = <&vreg_l7i_e0>    PMH0104 I_E0 ldo7, 2.8 V
+    dovdd-supply = <&vreg_l4i_e0>    PMH0104 I_E0 ldo4, 1.8 V
+    dvdd-supply  = <&vreg_l4i_e0>    the same rail as dovdd
+
+That mapping is not inferred: the vendor blobs vote LDO7_I0 (2800000 uV) and
+LDO4_I0 (1800000 uV) for this sensor, and Qualcomm's own [PATCH 5/6] wires its
+board's OV08X40 to one 2.8 V rail for avdd and one 1.8 V rail for dovdd and dvdd
+-- the same shape, on the same three sensor pins.  Their reset pin (tlmm 239,
+active low), pinctrl pair and 19.2 MHz MCLK4 match ours exactly.
+
+The rails need the rebuilt regulator module (patch 0021), which is what step 2
+installs; on the stock module this container still logs `ldo4: Unknown regulator`
+and the sensor stays on dummy regulators.  The BOB stays out: the vendor votes it,
+but nothing on this board needs a 3.4 V rail for the camera and its only legal
+values are 3000000 + n*32000 uV.
+
+Device tree re-verified after the change: one PMH0104 container, three supplies on
+the sensor, cci1 and the endpoint unchanged, and the patch (now 398 lines)
+reproduces the tree byte for byte from the pre-camera sources.

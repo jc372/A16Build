@@ -329,7 +329,7 @@
  };
  
  &uart14 {
-@@ -1369,3 +1405,62 @@
+@@ -1369,3 +1405,66 @@
  		regulator-always-on;
  	};
  };
@@ -380,7 +380,11 @@
 +		assigned-clocks = <&camcc CAM_CC_MCLK4_CLK>;
 +		assigned-clock-rates = <19200000>;
 +
-+		/* no supplies: see the note above the sensor node */
++		/* the machine's own rails: PMH0104 (I_E0) ldo7 2.8 V and ldo4 1.8 V,
++		 * the mapping upstream's glymur board uses.  Needs patches/0021. */
++		avdd-supply = <&vreg_l7i_e0>;
++		dovdd-supply = <&vreg_l4i_e0>;
++		dvdd-supply = <&vreg_l4i_e0>;
 +
 +		port {
 +			ov08x40_out_ep: endpoint {

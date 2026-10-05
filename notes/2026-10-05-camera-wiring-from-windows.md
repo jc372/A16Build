@@ -248,7 +248,30 @@ parsed.  The chip does not ACK because its three rails are dummy regulators -- t
 board's own PMH0104 LDOs are what it actually runs on, and this kernel cannot
 describe them.  So: cci1 is right, and the missing piece is power, not the bus.
 
-Next: step 2 = rebuild `qcom-rpmh-regulator` with 0021 through the ABI gate, then the
-rails in the PMH0104 container (avdd ldo7 2.8 V, dovdd/dvdd ldo4 1.8 V), and the BOB
-only at a value on its step grid.  Then CAMSS + CSIPHY4 for the app itself.
+Next: step 2 = rebuild `qcom-rpmh-regulator` with 0021, then the rails in the
+PMH0104 container (avdd ldo7 2.8 V, dovdd/dvdd ldo4 1.8 V), and the BOB only at a
+value on its step grid.  Then CAMSS + CSIPHY4 for the app itself.
+
+# Step 2 built (not yet booted)
+
+- The module: `drivers/regulator` built in the same tree that produced the running
+  kernel, with 0021 applied.  Safety rests on four facts: the tree's Module.symvers
+  is the kernel's own (31165 symbols, `module_layout` 0x297b75c6, identical to the
+  installed module), the new module's vermagic and `module_layout` CRC match it
+  exactly, `pmh0104_vreg_data` is 256 bytes (7 rails + terminator, was 160), and the
+  change is three static const table entries -- no code path.  The ABI gate could
+  not run: this kernel has no `/sys/kernel/btf/vmlinux`, so it has no BTF to read
+  offsets from.  Same-tree + same-CRC is the substitute, and it is checked in the
+  installer.
+- The install path: the module goes ONLY into a second initramfs
+  (`/boot/initrd.img-<ver>-camera1`) that the camera entry boots.  It is not
+  installed into `/lib/modules`, so a bad module cannot reach the usual boot paths
+  -- that is what makes "I can always get back in" true here rather than hopeful.
+  The installer refuses to install a repack that drops initramfs members, and it
+  proves the module inside the new initramfs hashes to the staged one.
+- The rail grid that caused the first failure, for the record:
+  `pmic5_bob`: `REGULATOR_LINEAR_RANGE(3000000, 0, 31, 32000)` -- 3.000 V + n*32 mV.
+  The vendor's 3400000 uV sits between two steps; 3392000 and 3424000 are legal.
+- Still open: the third boot.  Pass = no dummy-regulator lines, `rpmh-regulator`
+  registering ldo4/ldo7 for I_E0, and 21-0036 reading a chip id.
 
