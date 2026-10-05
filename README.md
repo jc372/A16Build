@@ -17,7 +17,7 @@ Everything is usable day to day except the camera. Two things work and cannot be
 | Keyboard, touchpad, stylus, fans, keyboard backlight | Working | The embedded controller |
 | USB | Working | External mouse and keyboard, and a dock |
 | 3D GPU | Working | Adreno X2-90, via freedreno and turnip |
-| Suspend and resume | Unreliable | Works, but the battery drains while asleep -- about 2.4 W, see [docs/suspend-power.md](docs/suspend-power.md) -- and the screen does not always come back |
+| Suspend and resume | Unreliable | Works, but the battery drains while asleep (about 2.4 W -- see [docs/suspend-power.md](docs/suspend-power.md)) and the screen does not always come back: Ctrl+Alt+F3 then Ctrl+Alt+F2 usually brings it back, see [docs/suspend.md](docs/suspend.md) |
 | Dock USB and ethernet after a suspend | Unreliable | Usually fine; occasionally needs a replug |
 | Camera | Not working | No driver yet |
 
