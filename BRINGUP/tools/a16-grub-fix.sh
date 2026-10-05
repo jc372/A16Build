@@ -79,6 +79,18 @@ dups = {t: v for t, v in titles.items() if len(v) > 1}
 if apply_:
     # repoint dead entries at the current kernel, keeping each entry's own cmdline
     out = s
+    # point this menu's default at the entry that boots the kernel we are actually
+    # running, BY TITLE.  "set default=3" is a position: it drifts as entries move and
+    # gives no clue what it boots.  A title cannot drift.
+    want_title = f"A16: linux-next {kver}"
+    have_title = any(t == want_title for t in titles)
+    dv_now = re.search(r'^set default=(.*)$', s, re.M)
+    if have_title and dv_now and want_title not in dv_now.group(1):
+        out = re.sub(r'^set default=.*$', f'set default="{want_title}"', out, count=1, flags=re.M)
+        print(f"    -> default set to '{want_title}' (by title, was {dv_now.group(1).strip()})")
+    elif have_title:
+        print(f"    default already names '{want_title}'")
+
     # drop the later copy of any duplicated title FIRST: the repoints below rewrite the
     # block text, so matching against it afterwards would find nothing.
     for t, v in dups.items():
