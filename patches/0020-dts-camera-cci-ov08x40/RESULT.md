@@ -177,6 +177,19 @@ the stock image does not have, its copy hashes to the staged module
 (6ae0320d42730c928042d791def70c8155aad8ba93a72993990c6293733f61f6), `/init` is present,
 and a truncated tail is refused.
 
+**Appending an archive after the stock image does not work.**  Implemented, installed,
+booted: camera boot 06a14e9d's log still reads `regulators-5: Unknown regulator ldo4`
+and `probe with driver qcom-rpmh-regulator failed with error -22` -- the stock module.
+The appended archive was not used.  The shape in use therefore keeps everything before
+the image's *last archive* byte for byte and rebuilds that one segment with the module
+in place, which does not depend on the kernel reading past a compressed segment.
+
+Validated offline on the real 48968838-byte image: the prefix is byte-identical, the
+rebuilt segment's structural manifest and every regular file's hash match the stock
+tree except the module, the module inside hashes to the staged one
+(6ae0320d42730c928042d791def70c8155aad8ba93a72993990c6293733f61f6), and the member list
+matches apart from the five `dev/*` nodes cpio cannot mknod as a non-root user.
+
 Two tool traps found on the way, both worth keeping: `lsinitramfs`/`unmkinitramfs`
 print nothing and exit 0 for an archive `mkinitramfs` writes here (so a check built on
 them either refuses a good build or believes any archive), and `cpio -i --to-stdout`

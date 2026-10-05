@@ -125,7 +125,8 @@ list_orig="$(mktemp /tmp/a16-list-orig.XXXXXX)"; list_new="$(mktemp /tmp/a16-lis
 modules_orig="$(mktemp /tmp/a16-mod-orig.XXXXXX)"; modules_new="$(mktemp /tmp/a16-mod-new.XXXXXX)"
 mod_extracted="$(mktemp /tmp/a16-mod-inside.XXXXXX)"
 tail_names="$(mktemp /tmp/a16-tail-names.XXXXXX)"; stock_names="$(mktemp /tmp/a16-stock-names.XXXXXX)"
-trap 'restore_stock_module; remove_hook; rm -f "$list_orig" "$list_new" "$modules_orig" "$modules_new" "$mod_extracted" "$tail_names" "$stock_names"' EXIT INT TERM
+cmp_out="$(mktemp /tmp/a16-cmp-out.XXXXXX)"
+trap 'restore_stock_module; remove_hook; rm -f "$list_orig" "$list_new" "$modules_orig" "$modules_new" "$mod_extracted" "$tail_names" "$stock_names" "$cmp_out"' EXIT INT TERM
 say ""
 
 # python3 finds the segment offsets, cpio builds and reads the appended archive
@@ -214,63 +215,70 @@ if [ "$mode" = remove ]; then
 fi
 
 verify_cam_initramfs() {
-	local now tail_off tail_list new_size want got extra
+	local now new_size want got
 	say ""
 	say "=== verifying before anything points at it ==="
 	now="$(sha256sum "$initrd" | awk '{print $1}')"
 	[ "$now" = "$stock_sha" ] || die "the stock initramfs changed during the run"
 	ok "the stock initramfs is untouched"
 
-	# 1. the camera image IS the stock image, byte for byte, and then our archive
-	if cmp -s -n "$stock_size" "$initrd" "$cam_initrd"; then
-		ok "the camera image starts with the stock image, byte for byte ($stock_size bytes)"
+	# 1. everything before the replaced segment is the stock image's bytes
+	if cmp -s -n "$seg_off" "$initrd" "$cam_initrd"; then
+		ok "the first $seg_off bytes are the stock image's, byte for byte"
 	else
-		die "the camera image does not start with the stock image"
+		die "the camera image does not start with the stock image's first $seg_off bytes"
 	fi
 	new_size="$(stat -c%s "$cam_initrd")"
-	[ "$new_size" -gt "$stock_size" ] || die "nothing was appended to the camera image"
-	tail_off=$stock_size
 
-	# 2. what is appended, read directly at that offset.  (The segment walker stops
-	#    after a compressed segment on purpose, and cannot be asked to find this; the
-	#    offset is known exactly because the bytes above it are the stock image.)
-	tail_list="$(tail -c +$((tail_off + 1)) "$cam_initrd" | cpio -it --quiet 2>/dev/null)"
-	[ -n "$tail_list" ] || die "no readable cpio archive at offset $tail_off"
-	if [ "$(printf '%s\n' "$tail_list" | grep -c .)" != "${#mod_paths[@]}" ]; then
-		printf '  [fail] the appended archive carries %s member(s), expected %s:\n' \
-			"$(printf '%s\n' "$tail_list" | grep -c .)" "${#mod_paths[@]}"
-		printf '%s\n' "$tail_list" | sed 's/^/           /'
-		die "it must carry the module and nothing else"
-	fi
-	if ! diff <(printf '%s\n' "${mod_paths[@]}" | sort) <(printf '%s\n' "$tail_list" | sort) >/dev/null; then
-		die "the appended archive does not carry exactly the module path(s)"
-	fi
-	ok "appended: exactly $(printf '%s ' "${mod_paths[@]}")"
+	# 2. it walks, and the last segment is still the same kind of archive
+	mapfile -t segs2 < <(segment_offsets "$cam_initrd") || die "the camera image could not be walked"
+	last2="${segs2[${#segs2[@]}-1]}"
+	[ "${last2##* }" = "$seg_kind" ] || die "the rebuilt image's last segment is not $seg_kind: $last2"
+	[ "${last2%% *}" = "$seg_off" ] || die "the rebuilt image's last segment moved to ${last2%% *}"
+	ok "the camera image walks, last segment still $seg_kind at $seg_off"
 
-	# 3. it may re-supply a path, never add one -- if it added a file the kernel
-	#    would put it in the initramfs root and the boot would differ from today's
-	printf '%s\n' "$tail_list" | sort -u > "$tail_names"
-	cut -f2- "$list_orig" | sort -u > "$stock_names"
-	extra="$(comm -13 "$stock_names" "$tail_names")"
-	if [ -n "$extra" ]; then
-		die "the appended archive would add a path the stock image does not have: $extra"
+	# 3. the rebuilt segment unpacks to the stock tree, with the module the only change.
+	#    Compared as a structural manifest plus a hash of every regular file, not with
+	#    diff -r: an initramfs carries device nodes (dev/console and friends) and diff
+	#    refuses to compare those, so it would call a correct rebuild a failure.
+	work_a="$(mktemp -d /tmp/a16-cmp-a.XXXXXX)"; work_b="$(mktemp -d /tmp/a16-cmp-b.XXXXXX)"
+	unpack_segment "$initrd" "$seg_off" "$seg_kind" "$work_a" || { rm -rf "$work_a" "$work_b"; die "could not unpack the stock segment"; }
+	unpack_segment "$cam_initrd" "$seg_off" "$seg_kind" "$work_b" || { rm -rf "$work_a" "$work_b"; die "could not unpack the rebuilt segment"; }
+	manifest() { ( cd "$1" && find . -printf '%y %m %U %G %s %l %P\n' | sort ); }
+	hashes()   { ( cd "$1" && find . -type f -print0 | sort -z | xargs -0 -r sha256sum ) | sed 's|  \./|  |'; }
+	mod_rel="${mod_paths[0]}"
+	if ! diff <(manifest "$work_a" | grep -v " $mod_rel\$") \
+	          <(manifest "$work_b" | grep -v " $mod_rel\$") > "$cmp_out" 2>&1; then
+		printf '  [fail] the rebuilt segment is not the stock tree:\n'
+		head -8 "$cmp_out" | sed 's/^/           /'
+		rm -rf "$work_a" "$work_b"
+		die "refusing to install it"
 	fi
-	ok "it adds no path the stock image does not already have"
+	if ! diff <(hashes "$work_a" | grep -v "  $mod_rel\$") \
+	          <(hashes "$work_b" | grep -v "  $mod_rel\$") > "$cmp_out" 2>&1; then
+		printf '  [fail] a file other than the module differs:\n'
+		head -8 "$cmp_out" | sed 's/^/           /'
+		rm -rf "$work_a" "$work_b"
+		die "refusing to install it"
+	fi
+	ok "the rebuilt segment is the stock tree, differing only in the module"
 
-	# 4. the copy the kernel ends up with: the last one, which is ours
+	# 4. the module in the rebuilt segment is the staged one
 	want="$(sha256sum "$MOD" | awk '{print $1}')"
-	tail -c +$((tail_off + 1)) "$cam_initrd" | cpio -i --to-stdout "${mod_paths[0]}" > "$mod_extracted" 2>/dev/null
-	[ -s "$mod_extracted" ] || die "could not extract ${mod_paths[0]} out of the appended archive"
-	got="$(sha256sum "$mod_extracted" | awk '{print $1}')"
-	[ "$want" = "$got" ] || die "the appended copy is $got, not the staged module ($want)"
-	ok "the appended copy is the staged module ($got)"
-	ok "and it wins: unpack_to_rootfs keeps going after a compressed segment and"
-	say "         do_name opens the file O_TRUNC, so a later archive replaces an earlier file"
+	got="$(sha256sum "$work_b/${mod_paths[0]}" 2>/dev/null | awk '{print $1}')"
+	[ "$want" = "$got" ] || { rm -rf "$work_a" "$work_b"; die "the module in the rebuilt segment is not the staged one ($got)"; }
+	rm -rf "$work_a" "$work_b"
+	ok "the module in the rebuilt segment is the staged one ($got)"
 
-	# 5. nothing else moved: the stock image's own /init and member count
-	cut -f2- "$list_orig" | grep -qx 'init' || die "the stock image has no /init"
-	ok "/init is there, from the stock image, untouched"
-	ok "size $new_size = $stock_size + $((new_size - stock_size)) appended"
+	# 5. the file list of the whole image is the stock image's
+	initramfs_members "$cam_initrd" > "$list_new" || die "could not read the camera image"
+	if ! diff <(cut -f2- "$list_orig" | sort -u) <(cut -f2- "$list_new" | sort -u) >/dev/null; then
+		die "the camera image's file list differs from the stock image's"
+	fi
+	ok "same $(sort -u "$list_new" | wc -l) members as the stock image"
+	cut -f2- "$list_new" | grep -qx 'init' || die "no /init in the camera image"
+	ok "/init is there"
+	ok "size $new_size against the stock's $stock_size"
 }
 
 # ---------------------------------------------------------------- reading an initramfs
@@ -319,46 +327,70 @@ initramfs_extract() {
 
 # ---------------------------------------------------------------- build
 say ""
-say "=== building the camera initramfs: the stock image plus one appended archive ==="
+say "=== building the camera initramfs: the last segment, rebuilt with the module inside ==="
 initramfs_members "$initrd" > "$list_orig" || die "could not read the stock initramfs"
 mapfile -t mod_paths < <(cut -f2- "$list_orig" | grep 'qcom-rpmh-regulator\.ko$' | sort -u)
 [ "${#mod_paths[@]}" -gt 0 ] || die "the stock initramfs does not carry qcom-rpmh-regulator.ko"
 say "  the stock image keeps that module at:"
 for mp in "${mod_paths[@]}"; do printf '    %s\n' "$mp"; done
 
-# The appended archive holds the module as a single file record and nothing else --
-# no directory entries.  Two reasons: a repeated directory would have the kernel try
-# to create a path that already exists, and the parents are already in the stock
-# image anyway; and a one-record archive is trivial to check.  The name is spelled
-# exactly as the stock image spells it (not "./usr/..."): a different string would
-# make the kernel create a second file instead of replacing that one.
-tail_cpio="$(mktemp /tmp/a16-camera-tail.XXXXXX)"
-python3 - "$MOD" "$tail_cpio" "${mod_paths[@]}" <<'PYEOF' || die "could not build the appended archive"
-import sys
-mod, out, names = sys.argv[1], sys.argv[2], sys.argv[3:]
-data = open(mod, "rb").read()
+# The copy the kernel ends up with is the one in the LAST archive, so that is the one
+# that gets replaced; everything before it stays byte for byte.  (Appending an extra
+# archive after the stock image does NOT work: tried on 2026-10-05, and the kernel went
+# on using the stock module -- see the header.)
+mapfile -t segs < <(segment_offsets "$initrd") || die "could not walk the stock initramfs"
+[ "${#segs[@]}" -ge 1 ] || die "the stock initramfs has no segments"
+last="${segs[${#segs[@]}-1]}"
+seg_off="${last%% *}"; seg_kind="${last##* }"
+case "$seg_kind" in
+	zstd|gzip|xz) : ;;
+	*) die "the stock image's last segment is '$seg_kind'; this script only replaces the module in a compressed last segment" ;;
+esac
+initramfs_members "$initrd" "$seg_off" | cut -f2- > "$tail_names"
+found=0
+for mp in "${mod_paths[@]}"; do
+	grep -qx "$mp" "$tail_names" && found=1
+done
+[ "$found" = 1 ] || die "the module is not in the last segment, so replacing it there would win nothing"
+say "  the last segment is $seg_kind at offset $seg_off, and the module is in it"
 
-def record(ino, mode, nlink, name, body):
-    f = [ino, mode, 0, 0, nlink, 0, len(body), 0, 0, 0, 0, len(name) + 1, 0]
-    h = "070701" + "".join("%08x" % v for v in f)
-    assert len(h) == 110, len(h)
-    pad = lambda b: b + b"\x00" * ((4 - len(b) % 4) % 4)
-    return pad(h.encode() + name.encode() + b"\x00") + pad(body)
+# does the stock image spell members with a leading "./"?  the rebuild has to match,
+# or the kernel would see two different paths instead of one file
+if cut -f2- "$list_orig" | grep -q '^\./'; then seg_dot=yes; else seg_dot=no; fi
+say "  member names carry a leading './': $seg_dot"
 
-buf = b""
-for n in names:
-    buf += record(1, 0o100644, 1, n, data)
-buf += record(0, 0, 1, "TRAILER!!!", b"")
-open(out, "wb").write(buf)
-print(f"    one record, {len(names)} name(s), {len(data)} bytes of module")
-PYEOF
-ok "appended archive built: $(stat -c%s "$tail_cpio") bytes, holding $(printf '%s ' "${mod_paths[@]}")"
+work="$(mktemp -d /tmp/a16-camera-seg.XXXXXX)"
+unpack_segment() {   # $1 image, $2 offset, $3 kind, $4 target dir
+	case "$3" in
+		zstd) tail -c +$(($2 + 1)) "$1" | zstd -dc 2>/dev/null | ( cd "$4" && cpio -idm --quiet ) ;;
+		gzip) tail -c +$(($2 + 1)) "$1" | gzip -dc 2>/dev/null | ( cd "$4" && cpio -idm --quiet ) ;;
+		xz)   tail -c +$(($2 + 1)) "$1" | xz -dc 2>/dev/null | ( cd "$4" && cpio -idm --quiet ) ;;
+		cpio) tail -c +$(($2 + 1)) "$1" | cpio -idm --quiet ;;
+	esac
+}
+say "  unpacking the last segment"
+unpack_segment "$initrd" "$seg_off" "$seg_kind" "$work" || { rm -rf "$work"; die "could not unpack the last segment"; }
+for mp in "${mod_paths[@]}"; do
+	[ -f "$work/$mp" ] || die "the last segment does not actually contain $mp"
+	install -m 0644 -o root -g root "$MOD" "$work/$mp" || die "could not place the module"
+	say "    replaced $mp"
+done
 
-cat "$initrd" > "$cam_initrd.new" || die "could not copy the stock initramfs"
-cat "$tail_cpio" >> "$cam_initrd.new" || die "could not append the archive"
+new_seg="$(mktemp /tmp/a16-camera-seg-out.XXXXXX)"
+( cd "$work" && if [ "$seg_dot" = yes ]; then find . -print0; else find * -print0; fi | cpio --null -o -H newc --quiet > "$new_seg" ) \
+	|| { rm -rf "$work"; die "could not repack the segment"; }
+rm -rf "$work"
+case "$seg_kind" in
+	zstd) zstd -19 -T0 -q -f -o "$new_seg.z" "$new_seg" && mv -f "$new_seg.z" "$new_seg" ;;
+	gzip) gzip -9 -c "$new_seg" > "$new_seg.z" && mv -f "$new_seg.z" "$new_seg" ;;
+	xz)   xz -T0 -c "$new_seg" > "$new_seg.z" && mv -f "$new_seg.z" "$new_seg" ;;
+esac
+head -c "$seg_off" "$initrd" > "$cam_initrd.new" || { rm -f "$new_seg"; die "could not copy the stock prefix"; }
+cat "$new_seg" >> "$cam_initrd.new" || { rm -f "$new_seg"; die "could not append the new segment"; }
+rm -f "$new_seg"
 mv -f "$cam_initrd.new" "$cam_initrd"
 chmod 0644 "$cam_initrd"
-ok "camera initramfs: stock ($stock_size bytes) + $(stat -c%s "$tail_cpio") bytes appended = $(stat -c%s "$cam_initrd")"
+ok "prefix kept byte for byte ($seg_off bytes) + rebuilt $seg_kind segment = $(stat -c%s "$cam_initrd") bytes"
 
 # ---------------------------------------------------------------- verify
 verify_cam_initramfs

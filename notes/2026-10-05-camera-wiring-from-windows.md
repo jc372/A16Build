@@ -351,6 +351,21 @@ byte-for-byte prefix, the appended archive carries exactly the one path, it adds
 path the stock image does not have, its copy hashes to the staged module, `/init` is
 present, and a truncated tail is refused.
 
+**It did not work, and the boot said so.**  Camera boot 06a14e9d: the log still reads
+`regulators-5: Unknown regulator ldo4` and `probe with driver qcom-rpmh-regulator
+failed with error -22`, i.e. the *stock* module was loaded -- the appended archive was
+not used, exactly the benign failure the shape was chosen for (boot fine, no rails, no
+camera).  So the shape changed: everything before the image's **last archive** is kept
+byte for byte, and that last archive is unpacked, given the rebuilt module in place of
+the stock one, and packed again.  Same idea (only the module changes) without relying
+on the kernel reading anything past a compressed segment.
+
+Validated on the real 48968838-byte two-segment image: prefix byte-identical, the
+rebuilt segment's manifest and per-file hashes equal to the stock tree's except the
+module, the module inside hashing to the staged one, and the member list equal apart
+from the five `dev/*` character devices that cpio cannot mknod as a normal user (the
+installer runs as root, where they round-trip).
+
 2. **`cpio -i --to-stdout <member>` exits 0 when the member is not in that archive.**
    Extracting the module from the first segment therefore "succeeded" with empty
    output and the check reported a mismatch.  Extract into a file and test `-s`, not

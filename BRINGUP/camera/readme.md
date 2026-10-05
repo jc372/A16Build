@@ -101,23 +101,26 @@ its service, and leaves the backups next to the menus it edited.
     sudo bash ~/a16-payload/camera/a16-camera-step2.sh --check    # verify, change nothing
     sudo bash ~/a16-payload/camera/a16-camera-step2.sh --remove   # undo
 
-The run gives the camera entry its own initramfs: the stock image's bytes, with one
-small archive appended that re-supplies only the rebuilt `qcom-rpmh-regulator`.  The
-kernel reads an initramfs as a sequence of archives and a later one replaces an
-earlier file (`init/initramfs.c`: `unpack_to_rootfs` carries on past a compressed
-segment, `do_name` opens the file `O_TRUNC`), so the camera boot gets the module with
-the PMH0104 rails while everything else stays byte-for-byte what the machine boots
-today.  Nothing is installed into `/lib/modules`, no hook is left behind, and no other
-menu entry is touched.
+The run gives the camera entry its own initramfs: everything before the image's last
+archive is kept byte for byte, and that last archive is unpacked, given the rebuilt
+`qcom-rpmh-regulator` in place of the stock one, and packed again.  So the module the
+kernel loads is the one with the PMH0104 rails, and every other file in the image is
+the one the machine boots today.  Nothing is installed into `/lib/modules`, no hook is
+left behind, and no other menu entry is touched.
+
+(An earlier attempt appended the module as an extra archive after the stock image.
+Measured on 2026-10-05, that does not work: the kernel went on using the stock module,
+`regulators-5: Unknown regulator ldo4` in the log.  Hence replacing it inside the last
+archive.)
 
 Read the install output.  These lines are the ones that matter:
 
     [ok]   the stock initramfs is untouched
-    [ok]   the camera image starts with the stock image, byte for byte (48432086 bytes)
-    [ok]   appended: exactly usr/lib/modules/.../qcom-rpmh-regulator.ko
-    [ok]   it adds no path the stock image does not already have
-    [ok]   the appended copy is the staged module (6ae0320d...)
-    [ok]   /init is there, from the stock image, untouched
+    [ok]   the first <offset> bytes are the stock image's, byte for byte
+    [ok]   the rebuilt segment is the stock tree, differing only in the module
+    [ok]   the module in the rebuilt segment is the staged one (6ae0320d...)
+    [ok]   same <n> members as the stock image
+    [ok]   /init is there
     [ok]   camera entry now boots initrd.img-<version>-camera1
 
 Then reboot and pick the camera entry.  Every run leaves a log at
