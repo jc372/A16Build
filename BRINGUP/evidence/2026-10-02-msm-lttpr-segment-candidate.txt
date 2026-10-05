@@ -28,7 +28,7 @@ What the captures actually show (two independent runs, same pattern)
   0xf0021), which msm never read at all. In the DP-2 capture clock recovery is lost exactly
   when pre-emphasis 3 is driven into the repeater.
 
-Change built (BRINGUP/patches/0018-msm-dp-lttpr-segment-training.patch, 4 files)
+Change built (retired/patches/old-numbering/0018-msm-dp-lttpr-segment-training.patch, 4 files)
 1. `dp_ctrl.c` — TPS4 is selected only for the sink segment (`dp_phy == DP_PHY_DPRX`).
    LTTPR segments use TPS3/TPS2, which is what the receiver advertises once the LTTPRs are
    active (and what the sink segment already trains with successfully).

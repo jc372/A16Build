@@ -3,7 +3,7 @@
 ## What was staged
 
 `sudo bash ~/a16.sh msmlttpr` staged the LTTPR segment-training `msm.ko`
-candidate (patch `BRINGUP/patches/0018-msm-dp-lttpr-segment-training.patch`)
+candidate (patch `retired/patches/old-numbering/0018-msm-dp-lttpr-segment-training.patch`)
 over the known-good `dpnext` layer and rebooted.
 
 ## Symptom

@@ -27,6 +27,7 @@ ad7faf6149b56468c7666898f54fb7045fc54eeae5e87b86d2993e92e5ccc3f7  ../../patches/
 873981896d897d7e90375085470792c0d5d297abb3963d09aa4939a8e7c5e70a  ../../patches/0015-drm-msm-a8xx-gate-clx-thinmem-hfi-exchanges/0015-drm-msm-a8xx-gate-clx-thinmem-hfi-exchanges.patch
 0d8d096dc2563447ce23e97059b23e1bdc0a2837060943da55fcb859a4bffa84  ../../patches/0016-drm-msm-attach-a-driver-to-the-gmu/0016-drm-msm-attach-a-driver-to-the-gmu.patch
 7f709c7f2aa738d1592f686440a810311855245b6dc194e055d4c830a00233b4  ../../patches/0017-dts-hdmi-bridge-tert-gdsc/0017-dts-hdmi-bridge-tert-gdsc.patch
+56824b6dcb8ef6ac0d5bf72ba16a89192b14e17f88c3c78cc1132f30c5690d76  ../../patches/0018-dts-rtc-uefi-rtc-info/0018-dts-rtc-uefi-rtc-info.patch
 
 # the prebuilt kernel package (arm64, built from this patch set)
 52704a0af3bcb01de02beaf8d4d1fe29dbf9de228a538d33f8abc8fb36a20ecf  linux-image-7.3.0-rc5-next-20261002-ec1_7.3.0-rc5-next-20261002-ec1_arm64.deb

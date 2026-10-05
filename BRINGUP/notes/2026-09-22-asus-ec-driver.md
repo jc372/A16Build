@@ -53,7 +53,7 @@ the radio survives (`sudo bash ~/a16.sh wifisleep test`).
 
 ## What was done here, and what is verified
 
-* The three patches are carried as `BRINGUP/patches/0011..0013` and **apply cleanly** to the tree this
+* The three patches are carried as `retired/patches/old-numbering/0011..0013` and **apply cleanly** to the tree this
   kernel was built from (`~/build/linux-next-1a1de54f7369`, commit `1a1de54f7369cd`).
 * `CONFIG_EC_ASUS_GLYMUR=m`; the module is built natively:
   `drivers/platform/arm64/asus-glymur-ec.ko`, 465 648 B, and **ABI-verified against the running

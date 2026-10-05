@@ -158,9 +158,9 @@ printf '  module_layout CRC  : %s (kernel-built modules: 0xe6658f7b)\n' \
 
 echo "== record patches =="
 diff -u "$base/drivers/gpu/drm/msm/dp/dp_panel.c" "$src/drivers/gpu/drm/msm/dp/dp_panel.c" \
-    > "$repo/BRINGUP/patches/0019-msm-dp-external-rate-cap-parameter.patch" || true
+    > "$repo/retired/patches/old-numbering/0019-msm-dp-external-rate-cap-parameter.patch" || true
 diff -u "$base/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_vid.c" \
         "$src/drivers/gpu/drm/msm/disp/dpu1/dpu_encoder_phys_vid.c" \
-    > "$repo/BRINGUP/patches/0020-dpu-drop-stuck-flush-after-vblank-timeout.patch" || true
-wc -l "$repo"/BRINGUP/patches/0019-*.patch "$repo"/BRINGUP/patches/0020-*.patch | sed 's/^/  /'
+    > "$repo/retired/patches/old-numbering/0020-dpu-drop-stuck-flush-after-vblank-timeout.patch" || true
+wc -l "$repo"/retired/patches/old-numbering/0019-*.patch "$repo"/retired/patches/old-numbering/0020-*.patch | sed 's/^/  /'
 echo "DONE - stage with: sudo bash ~/a16.sh dprate"

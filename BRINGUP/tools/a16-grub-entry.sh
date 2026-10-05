@@ -51,7 +51,7 @@ fi
 
 # ------------------------------------------------------------------ locate the pieces
 menufile() {   # the menu the machine actually boots from, not merely the first one found:
-	local c best="" best_score=-1 score n why     # 'EFI/Boot/grub.cfg' sorts first but is the
+	local c best="" best_score=-1 score n why running     # 'EFI/Boot/grub.cfg' sorts first but is the
 	for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
 		[ -f "$c" ] || continue                  # removable-media fallback
 		score=0; why=""
@@ -59,6 +59,15 @@ menufile() {   # the menu the machine actually boots from, not merely the first 
 		n="$(grep -cE '^[[:space:]]*menuentry' "$c" 2>/dev/null || echo 0)"
 		score=$((score+n)); why="$why, $n entries"
 		grep -q 'linux /boot/vmlinuz' "$c" 2>/dev/null && { score=$((score+10)); why="$why, names kernels"; }
+		# The decisive test. The firmware reads exactly one menu: the one this running kernel was
+		# booted from. Several ESP menus match *ubuntu* and score equally on that alone, and then a
+		# larger entry count wins -- which put an entry into EFI/ubuntu/grub.cfg on this machine while
+		# the firmware only ever reads EFI/ubuntu_snapdragon/grub.cfg. Nothing read it, and the kernel
+		# looked missing from the menu. Prefer the menu that names the kernel we are running under.
+		running="$(uname -r 2>/dev/null)"
+		if [ -n "$running" ] && grep -q "vmlinuz-$running" "$c" 2>/dev/null; then
+			score=$((score+1000)); why="$why, names the RUNNING kernel ($running)"
+		fi
 		printf '  candidate: %-46s %s\n' "${c##"$R"}" "$why" >&2   # stdout carries only the winner
 		[ "$score" -gt "$best_score" ] && { best_score="$score"; best="$c"; }
 	done

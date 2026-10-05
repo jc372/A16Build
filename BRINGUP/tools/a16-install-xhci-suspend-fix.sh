@@ -19,7 +19,7 @@
 # HCD was never suspended, leave the controller running instead of failing the system suspend, remind
 # it on the resume half, and log the hcd/root-hub states at every transition.
 #
-# Patch: BRINGUP/patches/0010-xhci-plat-a16-skip-unsuspended-hcd.patch
+# Patch: retired/patches/old-numbering/0010-xhci-plat-a16-skip-unsuspended-hcd.patch
 # Built from: ~/build/linux-next-1a1de54f7369 (native, same tree/config as the running kernel)
 # Module parameters (live, either direction):
 #   /sys/module/xhci_plat_hcd/parameters/a16_skip_unsuspended_hcd   the fix, 1 = on (default)
@@ -104,7 +104,7 @@ fi
 # ------------------------------------------------------------------ install
 rule
 say "-- checking the module to install"
-[ -f "$KO" ] || { say "   $KO is missing -- build it first:"; say "     (see BRINGUP/patches/0010-*.patch and tools/a16-build-gpucc-native.sh)"; exit 1; }
+[ -f "$KO" ] || { say "   $KO is missing -- build it first:"; say "     (see retired/patches/old-numbering/0010-*.patch and tools/a16-build-gpucc-native.sh)"; exit 1; }
 say "   file          : $KO"
 say "   built         : $(date -r "$KO" '+%Y-%m-%d %H:%M:%S')   $(stat -c %s "$KO") bytes"
 

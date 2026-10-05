@@ -94,7 +94,7 @@ DT's `link-frequencies` already reach 8.1 G, so nothing in the DT needed changin
 **2026-10-02 correction:** the historical patch above applied to every DP connector, not only
 eDP. A built candidate narrows the condition to `DRM_MODE_CONNECTOR_eDP`, leaving
 the working internal panel's HBR3 choice intact while restoring external sink/LTTPR rate limits.
-See `BRINGUP/patches/0016-dp-external-rate-and-failed-enable-guard.patch` and
+See `retired/patches/old-numbering/0016-dp-external-rate-and-failed-enable-guard.patch` and
 `BRINGUP/evidence/2026-10-02-dp-next-candidate.txt`.
 
 Result, first boot with it:

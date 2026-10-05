@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 # a16-x11-desktop.sh -- get a usable GNOME desktop on the panel WITHOUT the GPU.
 #
-# Why X11 and not Wayland: on Wayland mutter takes the msm GPU path for rendering, and the adreno
-# gen8 render path is not working in this kernel.  gnome-shell's first GPU submit oopses:
+# Why X11 and not Wayland: this script exists for the case where the adreno gen8 render path is
+# broken and the GPU cannot be used -- it forces the X server, and the desktop, onto software
+# rendering.  That was necessary while gnome-shell's first GPU submit oopsed:
+#
+# Historical note: the GPU is FIXED on this machine as of the t2 release (the two HFI exchanges
+# gen80100_gmu.bin v5.2.38 will not ack are gated for this chip).  On the current kernel a
+# Wayland session with the GPU works, so this script is a fallback rather than a requirement.
 #
 #     Internal error: Oops: 0000000096000004 [#1]  SMP
 #     CPU: 9 PID: 4809 Comm: gnome-shell
@@ -63,8 +68,9 @@ say ""
 say "2. tell the X server not to accelerate (nothing may reach msm's render path)"
 install -d -m 0755 /etc/X11/xorg.conf.d
 cat > /etc/X11/xorg.conf.d/20-a16-noaccel.conf <<'EOF'
-# A16: the adreno gen8 render path is not working in this kernel -- gnome-shell's first GPU submit
-# oopses (msm_ioctl_gem_submit) and wedges the machine.  So the X server must not accelerate.
+# A16: written for when the adreno gen8 render path was broken -- gnome-shell's first GPU submit
+# oopsed (msm_ioctl_gem_submit) and wedged the machine.  The GPU works on the current kernel;
+# this config is kept for the fallback case, and forces the X server not to accelerate.
 Section "Device"
     Identifier  "A16 msm"
     Driver      "modesetting"
@@ -84,7 +90,7 @@ install -d -m 0755 /usr/share/xsessions
 cat > /usr/share/xsessions/ubuntu-a16-xorg.desktop <<'EOF'
 [Desktop Entry]
 Name=Ubuntu on Xorg (A16)
-Comment=GNOME on X11 with software rendering (GPU path is broken on this machine)
+Comment=GNOME on X11 with software rendering (fallback; the GPU works on current kernels)
 Exec=env GNOME_SHELL_SESSION_MODE=ubuntu gnome-session --session=ubuntu
 Type=Application
 DesktopNames=GNOME

@@ -137,7 +137,7 @@ do_verdict() {
 
 do_next() {
   rule
-  if [ ! -f "$REPO/BRINGUP/patches/0014-ath12k-a16-no-soc-global-reset-on-resume.patch" ]; then
+  if [ ! -f "$REPO/BRINGUP/patches/retired/0014-ath12k-a16-no-soc-global-reset-on-resume.patch" ]; then
     say "FATAL: the patch file is missing from $REPO -- tell me, nothing is changed."; return 1
   fi
   # 1. not installed yet (or the built module is missing) -> install

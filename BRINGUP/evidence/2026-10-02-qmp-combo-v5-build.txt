@@ -9,7 +9,7 @@ Source and patch
 - Isolated candidate: `/home/jc/build/linux-next-1a1de54f7369-qmp-v5`.
 - Applied the 11-message Glymur/QMP combo-PHY v5 series in order: 00690, 00757, 00683, 00663, 00765, 00699, 00719, 00650, 00652, 00653, 00678.
 - The LKML HTML extraction omitted one context line in patch 00719; its hunk count was adjusted to the six context lines present. Two config-field insertions were placed at their corresponding local struct position because the local snapshot's struct layout differs from the series base.
-- Exact combined source delta: `BRINGUP/patches/0015-qmp-combo-glymur-v5-for-next-20260914.patch`. `git apply --check` passes against the untouched base source snapshot.
+- Exact combined source delta: `retired/patches/old-numbering/0015-qmp-combo-glymur-v5-for-next-20260914.patch`. `git apply --check` passes against the untouched base source snapshot.
 
 Build and ABI checks
 - Running kernel: `7.3.0-rc3-next-20260914` (arm64).

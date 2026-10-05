@@ -88,7 +88,7 @@ die()  { printf '  [fail] %s\n' "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 menufile() {   # the menu the machine actually boots from, not the first one found -- EFI/Boot
-	local c best="" best_score=-1 score n          # sorts first but is the removable fallback
+	local c best="" best_score=-1 score n running  # sorts first but is the removable fallback
 	for c in "$R"/boot/efi/EFI/*/grub.cfg "$R"/boot/EFI/EFI/*/grub.cfg "$R"/boot/efi/EFI/*/*/grub.cfg; do
 		[ -f "$c" ] || continue
 		score=0
@@ -96,6 +96,14 @@ menufile() {   # the menu the machine actually boots from, not the first one fou
 		n="$(grep -cE '^[[:space:]]*menuentry' "$c" 2>/dev/null || echo 0)"
 		score=$((score+n))
 		grep -q 'linux /boot/vmlinuz' "$c" 2>/dev/null && score=$((score+10))
+		# The decisive test. Several ESP menus match *ubuntu* and score the same on that alone, after
+		# which a larger entry count wins -- which put this entry into EFI/ubuntu/grub.cfg on a machine
+		# whose firmware only reads EFI/ubuntu_snapdragon/grub.cfg. Nothing read it and the kernel
+		# looked missing from the menu. Prefer the menu naming the kernel we are running under.
+		running="$(uname -r 2>/dev/null)"
+		if [ -n "$running" ] && grep -q "vmlinuz-$running" "$c" 2>/dev/null; then
+			score=$((score+1000))
+		fi
 		[ "$score" -gt "$best_score" ] && { best_score="$score"; best="$c"; }
 	done
 	[ -n "$best" ] && printf '%s' "$best"

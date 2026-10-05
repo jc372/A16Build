@@ -338,7 +338,7 @@ controller running (and skip the matching resume) instead of failing the system 
 `hcd->state`, `hcd->flags`, both root hubs' states, `device_may_wakeup()` and `xhci->quirks` at every
 transition. Reasoning, the three candidate root causes and what each would need:
 `BRINGUP/notes/2026-09-17-xhci-second-suspend.md`; patch:
-`BRINGUP/patches/0010-xhci-plat-a16-skip-unsuspended-hcd.patch`.
+`retired/patches/old-numbering/0010-xhci-plat-a16-skip-unsuspended-hcd.patch`.
 
     sudo bash ~/a16.sh suspendfix            # install (checks vermagic + every import CRC first)
     sudo bash ~/a16.sh suspendfix status     # installed? loaded? which module parameters are live

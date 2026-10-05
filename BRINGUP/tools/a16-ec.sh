@@ -23,7 +23,7 @@
 #
 # State of the series when this was written: v1, under review (Krzysztof Kozlowski on the bindings;
 # Abel Vesa has given a Reviewed-by on the DTS).  Not in linux-next yet -- so it is carried here as
-# BRINGUP/patches/0011..0013, which apply cleanly to the tree this kernel was built from.
+# retired/patches/old-numbering/0011..0013, which apply cleanly to the tree this kernel was built from.
 #
 # WHY IT IS WORTH HAVING ON THIS MACHINE, beyond fans and temperatures
 # -------------------------------------------------------------------
@@ -69,7 +69,7 @@ usage() {
 a16-ec -- the ASUS Zenbook A16 Embedded Controller (the posted 2026-09-17 driver).
 
 usage:
-  bash a16-ec.sh build     no root: apply BRINGUP/patches/0011..0013 to the kernel tree, turn
+  bash a16-ec.sh build     no root: apply retired/patches/old-numbering/0011..0013 to the kernel tree, turn
                            CONFIG_EC_ASUS_GLYMUR=m on, build asus-glymur-ec.ko and the DTB, and
                            verify vermagic / module_layout / every symbol CRC against the kernel
   sudo bash a16-ec.sh install   install the module into /lib/modules/<ver>/updates/a16/ (depmod) and

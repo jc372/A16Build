@@ -47,6 +47,7 @@ The patch filenames in this directory are the list. In application order:
 | `0014-soundwire-qcom-decode-all-slaves-before-alert-handoff` | decodes every SoundWire slave before the alert handoff | the sound card does not come up |
 | `0016-drm-msm-attach-a-driver-to-the-gmu` | binds the GMU as its own driver | upstream series (RFT at the time of writing): without it the GMU is left without a bound driver, so `3d6c000.gmu` reports `sync_state() pending`. Carries the definitions of `adreno_gmu_register()`/`adreno_gmu_unregister()` that the rest of the tree calls. |
 | `0017-dts-hdmi-bridge-tert-gdsc` | gives the HDMI bridge PHY its `GCC_USB30_TERT_GDSC` power domain | `phy-88e1000.phy.14: phy init failed --> -16`; the HDMI PHY's `com_aux` clock never comes up |
+| `0018-dts-rtc-uefi-rtc-info` | tells `&pmk8850_rtc` to take the time from firmware (`qcom,uefi-rtc-info`; other boards such as `glymur-qcb` set it, this one did not) | the clock comes up from the RTC's own registers instead of the firmware's stored time. This patch was added because the built tree carried the change and nothing in the set explained it — the set could not reproduce the t2 dtb without it. |
 
 ### Carried — the reverse case: upstream has the code and we gate it off for this part
 
@@ -88,7 +89,7 @@ Three fixes exist here and nowhere in this release:
 ## 4. Things that look like patches but are not
 
 Nothing in `patches/` on this release. Every file there is an ordinary source patch
-against the tree, and `MANIFEST.sha256` records all fifteen of them.
+against the tree, and `MANIFEST.sha256` records all sixteen of them.
 
 This section exists because an earlier numbering carried scratch names from a DTB-patching
 workflow — paths such as

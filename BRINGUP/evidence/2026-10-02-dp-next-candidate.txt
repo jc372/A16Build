@@ -12,7 +12,7 @@ Candidate delta
 - Restrict the A16 HBR3 override to the internal eDP connector. External DP/HDMI now uses the rate selected from DPCD and capped by LTTPR capabilities. The internal eDP workaround stays unchanged for this panel.
 - Skip PUSH_IDLE if `power_on` is false; change matches the behavior of the posted A16-tested guard.
 - Reuse the previously built Glymur QMP v5 candidate unchanged because it reached training where stock earlier failed at DPTX0 clock enable. This is not proof that the QMP candidate fixed that clock failure.
-- Source patch: `BRINGUP/patches/0016-dp-external-rate-and-failed-enable-guard.patch` (forward applies to pre-change source; reverse applies to built candidate source).
+- Source patch: `retired/patches/old-numbering/0016-dp-external-rate-and-failed-enable-guard.patch` (forward applies to pre-change source; reverse applies to built candidate source).
 - Built msm module: `/home/jc/build/linux-next-1a1de54f7369/drivers/gpu/drm/msm/msm.ko`; build log `/home/jc/a16-payload/dp-next-msm-build-20261002.log`.
 - Candidate msm SHA-256 `2c9655130d981b5ca50155850630822d303ee57002f19548951443b54f8b83a7`, srcversion `BBD010BD47287F02B65EE84`; running kernel's vermagic matches. All 805 imported-symbol CRCs match both the loaded-version file and stock, including module_layout `0xe6658f7b`.
 - Reusable QMP candidate SHA-256 `444b792b2f336d03e210dad95322160c86ca8138a90827ea2cbab1507dca7a31`; its 81 imports matched stock in the prior build.
