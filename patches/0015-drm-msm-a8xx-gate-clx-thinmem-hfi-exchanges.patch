@@ -1,0 +1,55 @@
+--- a/drivers/gpu/drm/msm/adreno/a6xx_hfi.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_hfi.c
+@@ -1059,6 +1059,8 @@
+ 
+ int a6xx_hfi_start(struct a6xx_gmu *gmu, int boot_state)
+ {
++	struct a6xx_gpu *a6xx_gpu = container_of(gmu, struct a6xx_gpu, gmu);
++	struct adreno_gpu *adreno_gpu = &a6xx_gpu->base;
+ 	int ret;
+ 
+ 	if (gmu->legacy)
+@@ -1077,17 +1079,37 @@
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = a6xx_hfi_enable_clx(gmu);
+-	if (ret)
+-		return ret;
++	/*
++	 * x285 (Glymur / Snapdragon X2 Elite): the firmware this part ships with
++	 * (gen80100_gmu.bin v5.2.38) does not accept this exchange. It raises its
++	 * FW_INIT error flag (0x800) and then never acks the first GX bandwidth vote,
++	 * so GPU bring-up fails with -110. Every exchange before and after it is
++	 * accepted, and skipping it brings the 3D stack up. Gated to this family until
++	 * upstream settles how the capability should be detected.
++	 */
++	if (!adreno_is_x285_family(adreno_gpu)) {
++		ret = a6xx_hfi_enable_clx(gmu);
++		if (ret)
++			return ret;
++	}
+ 
+ 	ret = a6xx_hfi_enable_ifpc(gmu);
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = a6xx_hfi_send_thinmem_config(gmu);
+-	if (ret)
+-		return ret;
++	/*
++	 * x285 (Glymur / Snapdragon X2 Elite): the firmware this part ships with
++	 * (gen80100_gmu.bin v5.2.38) does not accept this exchange. It raises its
++	 * FW_INIT error flag (0x800) and then never acks the first GX bandwidth vote,
++	 * so GPU bring-up fails with -110. Every exchange before and after it is
++	 * accepted, and skipping it brings the 3D stack up. Gated to this family until
++	 * upstream settles how the capability should be detected.
++	 */
++	if (!adreno_is_x285_family(adreno_gpu)) {
++		ret = a6xx_hfi_send_thinmem_config(gmu);
++		if (ret)
++			return ret;
++	}
+ 
+ 	ret = a6xx_hfi_send_core_fw_start(gmu);
+ 	if (ret)

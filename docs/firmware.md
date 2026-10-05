@@ -117,9 +117,12 @@ into `/lib/firmware/qca/` and see whether it settles. That is the case they are 
 
 ## Not covered here
 
-- **3D GPU** — the Adreno firmware is vendor-only and is not installed on this machine
-  (`gpu-video`: `qcdxkmsuc8480.mbn`, `qcdxkmbase8480_*.bin`, `qcvss8480.mbn`). Whether the current
-  `GMU firmware initialization timed out` is caused by that, or is a kernel-side issue, is untested.
+- **3D GPU** — settled, and it was not a firmware problem. The GPU firmware this machine needs
+  (`qcom/gen80100_gmu.bin`, `qcom/gen80100_sqe.fw` and the zap image) is already in linux-firmware;
+  the failure was kernel-side — two HFI exchanges the shipped `gen80100_gmu.bin` v5.2.38 will not
+  acknowledge. Gating them for this chip brings the GPU up, and the GPU works with no firmware
+  copied from Windows. The `gpu-video` images (`qcdxkmsuc8480.mbn` and friends) belong to the video
+  decode block, which is not enabled on this kernel and is not needed for 3D.
 - **Camera** — the vendor images exist in the driver store, but the device tree path for the sensor
   is not in place and there is no page for it yet.
 - **Wireless regulatory database** — `regulatory.db` is not ours; it belongs to the `wireless-regdb`

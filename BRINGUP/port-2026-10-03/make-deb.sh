@@ -95,7 +95,7 @@ Depends: kmod
 Installed-Size: $SIZE
 Description: Linux kernel $VER for the ASUS Zenbook A16 (UX3607OA)
  Built from linux-next next-20261002 with the A16 port applied: display, external display,
- Bluetooth, suspend, and the embedded controller.
+ Bluetooth, suspend, the embedded controller, audio, and the 3D GPU.
  .
  The postinst builds the initramfs for this kernel. No bootloader hook: add the boot
  entry yourself (see the repository README).

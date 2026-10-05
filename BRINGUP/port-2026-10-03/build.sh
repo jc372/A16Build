@@ -7,8 +7,10 @@
 #   sudo bash build.sh --all       build, then install
 #
 # Idempotent: every step checks whether its work is already done and skips it.
-# All paths are relative to this directory. Nothing is destructive: every step that
-# writes takes a backup, and the boot menu is backed up before it is edited.
+# Paths are relative to this directory, except the patch set, which lives at the
+# repository root (../../patches) so there is one working set and not several.
+# Nothing is destructive: every step that writes takes a backup, and the boot menu
+# is backed up before it is edited.
 #
 # What this build is, and why each piece is here, is in ./readme.md.
 set -u
@@ -20,7 +22,7 @@ BASE="${A16_BUILD_DIR:-$HOME/build}"
 TAR="$BASE/linux-$REL.tar.gz"
 TREE="${A16_TREE:-$BASE/$REL}"
 URL="https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/snapshot/linux-$REL.tar.gz"
-PATCH_DIR="$HERE/patches"
+PATCH_DIR="${A16_PATCH_DIR:-$HERE/../../patches}"   # the patch set lives at the repository root
 SEED="$HERE/config-seed"
 ESP="${A16_ESP:-/boot/efi}"
 LOG="${A16_LOG:-$HOME/a16-payload/a16-build-$REL-$(date +%Y%m%d-%H%M%S).log}"

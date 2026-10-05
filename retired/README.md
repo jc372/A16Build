@@ -11,7 +11,7 @@ this is where it is.** Those documents are a historical record and were left as 
 | Directory | What it was | Why it is retired |
 |-----------|-------------|-------------------|
 | `firmware/` | Device trees built by hand and copied to `/boot` | The build produces its own DTB from the tree; nothing is loaded out of band |
-| `patches/` | The older patch series, pre-port | Superseded by `BRINGUP/port-2026-10-03/patches/`, which is the verified set |
+| `patches/` | The older patch series, pre-port | Superseded by the verified set at the repository root, `patches/` |
 | `scripts/` | Bootstrap and staging helpers, including the module-overlay tooling | Superseded by `BRINGUP/port-2026-10-03/build.sh` and `BRINGUP/tools/` |
 
 What was learned, and what is still live: `docs/RETIRED-out-of-tree-drivers.md`. One tool from

@@ -40,6 +40,13 @@ patches in it, it reports your own work back as "already upstream" and is worthl
 | `0013-arm64-dts-glymur-zenbook-a16-ec` | the EC node in the DTS | no EC at `i2c 9-0076` |
 | `0014-ath12k-a16-no-soc-global-reset-on-resume` | ath12k resume | Wi-Fi does not survive resume |
 | `0016-ath12k-refuse-device-after-failed-resume` | ath12k error path | bad state after a failed resume |
+| `0016-drm-msm-attach-a-driver-to-the-gmu` | binds the GMU as its own driver | upstream series (RFT at the time of writing): without it the GMU is left without a bound driver, so `3d6c000.gmu` reports `sync_state() pending`. Carries the definitions of `adreno_gmu_register()`/`adreno_gmu_unregister()` that the rest of the tree calls. |
+
+### Carried — the reverse case: upstream has the code and we gate it off for this part
+
+| patch | what it does | why |
+|-------|--------------|-----|
+| `0015-drm-msm-a8xx-gate-clx-thinmem-hfi-exchanges` | skips the `a6xx_hfi_enable_clx()` and `a6xx_hfi_send_thinmem_config()` HFI exchanges on x285 | linux-next sends both unconditionally. The `gen80100_gmu.bin` v5.2.38 this part ships with does not accept them: it raises its FW_INIT error flag (`0x00000900` instead of the clean `0x00000100`) and then never acks the following GX bandwidth vote, so GPU bring-up fails with `-110`. Gated off, the 3D stack comes up (render node, hardware EGL, devfreq live). Open upstream question: how the capability should be detected. |
 
 ### Needs a rebase before it can be carried
 
@@ -109,13 +116,17 @@ only a `port` graph child. A node of this shape is required:
 Working: display (connected, 2880x1800, `dp_aux_backlight`), internal input (Asus
 Keyboard, hid-over-i2c touchpad, stylus), the EC at `i2c 9-0076`, Wi-Fi, sshd.
 
-Not working:
+Not working at the time this list was taken (all three are fixed by the patches that follow;
+the list is kept as the record of what the port was for):
 
 * **Bluetooth** — §5.
 * **External monitor** — plugging one in restarts the machine (§2).
 * **3D GPU** — `a6xx_gmu_start: GMU firmware initialization timed out`, then
   `Couldn't power up the GPU: -110`. The panel does not need the GMU, so the display is
-  unaffected, but GL applications fall back to software rendering.
+  unaffected, but GL applications fall back to software rendering. Fixed by
+  `0015-drm-msm-a8xx-gate-clx-thinmem-hfi-exchanges`: linux-next sends two HFI exchanges
+  (`a6xx_hfi_enable_clx()`, `a6xx_hfi_send_thinmem_config()`) that `gen80100_gmu.bin` v5.2.38
+  will not acknowledge, so they are gated for this chip and the GPU comes up.
 
 One configuration point is easy to lose and fatal: this release declares
 

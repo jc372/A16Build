@@ -6,7 +6,7 @@ staged ABI gate for each candidate. That work is **retired** and is not part of 
 
 **Why it is no longer needed:** linux-next now carries what the machine needs. The current
 kernel is built entirely in-tree from the snapshot in `../00-from-the-beginning.md`, and the
-eleven patches in `BRINGUP/port-2026-10-03/patches/` plus the kernel config are all it takes.
+fifteen patches in `patches/` plus the kernel config are all it takes.
 Nothing is loaded from an overlay, and no module is staged from a copied tree.
 
 **What was learned, and is kept:**

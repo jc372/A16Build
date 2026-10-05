@@ -21,7 +21,7 @@ steps in order. You do not need a second computer.
 | | |
 |---|---|
 | **Just want the kernel?** | Download the prebuilt **`.deb`** from [Releases](../../releases/latest). It is arm64, built for this machine on `7.3.0-rc5-next-20261002`. The page carries exactly two files: the package and `a16-install-kernel.sh`. Download both into one folder, run `sudo bash a16-install-kernel.sh`, and it puts the kernel, its modules and the device tree in place and adds the boot entry. No repository clone, nothing else to fetch. You still need Ubuntu on the machine (steps 1–4). |
-| **Build it yourself** | Follow the steps below. Everything you need to build the same kernel from source travels on a USB stick, and the patches are in [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/). |
+| **Build it yourself** | Follow the steps below. Everything you need to build the same kernel from source travels on a USB stick, and the patches are in [`patches/`](patches/). |
 
 Both routes end at the same place. The `.deb` is the same kernel this repository builds — the
 patches, the manifest and the hashes are here so you can check that.
@@ -94,7 +94,7 @@ fifth is optional and explained underneath:
 | Copy this | From |
 |---|---|
 | `a16-port.sh` | [`BRINGUP/port-2026-10-03/a16-port.sh`](BRINGUP/port-2026-10-03/a16-port.sh) |
-| `patches/` (whole directory) | [`BRINGUP/port-2026-10-03/patches/`](BRINGUP/port-2026-10-03/patches/) |
+| `patches/` (whole directory) | [`patches/`](patches/) |
 | `config-seed` | [`BRINGUP/port-2026-10-03/config-seed`](BRINGUP/port-2026-10-03/config-seed) |
 | `MANIFEST.sha256` | [`BRINGUP/port-2026-10-03/MANIFEST.sha256`](BRINGUP/port-2026-10-03/MANIFEST.sha256) |
 | `a16-pool/` — *optional, see below* | the build toolchain packages, so step 5 needs no network |
@@ -301,13 +301,14 @@ Windows as in step 4.
 
 | Working | Not working |
 |---|---|
-| Internal panel (2880x1800) | 3D GPU — software rendering only, upstream issue |
+| Internal panel (2880x1800) | Camera — needs a device tree description and a userspace stack |
 | External monitor (USB-C and HDMI) | Internal speakers -- **needs firmware from your own Windows install**, which this repo cannot ship; see [docs/audio.md](docs/audio.md) | |
-| Bluetooth | Dock USB / ethernet after a suspend |
+| Bluetooth | Dock USB / ethernet after a suspend (usually fine; occasionally needs a replug) |
 | Wi-Fi | |
 | Suspend power draw (2.4 W while asleep -- PCIe L2; see [docs/suspend-power.md](docs/suspend-power.md)) | |
 | Internal speakers (with the audio profile — see [docs/audio.md](docs/audio.md)) | |
 | Suspend and resume, with the fans spinning down | |
+| 3D GPU (Adreno X2-90, via freedreno and turnip) | |
 
 ---
 

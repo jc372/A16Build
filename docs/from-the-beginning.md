@@ -198,9 +198,12 @@ Eleven patches, in the order they apply:
 
 **No out-of-tree drivers.** Earlier work loaded a set of hand-built modules (an overlay of
 `ath12k`, `msm`, the PHY drivers, `gpucc-glymur`) beside a stock kernel. On this linux-next
-that is gone: everything the machine needs is in-tree, and the build produces it. The only
-hold-out is the 3D GPU, which is an upstream `GMU firmware initialization timed out` and has
-no local patch.
+that is gone: everything the machine needs is in-tree, and the build produces it. The 3D GPU
+was the last hold-out, and it is now carried as a patch: linux-next sends two HFI exchanges
+(`a6xx_hfi_enable_clx()` and `a6xx_hfi_send_thinmem_config()`) that the shipped
+`gen80100_gmu.bin` v5.2.38 will not acknowledge -- it raises its own error flag and stops
+answering the bandwidth vote that follows. Gating those two for this chip brings the GPU up;
+see `UPSTREAM-REPORT.md` for the evidence.
 
 ---
 
@@ -208,7 +211,7 @@ no local patch.
 
 ```
 BRINGUP/port-2026-10-03/build.sh      # applies patches/*.patch and builds
-BRINGUP/port-2026-10-03/patches/      # the patch set -- this directory IS the set
+patches/                              # the patch set, at the repository root
 BRINGUP/port-2026-10-03/readme.md     # the decision record: what was tried, what was dropped
 BRINGUP/tools/a16-install-stock-next.sh   # install the built kernel beside the existing ones
 ```
@@ -238,7 +241,8 @@ Verified on `7.3.0-rc5-next-20261002` with the eleven patches above:
 | Suspend / resume | **Works** — measured by frozen monotonic time, not by the fans |
 | Fans on suspend | **Spin down**, via the EC driver |
 | EC (fans, temps, keyboard backlight, wakeup) | **Works**, bound at i2c `9-0076` |
-| 3D GPU | **Does not work** — upstream `GMU firmware initialization timed out`; software rendering only |
+| 3D GPU | **Works** — `Adreno (TM) X2-90` through freedreno (OpenGL 4.6) and turnip; the two HFI
+exchanges the shipped firmware will not ack are gated for this chip |
 | Internal speakers | **Silent** |
 | Dock USB/ethernet after resume | Open |
 
