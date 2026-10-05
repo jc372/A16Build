@@ -82,8 +82,17 @@ if apply_:
     # point this menu's default at the entry that boots the kernel we are actually
     # running, BY TITLE.  "set default=3" is a position: it drifts as entries move and
     # gives no clue what it boots.  A title cannot drift.
-    want_title = f"A16: linux-next {kver}"
-    have_title = any(t == want_title for t in titles)
+    want_title = None
+    if any(t == f"A16: linux-next {kver}" for t in titles):
+        want_title = f"A16: linux-next {kver}"          # the plainly-named entry, if present
+    else:
+        # fallback menu: name the first entry that boots the kernel we are running
+        for b in blocks:
+            m = re.search(r'^\s*linux\s+(\S+)', b.group(2), re.M)
+            if m and os.path.basename(m.group(1)) == f"vmlinuz-{kver}":
+                want_title = b.group(1)
+                break
+    have_title = want_title is not None
     dv_now = re.search(r'^set default=(.*)$', s, re.M)
     if have_title and dv_now and want_title not in dv_now.group(1):
         out = re.sub(r'^set default=.*$', f'set default="{want_title}"', out, count=1, flags=re.M)
