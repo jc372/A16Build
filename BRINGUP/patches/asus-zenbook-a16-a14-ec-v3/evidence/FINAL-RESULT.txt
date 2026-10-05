@@ -29,7 +29,7 @@ RESULT
 NOT TESTED
   The event path, and nothing else.
 
-NOTES ON THE TREE
+ABOUT THE TREE
   next-20261002, rather than the next-20260922 the series was rebased onto.  The
   board dts this series touches also carries unrelated local patches of ours
   (Bluetooth, RTC, an HDMI power-domain workaround); none touch the &i2c9 hunk.
