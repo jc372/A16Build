@@ -7,17 +7,19 @@ steps in order. You do not need a second computer.
 
 Everything is usable day to day except the camera. Two things work and cannot be relied on.
 
-| Working | Unreliable | Not working |
+| What | State | Notes |
 |---|---|---|
-| | | Camera -- needs a device tree description and a userspace stack |
-| Internal panel (2880x1800) | Suspend and resume -- it works, but the battery drains while asleep (about 2.4 W, where it should be well under 1 W; see [docs/suspend-power.md](docs/suspend-power.md)) and the screen does not always come back. Switching to a text console (`ctrl-alt-f3`) and back usually brings it up | |
-| Two external monitors, each in its own way: a Gigabyte over USB-C, which needs the link-rate cap carried in `0012`, and an MSI over HDMI, because its own repeater never trains at any rate | USB and ethernet on a dock after a suspend -- usually fine, occasionally needs a replug | |
-| Bluetooth | | |
-| Wi-Fi | | |
-| Internal speakers, with the audio profile built from your own Windows install -- see [docs/audio.md](docs/audio.md) | | |
-| Keyboard, touchpad, stylus, fans and keyboard backlight -- the embedded controller | | |
-| USB, and an external mouse and keyboard | | |
-| 3D GPU (Adreno X2-90, via freedreno and turnip) | | |
+| Internal panel | Working | 2880x1800 |
+| External monitors | Working | Two of them, and each works differently: a Gigabyte over USB-C, which needs the link-rate cap carried in `0012`, and an MSI over HDMI, because its own repeater never trains at any rate |
+| Bluetooth | Working | Earbuds connected over A2DP |
+| Wi-Fi | Working | |
+| Internal speakers | Working | Need the audio profile built from your own Windows install -- see [docs/audio.md](docs/audio.md) |
+| Keyboard, touchpad, stylus, fans, keyboard backlight | Working | The embedded controller |
+| USB | Working | External mouse and keyboard, and a dock |
+| 3D GPU | Working | Adreno X2-90, via freedreno and turnip |
+| Suspend and resume | Unreliable | It works, but the battery drains while asleep -- about 2.4 W, where it should be well under 1 W, see [docs/suspend-power.md](docs/suspend-power.md) -- and the screen does not always come back. `ctrl-alt-f3` and back usually brings it up |
+| Dock USB and ethernet after a suspend | Unreliable | Usually fine; occasionally needs a replug |
+| Camera | Not working | Needs a device tree description and a userspace stack |
 
 ---
 
