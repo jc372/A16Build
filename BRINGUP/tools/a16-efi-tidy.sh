@@ -115,11 +115,11 @@ print("    -> stripped the [N] prefixes from the entry titles")
 # the default must still name an entry that survives
 want = keep_u if menu.endswith('ubuntu/grub.cfg') else keep_b
 want = re.sub(r'^\[\d+\]\s*', '', want)
-if any(t == want for t, _ in [(x.group(1), x.group(2)) for x in keep]):
+if any(re.sub(r'^\[\d+\]\s*', '', t) == want for t, _ in [(x.group(1), x.group(2)) for x in keep]):
     out = re.sub(r'^set default=.*$', f'set default="{want}"', out, count=1, flags=re.M)
     print(f"    -> default set to '{want[:60]}'")
 else:
-    first = keep[0].group(1) if keep else None
+    first = re.sub(r'^\[\d+\]\s*', '', keep[0].group(1)) if keep else None
     if first:
         out = re.sub(r'^set default=.*$', f'set default="{first}"', out, count=1, flags=re.M)
         print(f"    -> default set to the first surviving entry '{first[:56]}'")
