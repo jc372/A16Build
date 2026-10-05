@@ -1,0 +1,23 @@
+# Source: Windows, `pnputil /enum-devices /class Camera /resources` on the A16 (Zenbook
+# UX3607OA, glymur).  Supplied by the operator 2026-10-05.  Cited from here on: the machine's
+# own firmware resource assignment for the camera block.
+#
+# Linux irq = listed - 32 for GIC_SPI, so 488 <-> GIC_SPI 456, 891 <-> GIC_SPI 859.
+
+ACPI\QCOM0F32\1b   Spectra ISP Camera Platform Device
+  IRQ  488 (0x1E8)   891 (0x37B)   252 (0xFC)
+  MEM  0x0AC13000-0x0AC13FFF   0x0AC19000-0x0AC24FFF
+       0x0AC15000-0x0AC15FFF   0x0AC16000-0x0AC16FFF
+ACPI\VEN_QCOM&DEV_0F98   Spectra ISP Camera MipiCsi Device
+  IRQ  509 (0x1FD)   510 (0x1FE)   154 (0x9A)
+  MEM  0x0ACE4000-0x0ACE5FFF   0x0ACE6000-0x0ACE7FFF   0x0ACEC000-0x0ACEDFFF
+       0x0ACF6000-0x0ACF63FF   0x0ACF7000-0x0ACF73FF   0x0ACF8000-0x0ACF83FF
+ACPI\QCOM0F33\17   Spectra ISP Camera JPEG Encoder Device
+  IRQ  295   296
+  MEM  0x0AC2A000-0x0AC2AFFF   0x0AC2B000-0x0AC2BFFF
+ACPI\QCOM0F25\16   Spectra ISP Camera Device
+  IRQ  110 121 127 302 303 490 633 635 489 126 445
+ACPI\QCOM0F27\19   Spectra ISP Camera Flash Device (no resources)
+ACPI\VEN_QCOM&DEV_0F06&SUBSYS_16D41043&REV_0000\1a   Spectra ISP Camera Front Sensor Device
+ACPI\VEN_QCOM&DEV_0F99&SUBSYS_16D41043&REV_0000\1c   Spectra ISP Camera Auxiliary Sensor Device
+DISPLAY\QCOM_AVStream_8480\3&ac23e07&0&UID32768     Spectra ISP Camera AVStream Device
