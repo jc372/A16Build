@@ -98,6 +98,16 @@ out = re.sub(r'^set default=.*$', f'set default="{want}"', out, count=1, flags=r
 out = re.sub(r'\n{3,}', '\n\n', out)
 open(menu + '.new', 'w').write(out); os.replace(menu + '.new', menu)
 
+# the diagnostics entry no longer has a staged payload to show, and no longer probes 7.2
+out = re.sub(r'^[ \t]*search --no-floppy --file --set=a16esp /a16boot/vmlinuz\n', '', out, flags=re.M)
+out = out.replace('      echo "  staged ESP payload found on: $a16esp"\n', '')
+out = out.replace('      echo "  --- staged ESP payload ---"\n', '')
+out = re.sub(r'^[ \t]*ls \(\$a16esp\)/a16boot\n', '', out, flags=re.M)
+out = out.replace('7.3.0-rc3-next-20260914', '7.3.0-rc5-next-20261002-t2')
+out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/(?:vmlinuz|initrd\.img)-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
+out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/initrd\.img-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
+out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/vmlinuz-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
+
 cur = open(menu).read()
 after = re.findall(r'^menuentry\s+"([^"]+)"\s*\{(.*?)^\}', cur, re.S | re.M)
 d = re.search(r'^set default=(.*)$', cur, re.M).group(1).strip().strip('"')
@@ -116,7 +126,7 @@ echo
 STAGE=/boot/efi/a16boot
 if [ -d "$STAGE" ]; then
 	# guard: refuse to move it while any surviving entry actually boots from it
-	live=$(grep -lE '^[[:space:]]*(linux|initrd)[[:space:]]+/a16boot/' /boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/BOOT/grub.cfg 2>/dev/null)
+	live=$(grep -lE '^[[:space:]]*(linux|initrd)[[:space:]]+/a16boot/' $MENUS 2>/dev/null)
 	if [ -n "$live" ]; then
 		echo "  [skip] an entry still boots /a16boot/: $live"
 	elif [ "$APPLY" != 1 ]; then
