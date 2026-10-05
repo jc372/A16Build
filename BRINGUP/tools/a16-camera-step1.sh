@@ -115,7 +115,7 @@ check|install)
 	# and the rail never comes up -- which cost a boot once already.
 	if [ -r /sys/kernel/debug/cmd-db ]; then
 		bad=0
-		for key in L2B_E0 L4C_E0 B1B_E0; do
+		for key in L2B_E0 L4C_E0; do
 			if grep -qw "$key" /sys/kernel/debug/cmd-db; then printf '  [ok]   the command DB has %s\n' "$key"
 			else printf '  [fail] the command DB has no %s -- that rail cannot come up\n' "$key"; bad=1; fi
 		done

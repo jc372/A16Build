@@ -397,3 +397,17 @@ installer runs as root, where they round-trip).
   The installer now handles none/gzip/xz/zstd as first-class kinds and keeps the
   archive kind it found.
 
+
+## L9B_E0 is load-bearing for the panel (measured)
+
+L9B_E0 was picked as the sensor's avdd because the board's tree declared it and nothing
+referenced it.  Moving it 2960000 -> 2800000 for the sensor blacked out the internal
+panel (the machine came up on HDMI only), and the panel came back as soon as the rail
+was restored.  GNOME still listed the panel while it was dark, so the panel logic rail
+(vreg_edp, enable-gpios tlmm 18) was fine -- L9B feeds the backlight side.
+
+Two lessons.  "Free" in the device tree means nothing references it there, not that the
+board has nothing on it: reference counting must cover the whole preprocessed tree, and
+even then a rail can be wired to something the tree does not model.  And never change
+the voltage of a rail the camera merely *might* use: a rail can only be claimed, by
+declaring the supply and letting the sensor's own constraint do the work.
