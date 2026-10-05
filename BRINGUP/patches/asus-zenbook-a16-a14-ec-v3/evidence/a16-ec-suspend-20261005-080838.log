@@ -1,0 +1,2 @@
+
+STOPPED: this needs root:  sudo bash /home/jc/a16-payload/a16-ec-suspend-test.sh {probe|real}

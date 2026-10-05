@@ -1,0 +1,112 @@
+From mboxrd@z Thu Jan  1 00:00:00 1970
+Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+	(No client certificate requested)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id EFED547F783;
+	Wed, 23 Sep 2026 10:14:39 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
+ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
+	t=1790158493; cv=none; b=Ebn6bmIvX33QugBmNYnJHBaoawECJ2jYKVAjtOXFBICTsGSYVXMESfeGN936rohdYAn9TFEPzkB2GfIuVMIIqbcGqrJoEUVixUPzldhypdH+jhOWLcMMwfFWD5PYmUXQ/WbQH50f1YveQm5cWYCagt2GiFs/T5VUvZSU8iJ+Cwg=
+ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
+	s=arc-20240116; t=1790158493; c=relaxed/simple;
+	bh=OQs67cdVg2c1m+XU1/vr6nXu2CSt7D/HdSsrachOq+o=;
+	h=From:Date:Subject:MIME-Version:Content-Type:Message-Id:References:
+	 In-Reply-To:To:Cc; b=O87Qt7Q4zdWsfsBlV56ftWrU+9xn/ey0p7pN4yyoMzihMjK6OYlnaAl9saeA1h1sRSFmlf02usmE7qKdu5rBn/IdcKYf4FXlpn4fpOKmgxJKiDng/mjhxViXquHGxRXOtsEJecZG/nJgBSKT7yc/ATng8X7wuWnbb4sxKvTgbOs=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=R5Trspfu; arc=none smtp.client-ip=100.103.45.18
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="R5Trspfu"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 7E8971F00899;
+	Wed, 23 Sep 2026 10:14:33 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1790158477;
+	bh=S+/NkK/2JKzL6JPHeEE9Dg80nXCZn6rhh0cERna0HR8=;
+	h=From:Date:Subject:References:In-Reply-To:To:Cc;
+	b=R5TrspfuZHpohCAvzctDW3zJMwVhe45RuelDh4lcUCeY8Y8SpQbP30jxQgoijkGkv
+	 PQSoqATWOhcFog5V0AakmnUVsxDFjTHKlzKwVJoDwrn0GkGlOVRNd+l7q2F1oRQEV3
+	 xTlasXYyi7Gqku1LLdbPkr/Quv6XHx5fVaIh+EmCjHbN60RUFBgn34nSgg/Ny9dZyr
+	 FAY2LlFCEad15prhKxsWNXEWq6FnZqozvG87df8qWugYfYJmJhJ/uPJpodupUkTYmo
+	 rZNwSAq/LwyDt0unWXhanbgD0w3H5yP+2WCZGiDkv398GVOwNC7b6zC8Yyqlxs+O+i
+	 B9pZ/kjuCVv6Q==
+From: Konrad Dybcio <konradybcio@kernel.org>
+Date: Wed, 23 Sep 2026 12:14:15 +0200
+Subject: [PATCH v3 3/3] arm64: dts: qcom: glymur-zenbook-a16: Add Embedded
+ Controller
+Precedence: bulk
+X-Mailing-List: devicetree@vger.kernel.org
+List-Id: <devicetree.vger.kernel.org>
+List-Subscribe: <mailto:devicetree+subscribe@vger.kernel.org>
+List-Unsubscribe: <mailto:devicetree+unsubscribe@vger.kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Message-Id: <20260923-topic-asus_ec-v3-3-2bf3bb9da879@oss.qualcomm.com>
+References: <20260923-topic-asus_ec-v3-0-2bf3bb9da879@oss.qualcomm.com>
+In-Reply-To: <20260923-topic-asus_ec-v3-0-2bf3bb9da879@oss.qualcomm.com>
+To: Rob Herring <robh@kernel.org>, Krzysztof Kozlowski <krzk+dt@kernel.org>, 
+ Conor Dooley <conor+dt@kernel.org>, Konrad Dybcio <konradybcio@kernel.org>, 
+ Hans de Goede <hansg@kernel.org>, 
+ =?utf-8?q?Ilpo_J=C3=A4rvinen?= <ilpo.jarvinen@linux.intel.com>, 
+ Bryan O'Donoghue <bryan.odonoghue@linaro.org>, 
+ Guenter Roeck <linux@roeck-us.net>, Bjorn Andersson <andersson@kernel.org>, 
+ Abel Vesa <abelvesa@kernel.org>
+Cc: devicetree@vger.kernel.org, linux-kernel@vger.kernel.org, 
+ platform-driver-x86@vger.kernel.org, linux-hwmon@vger.kernel.org, 
+ linux-arm-msm@vger.kernel.org, 
+ Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>, 
+ Abel Vesa <abel.vesa@oss.qualcomm.com>
+X-Mailer: b4 0.16.0
+X-Developer-Signature: v=1; a=ed25519-sha256; t=1790158456; l=1353;
+ i=konrad.dybcio@oss.qualcomm.com; s=20230215; h=from:subject:message-id;
+ bh=nLdf2OOt7FPP8Nr17CHbfj2mxUwBBufE3w9vuYqYo80=;
+ b=AMVYQxbqKElaBrEzri+din2Lz0e8pTAWLl9k0LNnlsJqL0SUp1jUFQqubszdc+a8Oz/MnRoEg
+ S1G7Wqvc9iuBBsbdgW16B+PoFvqqqa7xIzwqt5dUVpUu1MVWdB49IeG
+X-Developer-Key: i=konrad.dybcio@oss.qualcomm.com; a=ed25519;
+ pk=iclgkYvtl2w05SSXO5EjjSYlhFKsJ+5OSZBjOkQuEms=
+
+From: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+
+The Glymur-based Zenbook A16 features an Embedded Controller running
+custom ASUS firmware (which is loosely based on the reference Qualcomm
+Hamoa EC one with a lot of modifications). It provides keyboard
+backlight control, additional temperature sensor readouts, fan speed
+monitoring and a number of miscellaneous functions.
+
+Describe it.
+
+Reviewed-by: Abel Vesa <abel.vesa@oss.qualcomm.com>
+Signed-off-by: Konrad Dybcio <konrad.dybcio@oss.qualcomm.com>
+---
+ .../boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts    | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
+index 40433dc2d6cf..d3356fcd25f0 100644
+--- a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
++++ b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
+@@ -670,8 +670,19 @@ &i2c9 {
+ 
+ 	status = "okay";
+ 
+-	/* EC subdevice @ 0x5b */
+-	/* EC @ 0x76 */
++	embedded-controller@76 {
++		compatible = "asus,zenbook-a16-ux3607oa-ec";
++		reg = <0x76>;
++
++		interrupts-extended = <&tlmm 66 IRQ_TYPE_EDGE_FALLING>;
++
++		pinctrl-0 = <&ec_int_n_default>;
++		pinctrl-names = "default";
++
++		#thermal-sensor-cells = <1>;
++
++		wakeup-source;
++	};
+ };
+ 
+ &i2c10 {
+
+-- 
+2.55.0
+
+

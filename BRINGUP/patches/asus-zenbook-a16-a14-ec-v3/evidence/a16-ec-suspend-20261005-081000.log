@@ -1,0 +1,128 @@
+a16 EC suspend/resume proof
+date  : Mon Oct  5 08:10:00 EDT 2026
+kernel: 7.3.0-rc5-next-20261002-t2
+mode  : real
+
+=== the EC before ===
+  fan1 0  fan2 0  temp1 34000  temp2 37000
+
+=== suspend stats before ===
+  success              1
+  fail                 0
+  failed_suspend       0
+  failed_resume        0
+  last_failed_dev      
+  last_failed_errno    0
+  last_failed_step     
+
+=== arming ftrace on the driver's own functions ===
+  function_graph on: asus_glymur_ec_suspend, asus_glymur_ec_resume
+  i2c_write tracepoint: enabled
+  (the trace buffer survives s2idle -- it lives in RAM)
+
+=== REAL: an actual s2idle suspend ===
+  The machine will sleep now. Wake it with a key press or the
+  power button. The screen going off and coming back is the least
+  interesting part -- the trace below is the evidence.
+
+  If it does not come back, hold the power button to force off.
+
+  echo mem returned: 0  (this line only prints after resume)
+
+=== suspend stats after ===
+  success              2
+  fail                 0
+  failed_suspend       0
+  failed_resume        0
+  last_failed_dev      
+  last_failed_errno    0
+  last_failed_step     
+
+=== THE EVIDENCE: what the driver actually did ===
+   16)               |  asus_glymur_ec_suspend() {
+   16)               |    i2c_smbus_write_byte_data() {
+   16)               |      i2c_smbus_xfer() {
+   16)               |        __i2c_smbus_xfer() {
+   16)               |          i2c_smbus_xfer_emulated() {
+    5)               |  asus_glymur_ec_resume() {
+    5)               |    i2c_smbus_write_byte_data() {
+    5)               |      i2c_smbus_xfer() {
+    5)               |        __i2c_smbus_xfer() {
+    5)               |          i2c_smbus_xfer_emulated() {
+
+=== raw trace buffer (first 60 lines) ===
+  # tracer: function_graph
+  #
+  # CPU  DURATION                  FUNCTION CALLS
+  # |     |   |                     |   |   |   |
+   15)               |  /* i2c_write: i2c-8 #0 a=010 f=0200 l=4 [05-00-01-08] */
+   12)               |  /* i2c_write: i2c-0 #0 a=015 f=0200 l=11 [05-00-37-03-06-00-05-00-07-01-00] */
+   14)               |  /* i2c_write: i2c-10 #0 a=017 f=0200 l=4 [05-00-01-08] */
+   ------------------------------------------
+   15)  kworker-6896  =>  kworker-1216 
+   ------------------------------------------
+  
+   15)               |  /* i2c_write: i2c-19 #0 a=015 f=0200 l=4 [05-00-01-08] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   12)               |  /* i2c_write: i2c-0 #0 a=015 f=0200 l=10 [05-00-33-03-06-00-04-00-03-03] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=1 [11] */
+   12)               |  /* i2c_write: i2c-0 #0 a=015 f=0200 l=10 [05-00-35-03-06-00-04-00-05-03] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-31] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=2 [11-81] */
+   12)               |  /* i2c_write: i2c-0 #0 a=015 f=0200 l=4 [05-00-01-08] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-32] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=2 [11-04] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=2 [11-01] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=1 [11] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=1 [11] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=1 [11] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=1 [11] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-31] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=2 [11-87] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-32] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=2 [11-00] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=2 [11-01] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=1 [11] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0200 l=3 [10-c4-30] */
+   10)               |  /* i2c_write: i2c-9 #0 a=05b f=0000 l=1 [11] */
+   16)               |  asus_glymur_ec_suspend() {
+   16)   0.312 us    |    mutex_lock();
+   16)               |    i2c_smbus_write_byte_data() {
+   16)               |      i2c_smbus_xfer() {
+   16)               |        i2c_adapter_lock_bus() {
+   16)   0.208 us    |          rt_mutex_lock();
+   16)   0.521 us    |        }
+   16)               |        __i2c_smbus_xfer() {
+   16)               |          i2c_smbus_xfer_emulated() {
+   16)               |            __i2c_transfer() {
+   16)               |              trace_event_buffer_reserve() {
+   16)               |                /* i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07] */
+   16)   0.260 us    |              }
+   16)               |              geni_i2c_xfer [i2c_qcom_geni]() {
+   16)               |                __pm_runtime_resume() {
+   16)   0.208 us    |                  _raw_spin_lock_irqsave();
+   16)   0.156 us    |                  rpm_resume();
+   16)   0.104 us    |                  _raw_spin_unlock_irqrestore();
+   16)   1.250 us    |                }
+
+=== the EC after ===
+  fan1 0  fan2 0  temp1 34000  temp2 40000
+
+=== what these results mean ===
+  asus_glymur_ec_suspend in the trace, returning 0
+      -> the EC was told to enter standby, and it acked.
+  asus_glymur_ec_resume in the trace, returning 0
+      -> the EC was told to exit standby, and it acked.
+  a non-zero return, or the function missing
+      -> the notification did NOT work; send me the log.
+  suspend_stats/success incremented, last_failed_dev empty
+      -> the kernel considers the cycle to have completed.
+
+Log: /home/jc/a16-payload/a16-ec-suspend-20261005-081000.log

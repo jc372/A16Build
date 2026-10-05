@@ -103,3 +103,33 @@ Two things worth knowing:
   Wi-Fi firmware (see `evidence/2026-09-22-ladder-runs.txt` §1 and §4), so the modern-standby
   notification is not what the Wi-Fi wedge was missing.  The EC stays for what it does give: fans,
   temperatures, backlight, and a channel for sideband events.
+
+## Later — v3 tested on hardware (2026-10-05)
+
+The series moved on.  **v3** (2026-09-23) is the current revision and is the review response to v1:
+three added includes (`container_of.h`, `dev_printk.h`, `lockdep.h`), braces on one `if`, and
+`dev_info` demoted to `dev_dbg`.  **v1 and v2 are byte-identical** — v2 was a straight repost — so
+v2 to v3 is the only substantive change so far.
+
+v3 was taken into the `t2` tree, built in, installed and booted.  Everything recorded above
+reproduces, and the suspend/resume notification is now captured **on the wire** rather than inferred:
+
+    i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07]
+                       bus i2c-9, addr 0x76 = the EC
+                       bytes 0x23=STANDBY_CMD, 0x07=ENTER
+
+    ...issued from inside asus_glymur_ec_suspend() in the ftrace call graph.
+    suspend_stats  success 2, fail 0, last_failed_dev empty
+    journal        PM: suspend entry (s2idle) 08:10:04 -> suspend exit 08:10:29, same boot
+
+Full record, his patches, the revision comparison and the traces:
+`BRINGUP/patches/asus-zenbook-a16-a14-ec-v3/`.
+
+Two corrections to what this note says above:
+
+* Our carried patches (`port-2026-10-03/patches/0002-dts-ec-node`, `0004-ec-driver`) are **v2
+  verbatim**, not a fork.  The only part that was ours is the Kconfig symbol name —
+  `CONFIG_ASUS_GLYMUR_EC` against his `CONFIG_EC_ASUS_GLYMUR` — and the help text.  The tree now uses
+  his symbol, and the duplicate Makefile line that came with having both is gone.
+* "`CONFIG_EC_ASUS_GLYMUR=m`; the module is built natively … 465 648 B" describes v1 as a module.
+  v3 is built in (`=y`) here, so there is no `.ko`.
