@@ -118,6 +118,9 @@ anchor = re.search(r'^menuentry\s+"' + re.escape(base_t) + r'"\s*\{.*?^\}', out,
 add = rec_block + "\n" + fs_block + "\n"
 if anchor:
 	out = out[:anchor.end()] + "\n\n" + add + out[anchor.end():]
+else:
+	# no base entry in this menu (EFI/BOOT): the clones still go in, at the end
+	out = out.rstrip() + "\n\n" + add
 # EFI/BOOT is the firmware's fallback: land it on recovery (visible, safe).  ubuntu keeps t2.
 if base_t not in [m.group(1) for m in re.finditer(r'^menuentry\s+"([^"]+)"', out, re.M)]:
 	out = re.sub(r'^set default=.*$', f'set default="{rec_t}"', out, count=1, flags=re.M)
