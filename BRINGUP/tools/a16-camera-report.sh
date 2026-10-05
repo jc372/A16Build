@@ -45,7 +45,7 @@ done
 
 echo "--- the device tree the firmware/kernel was actually given"
 if [ -r /sys/firmware/fdt ]; then
-	cat /sys/firmware/fdt > /home/jc/a16-payload/camera/acpi/fdt.firmware.dtb 2>/dev/null && \
+	cat /sys/firmware/fdt > /home/jc/a16-payload/camera/acpi/.fdt.new 2>/dev/null && mv -f /home/jc/a16-payload/camera/acpi/.fdt.new /home/jc/a16-payload/camera/acpi/fdt.firmware.dtb && \
 		echo "  saved /sys/firmware/fdt ($(stat -c%s /sys/firmware/fdt) bytes) -> acpi/fdt.firmware.dtb"
 	strings -n 8 /sys/firmware/fdt 2>/dev/null | grep -iE "ov0|ovti|camera|cci|csiphy|camss|sen" | sort -u | head -10 | sed "s/^/    /"
 else echo "  (no /sys/firmware/fdt)"; fi
@@ -57,10 +57,11 @@ if [ -d /sys/firmware/acpi/tables ]; then
 	O=/home/jc/a16-payload/camera/acpi; mkdir -p "$O"
 	for t in /sys/firmware/acpi/tables/*; do
 		[ -f "$t" ] || continue; b=$(basename "$t"); [ "$b" = dynamic ] && continue
-		if cat "$t" > "$O/$b" 2>>/home/jc/a16-payload/camera/logs/acpi-read.err; then
-			echo "  copied $b -> $(stat -c%s "$O/$b" 2>/dev/null) bytes"
-			[ -s "$O/$b" ] || echo "    [!!] $b copied as 0 bytes -- see logs/acpi-read.err"
-		else echo "  [fail] reading $t: $(tail -1 /home/jc/a16-payload/camera/logs/acpi-read.err 2>/dev/null)"; fi
+		tmp="$O/.$b.new"; err="$O/.$b.err"
+		cat "$t" > "$tmp" 2>"$err"
+		sz=$(stat -c%s "$tmp" 2>/dev/null || echo 0)
+		if [ "$sz" -gt 0 ] 2>/dev/null; then mv -f "$tmp" "$O/$b"; rm -f "$err"; echo "  copied $b -> $sz bytes"
+		else echo "  [fail] $b read as 0 bytes: $(head -c 200 "$err" 2>/dev/null | tr "\n" " ")"; rm -f "$tmp"; fi
 	done
 	command -v acpidump >/dev/null 2>&1 && acpidump > "$O/acpidump.txt" 2>/dev/null && echo "  readable dump: $O/acpidump.txt ($(wc -l < "$O/acpidump.txt" 2>/dev/null) lines)"
 	echo "  -> $(ls "$O" 2>/dev/null | wc -l) file(s) in $O"
