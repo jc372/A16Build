@@ -29,7 +29,7 @@ for n in "soc@0/cci@ac15000" "soc@0/cci@ac16000"; do
 	if [ -e "$p" ]; then printf '  %-22s present, status=%s\n' "$n" "$(tr -d '\0' < "$p/status" 2>/dev/null)"; else printf '  %-22s ABSENT\n' "$n"; fi
 done
 for p in /proc/device-tree/soc@0/cci@*/*/camera@36 /proc/device-tree/soc@0/cci@*/i2c-bus@*; do
-	[ -e "$p" ] || continue
+	[ -d "$p" ] || continue
 	printf '  %s -> %s\n' "${p#/proc/device-tree/}" "$(tr -d '\0' < "$p/compatible" 2>/dev/null)"
 done
 echo
@@ -38,10 +38,11 @@ for m in i2c_qcom_cci ov08x40 qcom_camss camcc_glymur pinctrl_glymur qcom_rpmh_r
 	printf '  %-22s %s\n' "$m" "$(lsmod | awk -v m="$m" '$1==m{print "loaded ("$3" users)"}' | head -1)"
 done
 echo
-echo "--- i2c adapters the CCI registered"
-for d in /sys/class/i2c-adapter/i2c-*; do
-	[ -e "$d" ] || continue
-	printf '  %-6s %s\n' "${d##*/}" "$(cat "$d/name" 2>/dev/null)"
+echo "--- i2c buses the CCI registered  (read from /sys/bus, which works unprivileged)"
+for d in /sys/bus/i2c/devices/i2c-*; do
+	[ -d "$d" ] || continue
+	n="$(cat "$d/name" 2>/dev/null)"
+	case "$n" in *CCI*) printf '  %-6s %s\n' "${d##*/}" "$n";; esac
 done
 echo
 echo "--- i2c clients on the CCI buses (the sensor is 0x36)"
@@ -90,17 +91,28 @@ if [ ! -e /proc/device-tree/soc@0/cci@ac16000 ]; then
 	echo "  (pick the camera entry in the menu, or run: sudo bash ~/a16-payload/camera/a16-camera-step1.sh)"
 	exit 0
 fi
-cci_n="$(ls -d /sys/class/i2c-adapter/i2c-* 2>/dev/null | while read -r d; do grep -l . /dev/null >/dev/null 2>&1; n=$(cat "$d/name" 2>/dev/null); case "$n" in *CCI*) echo "$n";; esac; done | wc -l)"
+cci_n="$(for d in /sys/bus/i2c/devices/i2c-*; do [ -d "$d" ] || continue; n=$(cat "$d/name" 2>/dev/null); case "$n" in *CCI*) echo "$n";; esac; done | wc -l)"
 echo "  device tree      : camera nodes present"
 echo "  CCI i2c adapters : $cci_n (expect 2: the two masters of cci1)"
-if [ -e /sys/bus/i2c/devices/1-0036 ] || ls /sys/bus/i2c/devices/*-0036 >/dev/null 2>&1; then
+if ls /sys/bus/i2c/devices/*-0036 >/dev/null 2>&1; then
 	echo "  sensor client    : present at 0x36"
 	drv="$(basename "$(readlink -f /sys/bus/i2c/devices/*-0036/driver 2>/dev/null)" 2>/dev/null)"
 	if [ -n "$drv" ]; then echo "  sensor driver    : BOUND ($drv)  <-- the sensor answered on I2C"
 	else echo "  sensor driver    : not bound -- read the dmesg lines above for why"; fi
 else
-	echo "  sensor client    : absent at 0x36 (no driver bound a device there)"
+	echo "  sensor client    : absent at 0x36 (nothing bound a device there)"
 fi
-if dmesg 2>/dev/null | grep -qiE 'ov08x40.*(reading|detected|560858)'; then echo "  chip id          : the driver reached the chip id read"; fi
+# what the probe actually did, and what the i2c errno means
+err="$(dmesg 2>/dev/null | grep -iE 'ov08x40 .*error reading chip-id|ov08x40 .*chip id' | tail -1)"
+case "$err" in
+	*'-6'*)   echo "  chip id          : NOT read -- -6 is -ENXIO, the transfer finished and the sensor did not ACK."
+	          echo "                     that is a power/reset problem on the sensor side, not the CCI" ;;
+	*'-110'*) echo "  chip id          : NOT read -- -110 is -ETIMEDOUT: the CCI never completed, so suspect the irq/clock" ;;
+	*'')      : ;;
+	*)        echo "  chip id          : $err" ;;
+esac
+if dmesg 2>/dev/null | grep -q 'ov08x40.*chip-id register: -6'; then
+	echo "                     CCI, pins, reset gpio and MCLK are nevertheless proven" >/dev/null
+fi
 echo
 echo "  next: read $LOG, or let the next session read it."

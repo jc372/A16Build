@@ -1,0 +1,215 @@
+=== a16 camera report Fri Oct  2 13:35:54 EDT 2026 (boot b730f501) ===
+--- kernel / cmdline
+Linux jc 7.3.0-rc5-next-20261002-t2 #16 SMP PREEMPT_DYNAMIC Mon Oct  5 08:00:47 EDT 2026 aarch64 GNU/Linux
+BOOT_IMAGE=/boot/vmlinuz-7.3.0-rc5-next-20261002-t2 root=UUID=f8e005e9-414c-4c8e-ad68-d1e9fdc208bc ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7
+
+
+--- which device tree is loaded
+ASUS Zenbook A16 (UX3607OA)
+  soc@0/cci@ac15000      present, status=disabled
+  soc@0/cci@ac16000      present, status=okay
+  soc@0/cci@ac16000/i2c-bus@1/camera@36 -> ovti,ov08x40
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac15000/i2c-bus@0/compatible: No such file or directory
+  soc@0/cci@ac15000/i2c-bus@0 -> 
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac15000/i2c-bus@1/compatible: No such file or directory
+  soc@0/cci@ac15000/i2c-bus@1 -> 
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac16000/i2c-bus@0/compatible: No such file or directory
+  soc@0/cci@ac16000/i2c-bus@0 -> 
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac16000/i2c-bus@1/compatible: No such file or directory
+  soc@0/cci@ac16000/i2c-bus@1 -> 
+
+--- modules of interest (loaded?)
+  i2c_qcom_cci           loaded (0 users)
+  ov08x40                loaded (0 users)
+  qcom_camss             
+  camcc_glymur           loaded (2 users)
+  pinctrl_glymur         loaded (14 users)
+  qcom_rpmh_regulator    loaded (122 users)
+
+--- i2c adapters the CCI registered
+
+--- i2c clients on the CCI buses (the sensor is 0x36)
+  0-0015     name=hid-over-i2c   driver=i2c_hid_of
+  10-0017    name=hid-over-i2c   driver=i2c_hid_of
+  19-0015    name=hid-over-i2c   driver=i2c_hid_of
+  21-0036    name=ov08x40        driver=driver
+  5-0043     name=ptn3222        driver=ptn3222
+  5-004f     name=ptn3222        driver=ptn3222
+  8-0010     name=hid-over-i2c   driver=i2c_hid_of
+  9-005b     name=dummy          driver=dummy
+  9-0076     name=zenbook-a16-ux3607o driver=asus-glymur-ec
+  i2c-0      name=Geni-I2C       driver=driver
+  i2c-10     name=Geni-I2C       driver=driver
+  i2c-13     name=Geni-I2C       driver=driver
+  i2c-19     name=Geni-I2C       driver=driver
+  i2c-20     name=Qualcomm-CCI   driver=driver
+  i2c-21     name=Qualcomm-CCI   driver=driver
+  i2c-22     name=dpu_dp_aux     driver=driver
+  i2c-23     name=dpu_dp_aux     driver=driver
+  i2c-24     name=dpu_dp_aux     driver=driver
+  i2c-25     name=dpu_dp_aux     driver=driver
+  i2c-5      name=Geni-I2C       driver=driver
+  i2c-8      name=Geni-I2C       driver=driver
+  i2c-9      name=Geni-I2C       driver=driver
+
+--- pinctrl: is the camera mux applied
+  pin 100 (GPIO_100): UNCLAIMED
+  pin 101 (GPIO_101): UNCLAIMED
+  pin 102 (GPIO_102): UNCLAIMED
+  pin 103 (GPIO_103): UNCLAIMED
+  pin 104 (GPIO_104): UNCLAIMED
+  pin 105 (GPIO_105): UNCLAIMED
+  pin 106 (GPIO_106): UNCLAIMED
+  pin 235 (GPIO_235): device ac16000.cci function asc_cci group gpio235
+  pin 236 (GPIO_236): device ac16000.cci function asc_cci group gpio236
+
+--- regulators (camera rails present?
+   regulator                      use open bypass  opmode voltage current     min     max
+  ---------------------------------------------------------------------------------------
+   regulator-dummy                 26   39      0 unknown     0mV     0mA     0mV     0mV 
+
+--- dmesg: cci / ov08x40 / camcc / regulator, whole lines
+  [    5.028381] ov08x40 21-0036: supply dovdd not found, using dummy regulator
+  [    5.028567] ov08x40 21-0036: supply avdd not found, using dummy regulator
+  [    5.028689] ov08x40 21-0036: supply dvdd not found, using dummy regulator
+  [    5.036073] ov08x40 21-0036: error reading chip-id register: -6
+
+--- dmesg: deferred probes and probe failures left over
+  [    1.142505] qcom-rpmh-regulator 18900000.rsc:regulators-5: Unknown regulator ldo4
+  [    1.144220] qcom-rpmh-regulator 18900000.rsc:regulators-5: probe with driver qcom-rpmh-regulator failed with error -22
+  [    1.234800] rtc-pm8xxx c426000.spmi:pmic@0:rtc@6100: probe with driver rtc-pm8xxx failed with error -2
+  [    5.008742] scmi-cpufreq scmi_dev.4: probe with driver scmi-cpufreq failed with error -110
+  [    5.074152] scmi-perf-domain scmi_dev.3: probe with driver scmi-perf-domain failed with error -110
+  [   10.336918] snd-x1e80100 sound: ASoC: Parent card not yet available, widget card binding deferred
+
+--- dmesg: the tail, whatever it says
+  [    7.380680] Bluetooth: hci0: QCA ROM Version  :0x00000101
+  [    7.380680] Bluetooth: hci0: QCA Patch Version:0x00007b40
+  [    7.390636] Bluetooth: hci0: QCA controller version 0x21000101
+  [    7.390664] Bluetooth: hci0: QCA Downloading qca/hmtbtfw11.tlv
+  [    7.390681] bluetooth hci0: Direct firmware load for qca/hmtbtfw11.tlv failed with error -2
+  [    7.390683] Bluetooth: hci0: QCA Failed to request file: qca/hmtbtfw11.tlv (-2)
+  [    7.391023] Bluetooth: hci0: QCA Failed to request file: qca/hmtbtfw11.tlv (-2)
+  [    7.391278] Bluetooth: hci0: HFP non-HCI data transport is supported
+  [    7.413809] Bluetooth: hci0: AOSP extensions version v1.03
+  [    7.413813] Bluetooth: hci0: AOSP quality report is supported
+  [    7.746806] systemd-journald[690]: /var/log/journal/93414fa53a06495fa8249b366a8d9eb6/user-1000.journal: Realtime clock jumped backwards relative to last journal entry, rotating.
+  [    7.937435] Bluetooth: RFCOMM TTY layer initialized
+  [    7.937447] Bluetooth: RFCOMM socket layer initialized
+  [    7.937451] Bluetooth: RFCOMM ver 1.11
+  [    9.521194] rfkill: input handler disabled
+  [   10.210492] qcom-apm gprsvc:service:2:1: CMD timeout for [1001021] opcode
+  [   10.210802] platform 6800000.remoteproc:glink-edge:gpr:service@1:dais: Adding to iommu group 38
+  [   10.336918] snd-x1e80100 sound: ASoC: Parent card not yet available, widget card binding deferred
+  [   10.342819] ALSA: Control name 'stream1.vol_ctrl1 MultiMedia2 Playback Volume' truncated to 'stream1.vol_ctrl1 MultiMedia2 Playback Volu'
+  [   10.344072] input: GLYMUR-ASUS-Zenbook-A16-UX3607O Headset Jack as /devices/platform/sound/sound/card0/input35
+
+=== end of report (boot b730f501) ===
+=== a16 camera report Mon Oct  5 13:04:06 EDT 2026 (boot b730f501) ===
+--- kernel / cmdline
+Linux jc 7.3.0-rc5-next-20261002-t2 #16 SMP PREEMPT_DYNAMIC Mon Oct  5 08:00:47 EDT 2026 aarch64 GNU/Linux
+BOOT_IMAGE=/boot/vmlinuz-7.3.0-rc5-next-20261002-t2 root=UUID=f8e005e9-414c-4c8e-ad68-d1e9fdc208bc ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7
+
+
+--- which device tree is loaded
+ASUS Zenbook A16 (UX3607OA)
+  soc@0/cci@ac15000      present, status=disabled
+  soc@0/cci@ac16000      present, status=okay
+  soc@0/cci@ac16000/i2c-bus@1/camera@36 -> ovti,ov08x40
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac15000/i2c-bus@0/compatible: No such file or directory
+  soc@0/cci@ac15000/i2c-bus@0 -> 
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac15000/i2c-bus@1/compatible: No such file or directory
+  soc@0/cci@ac15000/i2c-bus@1 -> 
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac16000/i2c-bus@0/compatible: No such file or directory
+  soc@0/cci@ac16000/i2c-bus@0 -> 
+/usr/local/sbin/a16-camera-report.sh: line 33: /proc/device-tree/soc@0/cci@ac16000/i2c-bus@1/compatible: No such file or directory
+  soc@0/cci@ac16000/i2c-bus@1 -> 
+
+--- modules of interest (loaded?)
+  i2c_qcom_cci           loaded (0 users)
+  ov08x40                loaded (0 users)
+  qcom_camss             
+  camcc_glymur           loaded (2 users)
+  pinctrl_glymur         loaded (14 users)
+  qcom_rpmh_regulator    loaded (122 users)
+
+--- i2c adapters the CCI registered
+
+--- i2c clients on the CCI buses (the sensor is 0x36)
+  0-0015     name=hid-over-i2c   driver=i2c_hid_of
+  10-0017    name=hid-over-i2c   driver=i2c_hid_of
+  19-0015    name=hid-over-i2c   driver=i2c_hid_of
+  21-0036    name=ov08x40        driver=driver
+  5-0043     name=ptn3222        driver=ptn3222
+  5-004f     name=ptn3222        driver=ptn3222
+  8-0010     name=hid-over-i2c   driver=i2c_hid_of
+  9-005b     name=dummy          driver=dummy
+  9-0076     name=zenbook-a16-ux3607o driver=asus-glymur-ec
+  i2c-0      name=Geni-I2C       driver=driver
+  i2c-10     name=Geni-I2C       driver=driver
+  i2c-13     name=Geni-I2C       driver=driver
+  i2c-19     name=Geni-I2C       driver=driver
+  i2c-20     name=Qualcomm-CCI   driver=driver
+  i2c-21     name=Qualcomm-CCI   driver=driver
+  i2c-22     name=dpu_dp_aux     driver=driver
+  i2c-23     name=dpu_dp_aux     driver=driver
+  i2c-24     name=dpu_dp_aux     driver=driver
+  i2c-25     name=dpu_dp_aux     driver=driver
+  i2c-5      name=Geni-I2C       driver=driver
+  i2c-8      name=Geni-I2C       driver=driver
+  i2c-9      name=Geni-I2C       driver=driver
+
+--- pinctrl: is the camera mux applied
+  pin 100 (GPIO_100): UNCLAIMED
+  pin 101 (GPIO_101): UNCLAIMED
+  pin 102 (GPIO_102): UNCLAIMED
+  pin 103 (GPIO_103): UNCLAIMED
+  pin 104 (GPIO_104): UNCLAIMED
+  pin 105 (GPIO_105): UNCLAIMED
+  pin 106 (GPIO_106): UNCLAIMED
+  pin 235 (GPIO_235): device ac16000.cci function asc_cci group gpio235
+  pin 236 (GPIO_236): device ac16000.cci function asc_cci group gpio236
+
+--- regulators (camera rails present?
+   regulator                      use open bypass  opmode voltage current     min     max
+  ---------------------------------------------------------------------------------------
+   regulator-dummy                 26   39      0 unknown     0mV     0mA     0mV     0mV 
+
+--- dmesg: cci / ov08x40 / camcc / regulator, whole lines
+  [    5.028381] ov08x40 21-0036: supply dovdd not found, using dummy regulator
+  [    5.028567] ov08x40 21-0036: supply avdd not found, using dummy regulator
+  [    5.028689] ov08x40 21-0036: supply dvdd not found, using dummy regulator
+  [    5.036073] ov08x40 21-0036: error reading chip-id register: -6
+  [   20.450632] camcc-glymur ade0000.clock-controller: sync_state() pending due to 21-0036
+
+--- dmesg: deferred probes and probe failures left over
+  [    1.142505] qcom-rpmh-regulator 18900000.rsc:regulators-5: Unknown regulator ldo4
+  [    1.144220] qcom-rpmh-regulator 18900000.rsc:regulators-5: probe with driver qcom-rpmh-regulator failed with error -22
+  [    1.234800] rtc-pm8xxx c426000.spmi:pmic@0:rtc@6100: probe with driver rtc-pm8xxx failed with error -2
+  [    5.008742] scmi-cpufreq scmi_dev.4: probe with driver scmi-cpufreq failed with error -110
+  [    5.074152] scmi-perf-domain scmi_dev.3: probe with driver scmi-perf-domain failed with error -110
+  [   10.336918] snd-x1e80100 sound: ASoC: Parent card not yet available, widget card binding deferred
+
+--- dmesg: the tail, whatever it says
+  [    7.937447] Bluetooth: RFCOMM socket layer initialized
+  [    7.937451] Bluetooth: RFCOMM ver 1.11
+  [    9.521194] rfkill: input handler disabled
+  [   10.210492] qcom-apm gprsvc:service:2:1: CMD timeout for [1001021] opcode
+  [   10.210802] platform 6800000.remoteproc:glink-edge:gpr:service@1:dais: Adding to iommu group 38
+  [   10.336918] snd-x1e80100 sound: ASoC: Parent card not yet available, widget card binding deferred
+  [   10.342819] ALSA: Control name 'stream1.vol_ctrl1 MultiMedia2 Playback Volume' truncated to 'stream1.vol_ctrl1 MultiMedia2 Playback Volu'
+  [   10.344072] input: GLYMUR-ASUS-Zenbook-A16-UX3607O Headset Jack as /devices/platform/sound/sound/card0/input35
+  [   17.339382] wlP4p1s0: authenticate with 22:36:26:d8:29:23 (local address=3c:ef:a5:29:6a:61)
+  [   17.339391] wlP4p1s0: send auth to 22:36:26:d8:29:23 (try 1/3)
+  [   17.361456] wlP4p1s0: authenticate with 22:36:26:d8:29:23 (local address=3c:ef:a5:29:6a:61)
+  [   17.361459] wlP4p1s0: send auth to 22:36:26:d8:29:23 (try 1/3)
+  [   17.368074] wlP4p1s0: authenticated
+  [   17.368426] wlP4p1s0: associate with 22:36:26:d8:29:23 (try 1/3)
+  [   17.388161] wlP4p1s0: RX AssocResp from 22:36:26:d8:29:23 (capab=0x1511 status=0 aid=22)
+  [   17.409162] wlP4p1s0: associated
+  [   20.450597] qnoc-glymur interconnect-1: sync_state() pending due to 1dfa000.crypto
+  [   20.450604] qnoc-glymur 16e0000.interconnect: sync_state() pending due to 1dfa000.crypto
+  [   20.450632] camcc-glymur ade0000.clock-controller: sync_state() pending due to 21-0036
+  [   30.179514] regulator: Not disabling unused regulators
+
+=== end of report (boot b730f501) ===

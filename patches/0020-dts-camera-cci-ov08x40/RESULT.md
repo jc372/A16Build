@@ -97,15 +97,37 @@ for the same reason.
     no regulators anywhere             decompiled DTB has no supply property on the
                                        sensor and no bob1 under regulators-0
 
-## Test status
+## Second run (boot b730f501, 2026-10-05 13:03): CCI half proven, sensor silent
 
-Rebuilt and staged after the first run; the second run has not happened yet.  Same
-one line, and the menu entry is already there:
+Healthy boot first: wifi up (192.168.60.100, 14 ms), four USB-A devices enumerated, no
+PCIe damage, and neither of the two failures above repeated.
 
-    sudo bash ~/a16-payload/camera/a16-camera-step1.sh
+    i2c-20, i2c-21     both named "Qualcomm-CCI"    cci1's two masters registered
+    gpio235/236        "device ac16000.cci function asc_cci"   our pinctrl applied
+    21-0036            name=ov08x40                 the sensor became an i2c client on
+                                                    cci1 master 1 and its probe ran
+    ov08x40 21-0036    supply dovdd / avdd / dvdd not found, using dummy regulator
+    ov08x40 21-0036    error reading chip-id register: -6
 
-Evidence: `~/a16-payload/camera/logs/boot-<boot-id>.log`, written twice per boot by
-the collector (10 s and 55 s in) so that something is on disk even if the boot does
-not survive.  Pass signal: `sensor driver : BOUND (ov08x40)` — the chip answered
-0x560858.  If the client is there but the chip times out, the CCI, the pins, the
-reset and the clock are proven and only the rails are missing, which is step 2.
+-6 is -ENXIO: the transfer *completed* and the sensor did not ACK.  It is not a
+timeout, so the CCI's completion interrupt, its clocks, the GDSC, the address
+0xac16000 and the asc_cci pins on gpio235/236 are all proven, and the endpoint
+parsed.  A sensor whose three supplies are dummy regulators does not ACK, which is
+what this result looks like: the chip has no power control.  `/dev/video` is still
+absent, by design — no CAMSS in step 1.
+
+Step 1 did its job.  What stands between the tree and the chip id is power.
+
+## Step 2, for the next round
+
+    rebuild qcom-rpmh-regulator with 0021 (through the ABI gate, one module), so
+    PMH0104's ldo4 and ldo7 exist at all; then declare the rails in the PMH0104
+    container ONLY -- it carries no board rails, so a mistake stays local:
+        avdd  -> ldo7  2.8 V
+        dovdd -> ldo4  1.8 V
+        dvdd  -> ldo4  1.8 V      (the reference board ties dvdd to dovdd)
+    and the BOB, if at all, at a value that is on its step grid.
+
+Same entry, same one line, and the log should then show
+`sensor driver : BOUND (ov08x40)`.  CAMSS + CSIPHY4 — the camera actually appearing
+in the app — is step 3.

@@ -231,3 +231,24 @@ after sysinit -- so the first pass is on disk before anything that could hang.
 No CAMSS, no csiphy4, no /dev/video.  That is step 3, and it is the rest of the same
 Qualcomm series.
 
+# Step 1, second run (boot b730f501): the CCI half is proven
+
+Healthy boot, no wifi/USB damage.  The collector log
+(`patches/0020-.../evidence/2026-10-05-camera-boot-b730f501.log`) says:
+
+    i2c-20, i2c-21    "Qualcomm-CCI"          cci1's two masters registered
+    gpio235/236       device ac16000.cci, function asc_cci   our pinctrl applied
+    21-0036           name=ov08x40             sensor is an i2c client on cci1 master 1
+    ov08x40 21-0036   supply dovdd/avdd/dvdd not found, using dummy regulator
+    ov08x40 21-0036   error reading chip-id register: -6
+
+-6 = -ENXIO: transfer completed, no ACK.  Not a timeout, so the CCI's completion
+interrupt, address, clocks, GDSC and the asc_cci pin mux all work, and the endpoint
+parsed.  The chip does not ACK because its three rails are dummy regulators -- the
+board's own PMH0104 LDOs are what it actually runs on, and this kernel cannot
+describe them.  So: cci1 is right, and the missing piece is power, not the bus.
+
+Next: step 2 = rebuild `qcom-rpmh-regulator` with 0021 through the ABI gate, then the
+rails in the PMH0104 container (avdd ldo7 2.8 V, dovdd/dvdd ldo4 1.8 V), and the BOB
+only at a value on its step grid.  Then CAMSS + CSIPHY4 for the app itself.
+
