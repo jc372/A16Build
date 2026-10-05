@@ -43,6 +43,19 @@ for r in vreg_l2b_e0 vreg_l4c_e0 vreg_l9b_e0 vreg_bob1_b_e0; do
   [ -d "$d" ] && echo "  $r: state=$(cat $d/state 2>/dev/null) $(cat $d/microvolts 2>/dev/null) uV"
 done
 
+echo "--- ACPI tables (a boot without acpi=off is the only one that has them)"
+if [ -d /sys/firmware/acpi/tables ]; then
+	O=/home/jc/a16-payload/camera/acpi; mkdir -p "$O"
+	for t in /sys/firmware/acpi/tables/*; do
+		[ -f "$t" ] || continue; b=$(basename "$t"); [ "$b" = dynamic ] && continue
+		cp -f "$t" "$O/$b" 2>/dev/null && echo "  copied $b ($(stat -c%s "$t") bytes)"
+	done
+	command -v acpidump >/dev/null 2>&1 && acpidump > "$O/acpidump.txt" 2>/dev/null && echo "  readable dump: $O/acpidump.txt ($(wc -l < "$O/acpidump.txt" 2>/dev/null) lines)"
+	echo "  -> $(ls "$O" 2>/dev/null | wc -l) file(s) in $O"
+else
+	echo "  (no ACPI on this boot -- expected on every entry that passes acpi=off)"
+fi
+echo
 echo "--- modules of interest (loaded?)"
 for m in i2c_qcom_cci ov02c10 ov08x40 qcom_camss videobuf2_common v4l2_async camcc_glymur pinctrl_glymur qcom_rpmh_regulator; do
 	printf '  %-22s %s\n' "$m" "$(lsmod | awk -v m="$m" '$1==m{print "loaded ("$3" users)"}' | head -1)"
