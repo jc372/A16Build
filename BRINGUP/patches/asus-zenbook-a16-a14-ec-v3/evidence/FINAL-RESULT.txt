@@ -1,27 +1,42 @@
-Final result: Konrad Dybcio's v3 EC driver on the ASUS Zenbook A16 (UX3607OA).
-Taken 2026-10-05, kernel 7.3.0-rc5-next-20261002-t2, built in (CONFIG_EC_ASUS_GLYMUR=y).
+ASUS Zenbook A16/A14 EC driver, v3 (Konrad Dybcio, 2026-09-23)
+Result on hardware.
+
+MACHINE
+  model        ASUS Zenbook A16 (UX3607OA)
+  compatible   asus,zenbook-a16-ux3607oa / qcom,glymur
+  soc          Qualcomm Snapdragon X2 Elite (Glymur)
+  kernel       7.3.0-rc5-next-20261002-t2
+  config       CONFIG_EC_ASUS_GLYMUR=y
 
 BINDS
-  hwmon4  name=asus_glymur_ec      i2c 9-0076 -> driver asus-glymur-ec
-  i2c 9-005b present (the EC subdevice)
+  i2c 9-0076   -> driver asus-glymur-ec
+  i2c 9-005b      EC subdevice
+  hwmon4          name=asus_glymur_ec
+  led             /sys/class/leds/asus::kbd_backlight
 
-WHAT IT REPORTS (read from sysfs)
-  fan1_input   1920-2040 RPM
-  fan2_input   1320 RPM
-  temp1_input  36-38 C   label CPU
-  temp2_input  38-41 C   label SoC
-  /sys/class/leds/asus::kbd_backlight  brightness 0 of max 3
+READINGS
+  fan1_input      1920-2040 RPM
+  fan2_input      1320 RPM
+  temp1_input     36-38 C    label CPU
+  temp2_input     38-41 C    label SoC
+  kbd_backlight   brightness 0, max 3
 
-SUSPEND ENTRY/EXIT NOTIFICATION -- captured on the bus
+SUSPEND / RESUME NOTIFICATION
   asus_glymur_ec_suspend   ret=0x0   488.593 us
   asus_glymur_ec_resume    ret=0x0   439.584 us
-  i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07]   STANDBY_CMD 0x23 / ENTER 0x07
-  i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-08]   STANDBY_CMD 0x23 / EXIT  0x08
 
-  pm_test=devices run:  suspend_stats success 2 -> 3, fail 0, last_failed_dev empty
-  real s2idle run:      PM: suspend entry 08:10:04 -> exit 08:10:29, same boot,
-                        suspend_stats success 1 -> 2, nothing failed
+  i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07]
+  i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-08]
 
-NOT CLAIMED (untested):
-  - the lid switch and power button paths
-  - the sideband event mailbox (ASUS_EC_MBOX_CMD_MISC 0x02 / MISC_ENABLE 0x83)
+  0x23   ASUS_QCOM_EC_MODERN_STANDBY_CMD
+  0x07   ASUS_QCOM_EC_MODERN_STANDBY_ENTER
+  0x08   ASUS_QCOM_EC_MODERN_STANDBY_EXIT
+
+  pm_test=devices   suspend_stats success 2 -> 3, fail 0, last_failed_dev empty
+  s2idle            PM: suspend entry 08:10:04, exit 08:10:29, same boot
+                    suspend_stats success 1 -> 2, fail 0
+
+NOT TESTED
+  lid switch
+  power button
+  sideband event mailbox (ASUS_EC_MBOX_CMD_MISC 0x02 / MISC_ENABLE 0x83)

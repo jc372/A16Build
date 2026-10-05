@@ -1,15 +1,11 @@
-State of the tree after taking his v3, on 2026-10-05 08:12.
+Tree state after taking v3, 2026-10-05.
 
 asus-glymur-ec.c  sha256 3aad31107d7278ad42b81afacdc5ee9390470f90de3d404c4dabdb30cd67a69c
-                  = his v3, unmodified
-
-Kconfig           his EC_ASUS_GLYMUR only; our ASUS_GLYMUR_EC entry deleted
-Makefile          his one line; our duplicate deleted
+                  v3, unmodified
+Kconfig           EC_ASUS_GLYMUR
+Makefile          obj-$(CONFIG_EC_ASUS_GLYMUR) += asus-glymur-ec.o
 .config           CONFIG_EC_ASUS_GLYMUR=y
 binding           Documentation/devicetree/bindings/embedded-controller/
                   asus,zenbook-a16-ux3607oa-ec.yaml
-dts               already identical to his patch 3/3 before we applied it
-
-Backups of what we replaced:
-  /home/jc/.hermes/cache/scratch/ec-v3/our-asus-glymur-ec.c   (his v2, as our port had it)
-  /home/jc/a16-payload/ec-test-backup-20261005-080148/        (the previous /boot kernel)
+dts               unchanged by 3/3; the node was already present
+kernel            7.3.0-rc5-next-20261002-t2

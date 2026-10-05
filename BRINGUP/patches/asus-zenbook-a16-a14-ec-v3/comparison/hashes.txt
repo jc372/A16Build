@@ -1,12 +1,10 @@
-Which revision of Konrad's EC driver each version is.
-sha256 of the driver source each one produces, first 24 hex:
+sha256 of the driver source each revision produces, first 24 hex.
 
 version    lines  sha256
-his v1     592    9c8cbee407ac346c245cc837
-his v2     592    9c8cbee407ac346c245cc837
-port v2    592    9c8cbee407ac346c245cc837
-his v3 now 600    3aad31107d7278ad42b81afa
+v1         592    9c8cbee407ac346c245cc837
+v2         592    9c8cbee407ac346c245cc837
+v3         600    3aad31107d7278ad42b81afa
+port       592    9c8cbee407ac346c245cc837
 
-v1 and v2 are byte-identical. Our port carried v2 verbatim.
-Only the Kconfig symbol name and the help text were ours
-(CONFIG_ASUS_GLYMUR_EC vs his CONFIG_EC_ASUS_GLYMUR).
+The port copy is v2. v1 and v2 are byte-identical; the port's Kconfig symbol was
+CONFIG_ASUS_GLYMUR_EC against his CONFIG_EC_ASUS_GLYMUR.
