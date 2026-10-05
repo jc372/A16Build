@@ -1,5 +1,5 @@
---- a/arch/arm64/boot/dts/qcom/glymur.dtsi
-+++ b/arch/arm64/boot/dts/qcom/glymur.dtsi
+--- a/glymur.dtsi
++++ b/glymur.dtsi
 @@ -5380,6 +5380,89 @@
  			#power-domain-cells = <1>;
  		};
@@ -270,8 +270,8 @@
  		};
  
  		ctcu@10001000 {
---- a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
-+++ b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
+--- a/glymur-asus-zenbook-a16-ux3607oa.dts
++++ b/glymur-asus-zenbook-a16-ux3607oa.dts
 @@ -16,6 +16,7 @@
  #include <dt-bindings/input/gpio-keys.h>
  #include <dt-bindings/input/input.h>
@@ -280,41 +280,17 @@
  #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
  
  /delete-node/ &pmh0104_l_e1;
-@@ -604,6 +605,33 @@
+@@ -604,6 +605,9 @@
  			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
  		};
  	};
-+	/* --- glymur camera step1: the PMH0104 rails, for step 2 ---------------
-+	 * Kept in the tree because these are the rails the machine actually has and
-+	 * these are their voltages, but this container CANNOT bind on the running
-+	 * kernel: see the note above.  Expected dmesg on the camera entry:
-+	 *     rpmh-regulator ... ldo4: Unknown regulator ldo4   (once per rail)
-+	 * Nothing consumes them yet, so the failure is contained.  Do not attach a
-+	 * supply to these before the module carrying 0021 is installed.
-+	 */
-+	regulators-5 {
-+		compatible = "qcom,pmh0104-rpmh-regulators";
-+		qcom,pmic-id = "I_E0";
-+
-+		vreg_l4i_e0: ldo4 {
-+			regulator-name = "vreg_l4i_e0";
-+			regulator-min-microvolt = <1800000>;
-+			regulator-max-microvolt = <1800000>;
-+			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
-+		};
-+
-+		vreg_l7i_e0: ldo7 {
-+			regulator-name = "vreg_l7i_e0";
-+			regulator-min-microvolt = <2800000>;
-+			regulator-max-microvolt = <2800000>;
-+			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
-+		};
-+	};
++	/* No PMH0104 regulator container while this firmware's command DB has no
++	 * rails for that PMIC: see the sensor node's note. */
 +
  };
  
  &gpu {
-@@ -1156,6 +1184,14 @@
+@@ -1156,6 +1160,14 @@
  			bias-pull-up;
  		};
  	};
@@ -329,7 +305,7 @@
  };
  
  &uart14 {
-@@ -1369,3 +1405,66 @@
+@@ -1369,3 +1381,70 @@
  		regulator-always-on;
  	};
  };
@@ -369,7 +345,7 @@
 +
 +&cci1_i2c1 {
 +	camera@36 {
-+		compatible = "ovti,ov08x40";
++		compatible = "ovti,ov02c10";
 +		reg = <0x36>;
 +
 +		reset-gpios = <&tlmm 239 GPIO_ACTIVE_LOW>;
@@ -380,17 +356,21 @@
 +		assigned-clocks = <&camcc CAM_CC_MCLK4_CLK>;
 +		assigned-clock-rates = <19200000>;
 +
-+		/* the machine's own rails: PMH0104 (I_E0) ldo7 2.8 V and ldo4 1.8 V,
-+		 * the mapping upstream's glymur board uses.  Needs patches/0021. */
-+		avdd-supply = <&vreg_l7i_e0>;
-+		dovdd-supply = <&vreg_l4i_e0>;
-+		dvdd-supply = <&vreg_l4i_e0>;
++		/* NO supplies on purpose, for now.  The machine's camera rails are
++		 * BUCK_BOOST1_B_E0 + LDO4_I0 + LDO7_I0 in the vendor's own power sequence
++		 * (CAMF_RES_MTP.bin, \_SB.CAMF), but those names are the camera driver's,
++		 * not this firmware's command DB keys: the DB has no PMH0104 rails at all,
++		 * and the DT rails resolved to "could not find RPMh address for L4I_E0".
++		 * Until the two names are bound to real DB rails, declaring a supply only
++		 * makes the probe defer for ever.  Dummy regulators let it run and read the
++		 * chip id (OV02C10 id 0x560243, register 0x300a), which is what tells us the
++		 * bus, reset, MCLK and sensor are right. */
 +
 +		port {
 +			ov08x40_out_ep: endpoint {
 +				bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
 +				clock-lanes = <0>;
-+				data-lanes = <1 2 3 4>;
++				data-lanes = <1 2>;
 +				link-frequencies = /bits/ 64 <400000000>;
 +			};
 +		};
