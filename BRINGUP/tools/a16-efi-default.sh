@@ -17,6 +17,9 @@ T2_TITLE='A16: linux-next 7.3.0-rc5-next-20261002-t2'
 OLD_TITLE='A16: camera step 1 (CCI1 + OV08X40 sensor, t2 kernel)'
 NEW_TITLE='A16: camera step 1 (CCI1 + OV02C10 sensor, t2 kernel)'
 MENUS="/boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/ubuntu_snapdragon/grub.cfg"
+# only this menu's default is set.  The ubuntu menu's 'set default=3' is the operator's
+# standing entry and is deliberately left exactly as it is.
+DEFAULT_IN="/boot/efi/EFI/ubuntu_snapdragon/grub.cfg"
 CHECK=0
 [ "${1:-}" = "--check" ] && CHECK=1
 
@@ -50,7 +53,11 @@ for m in $MENUS; do
 	fi
 
 	need_default=0
-	echo "$cur" | grep -qF "$T2_TITLE" || need_default=1
+	if [ "$m" = "$DEFAULT_IN" ]; then
+		echo "$cur" | grep -qF "$T2_TITLE" || need_default=1
+	else
+		echo "  [ok] this menu's default is left as it is ($cur)"
+	fi
 	need_title=0
 	grep -qF "$OLD_TITLE" "$m" && need_title=1
 
