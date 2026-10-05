@@ -274,9 +274,17 @@ SENSOR = """
 		assigned-clocks = <&camcc CAM_CC_MCLK4_CLK>;
 		assigned-clock-rates = <19200000>;
 
-		avdd-supply = <&vreg_l7i_e0>;
-		dovdd-supply = <&vreg_l4i_e0>;
-		dvdd-supply = <&vreg_l4i_e0>;
+		/* The machine's own rails: the firmware command DB has no I_E0 rails at all
+		 * (L4I_E0 and friends), but it does have L2B_E0 and B1B_E0.  dovdd and dvdd take
+		 * the 1.8 V rail this board declares Unused -- vreg_l2b_e0, and the machine's own
+		 * ACPI PEP catalogue votes LDO2_B_E0 at 1800000 uV.  avdd stays unpowered on
+		 * purpose: the only free 2.8 V-class rail is the board's L7B at 3072000 uV
+		 * (3.072 V), over an OV02C10's 2.8 V spec, and a chip ID read needs the I/O and
+		 * core rails, not the pixels. */
+		dovdd-supply = <&vreg_l2b_e0>;
+		dvdd-supply = <&vreg_l2b_e0>;
+
+
 
 		/* the machine's own rails: PMH0104 (I_E0) ldo7 2.8 V and ldo4 1.8 V,
 		 * the mapping upstream's glymur board uses.  Needs patches/0021.
