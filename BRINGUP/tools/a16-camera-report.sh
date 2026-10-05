@@ -34,7 +34,7 @@ for p in /proc/device-tree/soc@0/cci@*/*/camera@36 /proc/device-tree/soc@0/cci@*
 done
 echo
 echo "--- modules of interest (loaded?)"
-for m in i2c_qcom_cci ov02c10 ov08x40 qcom_camss camcc_glymur pinctrl_glymur qcom_rpmh_regulator; do
+for m in i2c_qcom_cci ov02c10 ov08x40 qcom_camss videobuf2_common v4l2_async camcc_glymur pinctrl_glymur qcom_rpmh_regulator; do
 	printf '  %-22s %s\n' "$m" "$(lsmod | awk -v m="$m" '$1==m{print "loaded ("$3" users)"}' | head -1)"
 done
 echo
@@ -60,6 +60,8 @@ if [ -d /sys/kernel/debug/pinctrl ]; then
 	done
 fi
 echo
+echo "--- video devices (a working pipeline shows /dev/video* and /dev/media*)"
+ls -l /dev/video* /dev/media* 2>/dev/null | sed 's/^/  /' || echo "  (none)"
 echo "--- regulators (camera rails present?"
 if [ -r /sys/kernel/debug/regulator/regulator_summary ]; then
 	sed -n '1,3p' /sys/kernel/debug/regulator/regulator_summary | sed 's/^/  /'
@@ -70,8 +72,8 @@ for r in /sys/class/regulator/*/name; do
 	case "$v" in *l4i_e0*|*l7i_e0*) printf '  %s = %s uV, state=%s\n' "$v" "$(cat "${r%name}"microvolts 2>/dev/null)" "$(cat "${r%name}state" 2>/dev/null)";; esac
 done
 echo
-echo "--- dmesg: cci / ov02c10 / camcc / regulator, whole lines"
-dmesg 2>/dev/null | grep -iE 'cci|ov02c10|ov08x40|ov08x|camcc|cam_cc|titan|vreg_l4i|vreg_l7i|pmh0104|rpmh.*(ldo4_i|ldo7_i)' | sed 's/^/  /'
+echo "--- dmesg: cci / ov02c10 / camss / camcc / regulator, whole lines"
+dmesg 2>/dev/null | grep -iE 'cci|ov02c10|ov08x40|ov08x|camss|csiphy|csid|vfe|camcc|cam_cc|titan|vreg_l4i|vreg_l7i|pmh0104|rpmh.*(ldo4_i|ldo7_i)' | sed 's/^/  /'
 echo
 echo "--- dmesg: deferred probes and probe failures left over"
 dmesg 2>/dev/null | grep -iE 'defer|probe.*fail|could not find RPMh|unknown regulator|not enough clocks|parsing endpoint|chip ID' | tail -25 | sed 's/^/  /'
