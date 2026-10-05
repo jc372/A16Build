@@ -67,9 +67,9 @@ verify_dtb() {
 		echo "  [fail] cannot decompile $f -- not a device tree?"
 		return 1
 	fi
-	local need="cci@ac16000 camera@36 ovti,ov02c10 0x124f800"
+	local need="cci@ac16000 camera@36 ovti,ov02c10 0x124f800 glymur-camss glymur-csi2-phy remote-endpoint"
 	# cci1 + the sensor + the rail container + the mclk rate must all be there
-	for what in "cci@ac16000" "camera@36" "ovti,ov02c10" "0x124f800"; do
+	for what in "cci@ac16000" "camera@36" "ovti,ov02c10" "0x124f800" "qcom,glymur-camss" "qcom,glymur-csi2-phy" "remote-endpoint"; do
 		if printf '%s' "$out" | grep -q -- "$what"; then echo "  [ok]   $f contains $what"
 		else echo "  [fail] $f does NOT contain $what -- wrong build?"; return 1; fi
 	done
