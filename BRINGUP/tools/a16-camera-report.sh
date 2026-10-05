@@ -45,17 +45,19 @@ done
 
 echo "--- the device tree the firmware/kernel was actually given"
 if [ -r /sys/firmware/fdt ]; then
-	cp -f /sys/firmware/fdt /home/jc/a16-payload/camera/acpi/fdt.firmware.dtb 2>/dev/null && \
+	cat /sys/firmware/fdt > /home/jc/a16-payload/camera/acpi/fdt.firmware.dtb 2>/dev/null && \
 		echo "  saved /sys/firmware/fdt ($(stat -c%s /sys/firmware/fdt) bytes) -> acpi/fdt.firmware.dtb"
 	strings -n 8 /sys/firmware/fdt 2>/dev/null | grep -iE "ov0|ovti|camera|cci|csiphy|camss|sen" | sort -u | head -10 | sed "s/^/    /"
 else echo "  (no /sys/firmware/fdt)"; fi
 
+# NB: these are sysfs attributes.  stat() reports 0 bytes for them and cp takes a
+# fast path that silently copies nothing, so they must be read with cat.
 echo "--- ACPI tables (a boot without acpi=off is the only one that has them)"
 if [ -d /sys/firmware/acpi/tables ]; then
 	O=/home/jc/a16-payload/camera/acpi; mkdir -p "$O"
 	for t in /sys/firmware/acpi/tables/*; do
 		[ -f "$t" ] || continue; b=$(basename "$t"); [ "$b" = dynamic ] && continue
-		cp -f "$t" "$O/$b" 2>/dev/null && echo "  copied $b ($(stat -c%s "$t") bytes)"
+		cat "$t" > "$O/$b" 2>/dev/null && echo "  copied $b ($(stat -c%s "$t") bytes)"
 	done
 	command -v acpidump >/dev/null 2>&1 && acpidump > "$O/acpidump.txt" 2>/dev/null && echo "  readable dump: $O/acpidump.txt ($(wc -l < "$O/acpidump.txt" 2>/dev/null) lines)"
 	echo "  -> $(ls "$O" 2>/dev/null | wc -l) file(s) in $O"

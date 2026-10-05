@@ -28,7 +28,7 @@ for t in /sys/firmware/acpi/tables/*; do
 	b=$(basename "$t")
 	[ "$b" = "dynamic" ] && continue
 	s=$(stat -c%s "$t")
-	cp -f "$t" "$OUT/$b" 2>/dev/null && { n=$((n+1)); printf '  [ok] %-12s %8s bytes\n' "$b" "$s"; }
+	cat "$t" > "$OUT/$b" 2>/dev/null && { n=$((n+1)); printf '  [ok] %-12s %8s bytes\n' "$b" "$s"; }
 done
 echo
 echo "  $n table(s) written to $OUT"
