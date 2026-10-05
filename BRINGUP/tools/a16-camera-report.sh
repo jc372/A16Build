@@ -57,7 +57,10 @@ if [ -d /sys/firmware/acpi/tables ]; then
 	O=/home/jc/a16-payload/camera/acpi; mkdir -p "$O"
 	for t in /sys/firmware/acpi/tables/*; do
 		[ -f "$t" ] || continue; b=$(basename "$t"); [ "$b" = dynamic ] && continue
-		cat "$t" > "$O/$b" 2>/dev/null && echo "  copied $b ($(stat -c%s "$t") bytes)"
+		if cat "$t" > "$O/$b" 2>>/home/jc/a16-payload/camera/logs/acpi-read.err; then
+			echo "  copied $b -> $(stat -c%s "$O/$b" 2>/dev/null) bytes"
+			[ -s "$O/$b" ] || echo "    [!!] $b copied as 0 bytes -- see logs/acpi-read.err"
+		else echo "  [fail] reading $t: $(tail -1 /home/jc/a16-payload/camera/logs/acpi-read.err 2>/dev/null)"; fi
 	done
 	command -v acpidump >/dev/null 2>&1 && acpidump > "$O/acpidump.txt" 2>/dev/null && echo "  readable dump: $O/acpidump.txt ($(wc -l < "$O/acpidump.txt" 2>/dev/null) lines)"
 	echo "  -> $(ls "$O" 2>/dev/null | wc -l) file(s) in $O"
