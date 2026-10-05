@@ -80,14 +80,19 @@ if apply_:
     # repoint dead entries at the current kernel, keeping each entry's own cmdline
     out = s
     for b, title, kp, ip in dead:
-        old_k = re.search(r'^(\s*linux\s+)(\S+)(.*)$', b.group(0), re.M)
-        if not old_k:
-            continue
-        new_block = b.group(0).replace(old_k.group(2), want_k, 1)
-        new_block = re.sub(r'^(\s*initrd\s+)\S+', lambda m: m.group(1) + want_i, new_block, count=1, flags=re.M)
-        # the guard in front of it, if any
-        if kp: new_block = new_block.replace(f"[ -f {kp} -a -f {ip} ]", f"[ -f {want_k} -a -f {want_i} ]")
-        new_block = f"# a16-grub-fix.sh: kernel repointed from {kp} ({STAMP})\n" + new_block
+        # line by line: the guard, the linux line and the initrd line each carry a path,
+        # and a blind replace on the whole block would hit the guard first.
+        fixed = []
+        for ln in b.group(0).split("\n"):
+            if re.match(r'^\s*if \[ -f ', ln):
+                ln = ln.replace(kp, want_k)
+                if ip: ln = ln.replace(ip, want_i)
+            m = re.match(r'^(\s*linux\s+)(\S+)(.*)$', ln)
+            if m: ln = m.group(1) + want_k + m.group(3)
+            m = re.match(r'^(\s*initrd\s+)(\S+)(.*)$', ln)
+            if m: ln = m.group(1) + want_i + m.group(3)
+            fixed.append(ln)
+        new_block = f"# a16-grub-fix.sh: kernel repointed from {kp} ({STAMP})\n" + "\n".join(fixed)
         out = out.replace(b.group(0), new_block, 1)
         print(f"    -> repointed '{title[:48]}' to {kver}")
     # drop the later copy of any duplicated title
