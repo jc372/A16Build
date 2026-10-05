@@ -139,12 +139,17 @@ check|install)
 	printf '%s\n' "$ENTRY" | sed 's/^/  | /'
 
 	menus_with_kernel() {
+		# stdout carries ONLY paths that still need the entry; every note goes to
+		# stderr, because the caller loops over stdout as file names.
 		local c
 		for c in /boot/efi/EFI/*/grub.cfg /boot/efi/EFI/*/*/grub.cfg; do
 			[ -f "$c" ] || continue
 			grep -q "vmlinuz-$KVER" "$c" 2>/dev/null || continue
-			grep -q "glymur-a16-camera1.dtb" "$c" 2>/dev/null && { echo "  [ok]   already present in $c"; continue; }
-			echo "$c"
+			if grep -q "glymur-a16-camera1.dtb" "$c" 2>/dev/null; then
+				printf '  [ok]   already present in %s\n' "$c" >&2
+				continue
+			fi
+			printf '%s\n' "$c"
 		done
 	}
 	MENUS="$(menus_with_kernel)"
@@ -185,14 +190,30 @@ ExecStartPre=/bin/sleep 10
 ExecStart=/usr/local/sbin/a16-camera-report.sh
 ExecStartPost=/bin/sh -c 'sleep 45; /usr/local/sbin/a16-camera-report.sh'
 SuccessExitStatus=0 1
+
+[Install]
+WantedBy=sysinit.target
 UNIT
 	systemctl daemon-reload >/dev/null 2>&1
 	systemctl enable a16-camera-report.service >/dev/null 2>&1
-	echo "  [ok]   $REPORT_DST + $UNIT (enabled)"
+	ENABLED="$(systemctl is-enabled a16-camera-report.service 2>&1)"
+	if [ "$ENABLED" = enabled ] || [ "$ENABLED" = static ]; then
+		echo "  [ok]   collector armed: $REPORT_DST + $UNIT ($ENABLED)"
+	else
+		echo "  [warn] the collector unit is '$ENABLED', so it will NOT run by itself."
+		echo "         the boot after this one still gets evidence if you run, by hand:"
+		echo "             bash ~/a16-payload/camera/a16-camera-report.sh"
+	fi
 
-	# one report now, on the running (non-camera) tree, so the file exists and the
-	# format is known-good before the boot that matters
+	# one report now, on the running (non-camera) tree, so the file exists, the format
+	# is known-good and the path is proven writable before the boot that matters
 	bash "$REPORT" >/dev/null 2>&1 || true
+	NEWEST="$(ls -1t /home/jc/a16-payload/camera/logs/boot-*.log 2>/dev/null | head -1)"
+	if [ -n "$NEWEST" ] && [ -s "$NEWEST" ]; then
+		echo "  [ok]   the collector writes here: $NEWEST ($(stat -c%s "$NEWEST") bytes)"
+	else
+		echo "  [warn] no collector log appeared just now -- check $REPORT as root"
+	fi
 
 	cat <<NEXT
 
