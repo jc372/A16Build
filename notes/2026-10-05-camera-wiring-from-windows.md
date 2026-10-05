@@ -360,6 +360,25 @@ byte for byte, and that last archive is unpacked, given the rebuilt module in pl
 the stock one, and packed again.  Same idea (only the module changes) without relying
 on the kernel reading anything past a compressed segment.
 
+**And the module loaded.**  Camera boot 63a2221c, the in-place shape: the old error is
+gone and what replaces it is the *next* problem:
+
+    [    1.172386] qcom-rpmh-regulator 18900000.rsc:regulators-5: ldo4:
+                   could not find RPMh address for resource L4I_E0
+
+So patch 0021's part is right (the rail is known, its range and mode come from the
+driver's own table) and the address is not something the driver carries at all:
+`cmd_db_read_addr(rpmh_resource_name)` asks **the firmware's command DB** by name --
+resource type letter + index + the device tree's pmic-id, so LDO 4 of pmic-id I_E0 is
+looked up as "L4I_E0".  This firmware has no such resource, so the driver cannot vote
+for that rail and the sensor stays unpowered.
+
+Which keys the firmware *does* provide is the missing fact, and it is root-readable:
+`/sys/kernel/debug/cmd-db` (created 0400 by drivers/soc/qcom/cmd-db.c).  Inventing an
+address is not an option -- a wrong one writes to whichever rail really owns it -- so
+`a16-camera-cmd-db.sh` writes the dump (plus the camera's would-be keys and the
+instances this board names) to `logs/cmd-db-<stamp>.txt` for reading.
+
 Validated on the real 48968838-byte two-segment image: prefix byte-identical, the
 rebuilt segment's manifest and per-file hashes equal to the stock tree's except the
 module, the module inside hashing to the staged one, and the member list equal apart
