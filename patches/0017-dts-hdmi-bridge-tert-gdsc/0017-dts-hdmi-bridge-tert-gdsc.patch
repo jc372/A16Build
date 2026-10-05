@@ -1,9 +1,10 @@
 --- a/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
 +++ b/arch/arm64/boot/dts/qcom/glymur-asus-zenbook-a16-ux3607oa.dts
-@@ -79,6 +79,24 @@
+@@ -78,6 +78,24 @@
+ 
  		pinctrl-0 = <&usb2_dp_hot_plug_detect>;
  		pinctrl-names = "default";
- 
++
 +		/*
 +		 * The A16's HDMI output is fed from the tertiary combo PHY
 +		 * (phy@88e1000) through this bridge, and that PHY's "com_aux"
@@ -21,114 +22,6 @@
 +		 * attach, with no dependency on the unused USB controller.
 +		 */
 +		power-domains = <&gcc GCC_USB30_TERT_GDSC>;
-+
+ 
  		ports {
  			#address-cells = <1>;
- 			#size-cells = <0>;
-@@ -670,8 +688,19 @@
- 
- 	status = "okay";
- 
--	/* EC subdevice @ 0x5b */
--	/* EC @ 0x76 */
-+	embedded-controller@76 {
-+		compatible = "asus,zenbook-a16-ux3607oa-ec";
-+		reg = <0x76>;
-+
-+		interrupts-extended = <&tlmm 66 IRQ_TYPE_EDGE_FALLING>;
-+
-+		pinctrl-0 = <&ec_int_n_default>;
-+		pinctrl-names = "default";
-+
-+		#thermal-sensor-cells = <1>;
-+
-+		wakeup-source;
-+	};
- };
- 
- &i2c10 {
-@@ -861,6 +890,7 @@
- };
- 
- &pmk8850_rtc {
-+	qcom,uefi-rtc-info;
- 	qcom,no-alarm;
- };
- 
-@@ -1266,3 +1296,76 @@
- 
- 	status = "okay";
- };
-+
-+/*
-+ * A16: the Bluetooth UART (uart14, a98000.serial) is a serdev controller, so its tty is
-+ * hidden from userspace and btattach cannot open it. hci_qca binds a serdev *client*, and
-+ * the DT had none -- only a port graph child. Six supplies are requested by hci_qca's
-+ * wcn7850 data and described nowhere, so they are stubbed as always-on fixed regulators.
-+ * TEST, NOT A FIX: the rails are very likely already powered (WLAN on the same module
-+ * works), but they still have to be mapped for real before this is more than a test.
-+ */
-+&uart14 {
-+	bluetooth {
-+		compatible = "qcom,wcn7850-bt";
-+		max-speed = <3200000>;
-+		vddio-supply = <&a16_bt_vddio>;
-+		vddaon-supply = <&a16_bt_vddaon>;
-+		vdddig-supply = <&a16_bt_vdddig>;
-+		vddrfa0p8-supply = <&a16_bt_vddrfa0p8>;
-+		vddrfa1p2-supply = <&a16_bt_vddrfa1p2>;
-+		vddrfa1p9-supply = <&a16_bt_vddrfa1p9>;
-+		/* 0006: the chip is held disabled on pin 116 (the wlan-connector declares it
-+		 * as w-disable2, ACTIVE_LOW). hci_qca requires enable-gpios -- without it
-+		 * the radio never leaves reset and every UART command times out (-110).
-+		 * Pin and polarity taken from the Glymur reference board:
-+		 * glymur-crd.dtsi: bt-enable-gpios = <&tlmm 116 GPIO_ACTIVE_HIGH>.  */
-+		enable-gpios = <&tlmm 116 GPIO_ACTIVE_HIGH>;
-+		bt-enable-gpios = <&tlmm 116 GPIO_ACTIVE_HIGH>;
-+	};
-+};
-+
-+&{/} {
-+	a16_bt_vddio: regulator-bt-vddio {
-+		compatible = "regulator-fixed";
-+		regulator-name = "A16_BT_VDDIO";
-+		regulator-min-microvolt = <1800000>;
-+		regulator-max-microvolt = <1800000>;
-+		regulator-always-on;
-+	};
-+	a16_bt_vddaon: regulator-bt-vddaon {
-+		compatible = "regulator-fixed";
-+		regulator-name = "A16_BT_VDDAON";
-+		regulator-min-microvolt = <600000>;
-+		regulator-max-microvolt = <600000>;
-+		regulator-always-on;
-+	};
-+	a16_bt_vdddig: regulator-bt-vdddig {
-+		compatible = "regulator-fixed";
-+		regulator-name = "A16_BT_VDDDIG";
-+		regulator-min-microvolt = <850000>;
-+		regulator-max-microvolt = <850000>;
-+		regulator-always-on;
-+	};
-+	a16_bt_vddrfa0p8: regulator-bt-vddrfa0p8 {
-+		compatible = "regulator-fixed";
-+		regulator-name = "A16_BT_VDDRFA0P8";
-+		regulator-min-microvolt = <800000>;
-+		regulator-max-microvolt = <800000>;
-+		regulator-always-on;
-+	};
-+	a16_bt_vddrfa1p2: regulator-bt-vddrfa1p2 {
-+		compatible = "regulator-fixed";
-+		regulator-name = "A16_BT_VDDRFA1P2";
-+		regulator-min-microvolt = <1200000>;
-+		regulator-max-microvolt = <1200000>;
-+		regulator-always-on;
-+	};
-+	a16_bt_vddrfa1p9: regulator-bt-vddrfa1p9 {
-+		compatible = "regulator-fixed";
-+		regulator-name = "A16_BT_VDDRFA1P9";
-+		regulator-min-microvolt = <1900000>;
-+		regulator-max-microvolt = <1900000>;
-+		regulator-always-on;
-+	};
-+};
