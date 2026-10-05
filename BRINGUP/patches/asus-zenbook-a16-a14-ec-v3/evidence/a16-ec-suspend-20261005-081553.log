@@ -1,0 +1,103 @@
+a16 EC suspend/resume proof
+date  : Mon Oct  5 08:15:53 EDT 2026
+kernel: 7.3.0-rc5-next-20261002-t2
+mode  : probe
+
+=== the EC before ===
+  fan1 1980  fan2 1320  temp1 35000  temp2 37000
+
+=== suspend stats before ===
+  success              2
+  fail                 0
+  failed_suspend       0
+  failed_resume        0
+  last_failed_dev      
+  last_failed_errno    0
+  last_failed_step     
+
+=== arming ftrace on the driver's own functions ===
+  function_graph on: asus_glymur_ec_suspend, asus_glymur_ec_resume
+  return values     : captured (funcgraph-retval)
+  i2c_write tracepoint: enabled
+  (the trace buffer survives s2idle -- it lives in RAM)
+
+=== PROBE: running the suspend path without powering down ===
+  /sys/power/pm_test = devices  -> the kernel runs every device's
+  suspend and resume callback, pauses, then resumes itself.
+  The machine does not sleep. Nothing can freeze.
+
+  echo mem returned: 0
+
+=== suspend stats after ===
+  success              3
+  fail                 0
+  failed_suspend       0
+  failed_resume        0
+  last_failed_dev      
+  last_failed_errno    0
+  last_failed_step     
+
+=== THE EVIDENCE: what the driver actually did ===
+  -- the driver's callbacks, opening and closing lines --
+     10)               |  asus_glymur_ec_suspend() {
+     10) ! 488.593 us  |  } /* asus_glymur_ec_suspend ret=0x0 */
+      8)               |  asus_glymur_ec_resume() {
+      8) ! 439.584 us  |  } /* asus_glymur_ec_resume ret=0x0 */
+
+  -- every write the kernel made to the EC (bus i2c-9, addr 0x76) --
+    i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07]
+    i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-08]
+
+  -- the suspend call in full, to its return --
+     10)               |  asus_glymur_ec_suspend() {
+     10)   0.156 us    |    mutex_lock(); /* ret=0x0 */
+     10)               |    i2c_smbus_write_byte_data() {
+     10)               |      i2c_smbus_xfer() {
+     10)               |        i2c_adapter_lock_bus() {
+     10)   0.104 us    |          rt_mutex_lock(); /* ret=0x0 */
+     10)   0.521 us    |        } /* i2c_adapter_lock_bus ret=0x0 */
+     10)               |        __i2c_smbus_xfer() {
+     10)               |          i2c_smbus_xfer_emulated() {
+     10)               |            __i2c_transfer() {
+     10)               |              trace_event_buffer_reserve() {
+     10)               |                /* i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07] */
+     10)   0.261 us    |              } /* trace_event_buffer_reserve ret=0xffff0008011921e8 */
+     10)               |              geni_i2c_xfer [i2c_qcom_geni]() {
+     10)               |                __pm_runtime_resume() {
+     10)   0.156 us    |                  _raw_spin_lock_irqsave(); /* ret=0x0 */
+     10)   0.157 us    |                  rpm_resume(); /* ret=0x1 */
+     10)   0.104 us    |                  _raw_spin_unlock_irqrestore(); /* ret=0x0 */
+     10)   1.041 us    |                } /* __pm_runtime_resume ret=0x1 */
+     10)   0.208 us    |                qcom_geni_i2c_conf [i2c_qcom_geni](); /* ret=0x0 */
+     10)               |                geni_i2c_gpi_xfer [i2c_qcom_geni]() {
+     10)               |                  geni_i2c_gpi [i2c_qcom_geni]() {
+     10)               |                    i2c_get_dma_safe_msg_buf() {
+     10)   0.730 us    |                      __kmalloc_node_track_caller_noprof(); /* ret=0xffff000807fff140 */
+     10)   1.094 us    |                    } /* i2c_get_dma_safe_msg_buf ret=0xffff000807fff140 */
+     10)   0.156 us    |                    is_vmalloc_addr(); /* ret=0x0 */
+     10)               |                    dma_map_page_attrs() {
+     10)               |                      dma_map_phys() {
+     10)               |                        iommu_dma_map_phys() {
+     10)   0.157 us    |                          iommu_get_dma_domain(); /* ret=0xffff00081d2a6458 */
+     10)   0.156 us    |                          dev_use_swiotlb(); /* ret=0x0 */
+     10)   0.157 us    |                          arch_sync_dma_for_device(); /* ret=0x0 */
+     10)   0.104 us    |                          dma_info_to_prot(); /* ret=0x1 */
+     10)               |                          __iommu_dma_map() {
+     10)   0.208 us    |                            iommu_get_dma_domain(); /* ret=0xffff00081d2a6458 */
+
+=== the whole trace buffer was saved to /home/jc/a16-payload/asus-zenbook-a16-a14-ec-v3/evidence/a16-ec-suspend-20261005-081553.log.trace ===
+
+=== the EC after ===
+  fan1 0  fan2 0  temp1 35000  temp2 38000
+
+=== what these results mean ===
+  asus_glymur_ec_suspend in the trace, returning 0
+      -> the EC was told to enter standby, and it acked.
+  asus_glymur_ec_resume in the trace, returning 0
+      -> the EC was told to exit standby, and it acked.
+  a non-zero return, or the function missing
+      -> the notification did NOT work; send me the log.
+  suspend_stats/success incremented, last_failed_dev empty
+      -> the kernel considers the cycle to have completed.
+
+Log: /home/jc/a16-payload/asus-zenbook-a16-a14-ec-v3/evidence/a16-ec-suspend-20261005-081553.log

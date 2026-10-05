@@ -71,11 +71,27 @@ Suspend/resume notification — **captured on the wire, not judged by eye**:
     journal         PM: suspend entry (s2idle) 08:10:04 -> suspend exit 08:10:29
     boot time       unchanged (08:04:47) — it resumed, it did not reboot
 
-**Still missing at the time of writing**: the EXIT byte `[23-08]` on the wire
-from the resume path, and the callbacks' explicit return values. Both were lost
-to a 60-line cap in the first version of the test script; the current script
-enables `funcgraph-retval` and greps every write to address 0x76. Re-run `probe`
-to capture them.
+**Both halves captured**, with return values, from the safe `pm_test=devices`
+stage (which runs the whole suspend and resume callback path without powering
+down):
+
+    asus_glymur_ec_suspend() { ... } /* asus_glymur_ec_suspend ret=0x0 */  488.593 us
+    asus_glymur_ec_resume()  { ... } /* asus_glymur_ec_resume  ret=0x0 */  439.584 us
+
+    i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-07]   STANDBY_CMD / ENTER
+    i2c_write: i2c-9 #0 a=076 f=0000 l=2 [23-08]   STANDBY_CMD / EXIT
+
+    suspend_stats 2 -> 3, fail 0, last_failed_dev empty
+
+An earlier pass lost these to a 60-line cap in the first version of the test
+script. The current script enables `funcgraph-retval` and greps every write to
+address 0x76; `evidence/a16-ec-suspend-20261005-081553.log` has the full run and
+`.log.trace` the whole trace buffer.
+
+Everything the cover letter claims is therefore confirmed on this hardware:
+fan RPM for both fans, two temperature sensors, the keyboard backlight, and the
+suspend entry/exit notification — the last of these with the exact register, the
+exact value, and the callback's own return value.
 
 ## Reproducing
 
@@ -107,6 +123,12 @@ Plain text, bottom-posted. A direct mail is fine but a `Tested-by:` only counts
 in the thread, because it has to go into the commit message and the maintainers
 have to see it.
 
-Claim only what is proven: fan RPM, both temperature sensors, and the keyboard
-backlight LED are confirmed; suspend notification is confirmed as far as the
-ENTER command reaching the EC. Do not claim the EXIT half until it is captured.
+Everything in the cover letter is now confirmed on this machine, so the whole
+claim is available: fan RPM for both fans, both temperature sensors, the
+keyboard backlight, and suspend entry/exit being reported to the EC — the last
+with the register, the values, and the callbacks' return values.
+
+Worth including the awkward detail rather than hiding it: our port had been
+carrying v2 verbatim, and the first test pass lost the return values to a
+script bug of ours. Neither weakens the result, and both are the kind of thing
+a maintainer would rather hear from the tester than discover later.

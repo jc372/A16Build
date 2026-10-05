@@ -115,6 +115,8 @@ stats | tee -a "$LOG"
 say ""
 say "=== THE EVIDENCE: what the driver actually did ==="
 cp "$TR/trace" "$LOG.trace" 2>/dev/null
+chmod 644 "$LOG.trace" 2>/dev/null
+chmod 644 "$LOG" 2>/dev/null
 if grep -qE 'asus_glymur_ec_(suspend|resume)' "$LOG.trace" 2>/dev/null; then
 	say "  -- the driver's callbacks, opening and closing lines --"
 	grep -E 'asus_glymur_ec_(suspend|resume)' "$LOG.trace" | sed 's/^/    /' | tee -a "$LOG"
