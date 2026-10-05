@@ -301,12 +301,12 @@ Windows as in step 4.
 
 | Working | Not working |
 |---|---|
-| Internal panel (2880x1800) | Camera — needs a device tree description and a userspace stack |
-| External monitor (USB-C and HDMI) | Internal speakers -- **needs firmware from your own Windows install**, which this repo cannot ship; see [docs/audio.md](docs/audio.md) | |
-| Bluetooth | Dock USB / ethernet after a suspend (usually fine; occasionally needs a replug) |
+| Internal panel (2880x1800) | Camera -- needs a device tree description and a userspace stack |
+| External monitor (USB-C and HDMI) | Dock USB / ethernet after a suspend (usually fine; occasionally needs a replug) |
+| Bluetooth | Audio profile for the internal speakers -- built from your own Windows install, which this repo cannot ship; see [docs/audio.md](docs/audio.md) |
 | Wi-Fi | |
+| Internal speakers, with that profile | |
 | Suspend power draw (2.4 W while asleep -- PCIe L2; see [docs/suspend-power.md](docs/suspend-power.md)) | |
-| Internal speakers (with the audio profile — see [docs/audio.md](docs/audio.md)) | |
 | Suspend and resume, with the fans spinning down | |
 | 3D GPU (Adreno X2-90, via freedreno and turnip) | |
 

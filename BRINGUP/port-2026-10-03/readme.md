@@ -105,9 +105,24 @@ DTS (`0002`, `0005`, `0006`, `0017`).
 
 ## 5. Bluetooth
 
-Not working, and not for want of configuration: this build has `BT=m`, `BT_HCIUART=m`,
-`BT_HCIUART_SERDEV=y`, `BT_HCIUART_QCA=y`, and the firmware is installed system-wide in
-`/lib/firmware/qca`.
+Was not working when this was written, and not for want of configuration: this build has
+`BT=m`, `BT_HCIUART=m`, `BT_HCIUART_SERDEV=y`, `BT_HCIUART_QCA=y`, and the firmware is
+installed system-wide in `/lib/firmware/qca`.
+
+It works now, on this set — `0005` provides the missing node below and `0006` the enable
+line, and §11 records the test that showed the enable line was the second half of it.
+Verified 2026-10-05: `hci0` present and unblocked, and a pair of Bluetooth earbuds
+connected over A2DP.
+
+One thing in the log looks like a failure and is not:
+
+    Bluetooth: hci0: QCA Downloading qca/hmtbtfw11.tlv
+    bluetooth hci0: Direct firmware load for qca/hmtbtfw11.tlv failed with error -2
+
+The name comes from the chip's ROM version, and this machine carries the `hmtbtfw20.*`
+files, so the request misses. It does not matter: the chip reports `QCA Patch Version:
+0x00007b40` before the download is attempted, so it already holds a working image. The
+controller comes up and stays up.
 
 What is missing is the device-tree **serdev client**. `uart14` (`a98000.serial`) is a
 serdev controller, so its tty is deliberately hidden from userspace and `btattach`
