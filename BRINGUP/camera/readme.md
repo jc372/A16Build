@@ -107,10 +107,18 @@ Read the install output.  These lines are the ones that matter:
     [ok]   module_layout CRC matches
     [ok]   the module carries the PMH0104 LDOs (vreg table 256 bytes = 7 rails)
     [ok]   the stock initramfs is byte-identical to before the build
-    [ok]   members: N, none of the stock's N missing
+    [ok]   the new initramfs walks cleanly -- 0 cpio 12871168 zstd
+    [ok]   members: N in the new image, M in the stock one
     [ok]   the new initramfs has its /init
-    [ok]   all N copy/copies inside hash to the staged module
+    [ok]   all N kernel modules of the stock image are in the new one
+    [ok]   the module inside the new initramfs is the staged one (6ae0320d...)
     [ok]   camera entry now boots initrd.img-<version>-camera1
+
+The archive is read by `a16-camera-initrd-segments.py` (which finds where each
+segment starts) plus GNU `cpio` (which lists them).  That pair exists because
+`lsinitramfs` and `unmkinitramfs` print nothing at all, and exit 0, for an archive
+`mkinitramfs` wrote on this machine -- silently -- so a check based on them either
+refuses a good build or, worse, believes any archive.
 
 Then reboot and pick the camera entry.  The run builds a second initramfs for the
 camera entry with the rebuilt `qcom-rpmh-regulator` inside, using `mkinitramfs` and

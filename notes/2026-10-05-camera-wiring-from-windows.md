@@ -309,6 +309,25 @@ to the stock initramfs, so it cannot be left armed on an image that does not boo
 The escape route held: the usual entries boot the same tree, the same initramfs and
 the same module they did before, which is why the machine came back with no
 intervention.
+
+# Two tool traps found while fixing that, worth keeping
+
+1. **`lsinitramfs` and `unmkinitramfs` are silent liars here.**  For the 89 MB archive
+   `mkinitramfs` wrote, both print *nothing at all* and exit 0 -- no error, no output
+   -- while listing the stock image fine.  (`lsinitramfs` is a 58-line shell script
+   that just runs `unmkinitramfs --list`, and `unmkinitramfs` is a 66 KB ELF.)  A
+   verification based on them cannot tell "this archive is empty" from "I could not
+   read this archive", so the image is now read directly:
+   `a16-camera-initrd-segments.py` walks the headers (plain cpio to its TRAILER, skip
+   the zeros, look at the next magic -- the kernel's own rule) to find where each
+   segment starts, and GNU `cpio` lists each segment through `tail -c +<offset>`.
+   The 89 MB build came out as `0 cpio` + `12871168 zstd`, 3928 members, and the
+   module inside it hashed to the staged one.
+
+2. **`cpio -i --to-stdout <member>` exits 0 when the member is not in that archive.**
+   Extracting the module from the first segment therefore "succeeded" with empty
+   output and the check reported a mismatch.  Extract into a file and test `-s`, not
+   the exit status.
 - The machine's initramfs is an **uncompressed SVR4 cpio** ("ASCII cpio archive",
   48432086 bytes), not zstd or gzip, which is what `file` reports for it.  Detecting
   the archive kind by magic bytes (`od -An -tx1 -N6`) rather than by `file`'s wording

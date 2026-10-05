@@ -110,16 +110,18 @@ exec > >(tee -a "$LOG") 2>&1
 # Ctrl-C, a kill or any early exit still has to put the stock module back and take
 # the hook out; both are no-ops until the build starts, and neither touches the menu
 # entry (only a failure does that, in die())
-trap 'restore_stock_module; remove_hook' EXIT INT TERM
 say "=== camera step 2: rails for the camera entry ==="
 say "  kernel     : $KVER"
 say "  log        : $LOG"
+list_orig="$(mktemp /tmp/a16-list-orig.XXXXXX)"; list_new="$(mktemp /tmp/a16-list-new.XXXXXX)"
+modules_orig="$(mktemp /tmp/a16-mod-orig.XXXXXX)"; modules_new="$(mktemp /tmp/a16-mod-new.XXXXXX)"
+mod_extracted="$(mktemp /tmp/a16-mod-inside.XXXXXX)"
+trap 'restore_stock_module; remove_hook; rm -f "$list_orig" "$list_new" "$modules_orig" "$modules_new" "$mod_extracted"' EXIT INT TERM
 say ""
 
-# the tools that know how a modern (concatenated, compressed) initramfs is put
-# together -- the hand-rolled version is gone, see the header
-for t in mkinitramfs lsinitramfs unmkinitramfs; do
-	command -v "$t" >/dev/null || die "$t is missing (initramfs-tools needed)"
+# mkinitramfs builds the archive; python3 walks the result (see the header)
+for t in mkinitramfs python3 cpio; do
+	command -v "$t" >/dev/null || die "$t is missing"
 done
 [ "$KVER" = "$(uname -r)" ] || die "kernel release changed under me"
 
@@ -177,11 +179,10 @@ ok "disk space is there ($((avail_k/1024/1024))G free on /)"
 if [ "$mode" = check ]; then
 	say ""
 	say "--- what the machine's initramfs carries (reads it, changes nothing)"
-	lsinitramfs "$initrd" | sort > /tmp/a16-stock-list.$$
-	n="$(wc -l < /tmp/a16-stock-list.$$)"; rm -f /tmp/a16-stock-list.$$
-	say "  $n members"
-	say "  has init  : $(lsinitramfs "$initrd" | grep -cx 'init')"
-	say "  has module: $(lsinitramfs "$initrd" | grep -c 'qcom-rpmh-regulator.ko')"
+	initramfs_members "$initrd" > "$list_orig" || die "could not read the stock initramfs"
+	say "  $(wc -l < "$list_orig") members, $(segment_offsets "$initrd" | wc -l) segment(s)"
+	say "  has init  : $(cut -f2- "$list_orig" | grep -cx 'init')"
+	say "  has module: $(cut -f2- "$list_orig" | grep -c 'qcom-rpmh-regulator.ko')"
 	say ""
 	say "check only: nothing was written.  Run without --check to install."
 	exit 0
@@ -204,51 +205,95 @@ if [ "$mode" = remove ]; then
 fi
 
 verify_cam_initramfs() {
-say ""
-say "=== verifying the archive before anything points at it ==="
-now_sha="$(sha256sum "$initrd" | awk '{print $1}')"
-[ "$now_sha" = "$stock_sha" ] || die "the stock initramfs is not the one we started with"
-ok "the stock initramfs is byte-identical to before the build"
+	local seg now n_orig n_new missing mod_path want got new_size
+	say ""
+	say "=== verifying the archive before anything points at it ==="
+	now="$(sha256sum "$initrd" | awk '{print $1}')"
+	[ "$now" = "$stock_sha" ] || die "the stock initramfs is not the one we started with"
+	ok "the stock initramfs is byte-identical to before the build"
 
-lsinitramfs "$initrd"     | sort > /tmp/a16-lo.$$ || die "lsinitramfs failed on the stock initramfs"
-lsinitramfs "$cam_initrd" | sort > /tmp/a16-ln.$$ || die "lsinitramfs failed on the new initramfs"
-n_orig="$(wc -l < /tmp/a16-lo.$$)"; n_new="$(wc -l < /tmp/a16-ln.$$)"
-missing="$(comm -23 /tmp/a16-lo.$$ /tmp/a16-ln.$$)"
-if [ -n "$missing" ]; then
-	printf '  [fail] the new initramfs is missing %s member(s):\n' "$(printf '%s\n' "$missing" | wc -l)"
-	printf '%s\n' "$missing" | head -8 | sed 's/^/           /'
-	rm -f /tmp/a16-lo.$$ /tmp/a16-ln.$$
-	die "refusing to install it"
-fi
-rm -f /tmp/a16-lo.$$ /tmp/a16-ln.$$
-[ "$n_new" -ge "$n_orig" ] || die "fewer members than the stock initramfs: $n_new < $n_orig"
-ok "members: $n_new, none of the stock's $n_orig missing"
+	# the walker must get through the whole image, or our picture of it is wrong
+	if ! seg="$(segment_offsets "$cam_initrd" 2>&1)"; then
+		die "the new initramfs could not be walked: $seg"
+	fi
+	ok "the new initramfs walks cleanly -- $(printf '%s' "$seg" | tr '\n' ' ')"
 
-# /init is the thing whose absence panicked the machine, so it is checked by name
-if lsinitramfs "$cam_initrd" | grep -qx 'init'; then
+	initramfs_members "$initrd"     > "$list_orig" || die "could not list the stock initramfs"
+	initramfs_members "$cam_initrd" > "$list_new"  || die "could not list the new initramfs"
+	n_orig="$(wc -l < "$list_orig")"; n_new="$(wc -l < "$list_new")"
+	[ "$n_orig" -gt 100 ] || die "only $n_orig members listed for the stock initramfs -- the listing itself is wrong"
+	[ "$n_new" -gt 100 ] || die "only $n_new members listed for the new initramfs -- the listing itself is wrong"
+	ok "members: $n_new in the new image, $n_orig in the stock one"
+
+	# /init by name: its absence is exactly what panicked the machine
+	cut -f2- "$list_new" | grep -qx 'init' || die "no /init in the new initramfs -- that is what panicked it the first time"
 	ok "the new initramfs has its /init"
-else
-	die "no /init in the new initramfs -- this is exactly the failure that panicked"
-fi
 
-work="$(mktemp -d /tmp/a16-verify.XXXXXX)"
-unmkinitramfs "$cam_initrd" "$work" >/dev/null 2>&1 || { rm -rf "$work"; die "could not unpack the new initramfs to check the module"; }
-want="$(sha256sum "$MOD" | awk '{print $1}')"
-mapfile -t copies < <(find "$work" -name 'qcom-rpmh-regulator.ko' -type f)
-[ "${#copies[@]}" -gt 0 ] || { rm -rf "$work"; die "no qcom-rpmh-regulator.ko inside the new initramfs"; }
-bad=0
-for f in "${copies[@]}"; do
-	[ "$(sha256sum "$f" | awk '{print $1}')" = "$want" ] || bad=$((bad+1))
-done
-rm -rf "$work"
-[ "$bad" = 0 ] || die "$bad copy/copies of the module inside are not the staged one"
-ok "all ${#copies[@]} copy/copies inside hash to the staged module ($want)"
+	# every kernel module the stock image carries must still be there -- that is the
+	# set that mounts the root filesystem
+	cut -f2- "$list_orig" | grep -E '^usr/lib/modules/.*\.ko' | sort > "$modules_orig"
+	cut -f2- "$list_new"  | grep -E '^usr/lib/modules/.*\.ko' | sort > "$modules_new"
+	missing="$(comm -23 "$modules_orig" "$modules_new")"
+	if [ -n "$missing" ]; then
+		printf '  [fail] %s module(s) of the stock initramfs are not in the new one:\n' "$(printf '%s\n' "$missing" | wc -l)"
+		printf '%s\n' "$missing" | head -8 | sed 's/^/           /'
+		die "refusing to install it"
+	fi
+	ok "all $(wc -l < "$modules_orig") kernel modules of the stock image are in the new one"
 
-new_size="$(stat -c%s "$cam_initrd")"
-if [ "$new_size" -lt $((stock_size / 2)) ]; then
-	die "the new initramfs is $new_size bytes against the stock's $stock_size -- far too small"
-fi
-ok "size $new_size vs the stock's $stock_size"
+	# the module itself, by content, not by name
+	mod_path="$(grep -m1 'qcom-rpmh-regulator\.ko' "$list_new" | cut -f2-)"
+	[ -n "$mod_path" ] || die "no qcom-rpmh-regulator.ko in the new initramfs"
+	want="$(sha256sum "$MOD" | awk '{print $1}')"
+	initramfs_extract "$cam_initrd" "$mod_path" "$mod_extracted" \
+		|| die "could not extract $mod_path out of the new initramfs"
+	got="$(sha256sum "$mod_extracted" | awk '{print $1}')"
+	[ "$want" = "$got" ] || die "the module inside the new initramfs ($got) is not the staged one ($want)"
+	ok "the module inside the new initramfs is the staged one ($got)"
+
+	new_size="$(stat -c%s "$cam_initrd")"
+	[ "$new_size" -ge $((stock_size / 2)) ] || die "the new initramfs is $new_size bytes against the stock's $stock_size -- far too small"
+	ok "size $new_size vs the stock's $stock_size"
+}
+
+# ---------------------------------------------------------------- reading an initramfs
+# lsinitramfs and unmkinitramfs print NOTHING and exit 0 for the archive mkinitramfs
+# wrote on this machine -- silently, with no error -- while listing the stock image
+# fine.  A checker that believes that empty list refuses a good build, which is what
+# happened on 2026-10-05.  So the image is read directly: where do the segments start
+# (python walks the headers, the kernel's own rule), and what is in each of them (GNU
+# cpio, which handles them all).
+segment_offsets() { python3 "$here/a16-camera-initrd-segments.py" "$1"; }
+
+# every member of the image: "size<TAB>path"
+initramfs_members() {
+	local img=$1 off kind
+	while read -r off kind; do
+		case "$kind" in
+			cpio) tail -c +$((off + 1)) "$img" | cpio -it --quiet 2>/dev/null ;;
+			zstd) tail -c +$((off + 1)) "$img" | zstd -dc 2>/dev/null | cpio -it --quiet 2>/dev/null ;;
+			gzip) tail -c +$((off + 1)) "$img" | gzip -dc 2>/dev/null | cpio -it --quiet 2>/dev/null ;;
+			xz)   tail -c +$((off + 1)) "$img" | xz -dc 2>/dev/null | cpio -it --quiet 2>/dev/null ;;
+		esac
+	done < <(segment_offsets "$img")
+}
+
+# one member of the image into a file, searched in every segment; 1 if not found.
+# cpio exits 0 even when its pattern matches nothing, so the test is the size of what
+# came out -- with the exit status it returned an empty "success" from segment 0.
+initramfs_extract() {
+	local img=$1 want=$2 dest=$3 off kind
+	while read -r off kind; do
+		: > "$dest"
+		case "$kind" in
+			cpio) tail -c +$((off + 1)) "$img" | cpio -i --to-stdout "$want" > "$dest" 2>/dev/null ;;
+			zstd) tail -c +$((off + 1)) "$img" | zstd -dc 2>/dev/null | cpio -i --to-stdout "$want" > "$dest" 2>/dev/null ;;
+			gzip) tail -c +$((off + 1)) "$img" | gzip -dc 2>/dev/null | cpio -i --to-stdout "$want" > "$dest" 2>/dev/null ;;
+			xz)   tail -c +$((off + 1)) "$img" | xz -dc 2>/dev/null | cpio -i --to-stdout "$want" > "$dest" 2>/dev/null ;;
+		esac
+		[ -s "$dest" ] && return 0
+	done < <(segment_offsets "$img")
+	return 1
 }
 
 # ---------------------------------------------------------------- build
