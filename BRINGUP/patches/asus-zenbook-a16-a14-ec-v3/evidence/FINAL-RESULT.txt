@@ -22,6 +22,13 @@ READINGS
   kbd_backlight   1 of 3, and the backlight responds
 
 MAILBOX
+  The driver's own name for this: ASUS_EC_PAGE_MAILBOX 0xc4 is an EC register
+  page holding ASUS_EC_MBOX_REG_CMD 0x30 / SUBCMD 0x31 / DATA 0x32, driven by
+  asus_ec_wait_mailbox() and asus_ec_mailbox_cmd().  It is the EC's paged
+  register window, NOT the kernel mailbox framework -- no linux/mailbox.h, no
+  mbox_chan.  A command is submitted by writing SUBCMD, DATA then CMD, and
+  polling CMD until the EC clears it to zero (five tries, 5 ms apart).
+
   asus_ec_enable_writes() sends MBOX_CMD_MISC 0x02 / SUBCMD_MISC_ENABLE 0x83 at
   probe, and the probe aborts if it fails -- so a bound driver is proof it worked.
   The keyboard backlight level goes through the same mailbox (CMD_KBD 0x01 /
