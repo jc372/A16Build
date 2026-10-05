@@ -20,7 +20,16 @@ What the driver does:
 * fan RPM for the two fans (`ASUS_QCOM_EC_RAM_FAN_CPU` 0x0602, `…_FAN_GPU` 0x0624) and two
   temperature sensors, exposed through hwmon;
 * keyboard backlight (`asus::kbd_backlight`), through the LED class;
-* a mailbox for "miscellaneous sideband events" (`ASUS_EC_MBOX_CMD_MISC` 0x02 / `…_MISC_ENABLE` 0x83);
+* the EC **mailbox** — page `MAILBOX`, registers `CMD` 0x30 / `SUBCMD` 0x31 / `DATA` 0x32 on the
+  subdevice at 0x5b — used to send commands to the EC.  `asus_ec_enable_writes()` sends
+  `ASUS_EC_MBOX_CMD_MISC` 0x02 / `…_SUBCMD_MISC_ENABLE` 0x83 at probe; the driver's own message
+  calls that "enable EC direct access", and the probe aborts if it fails, so a bound driver is
+  proof it worked.  The keyboard backlight level goes through the same mailbox
+  (`…_CMD_KBD` 0x01 / `…_SUBCMD_KBD_LVL` 0x87);
+* an **event path** — the EC raises an interrupt on GPIO 66, and `asus_ec_irq()` reads
+  `ASUS_QCOM_EC_EVENT_CMD` 0x05 and logs the code at `dev_dbg`: hotkey, fan status, thermal trip,
+  critical trip, thermistor.  Nothing prints at the default log level, so this path is invisible
+  unless `dev_dbg` is on;
 * **system suspend entry/exit are reported to the EC** — `ASUS_QCOM_EC_MODERN_STANDBY_CMD` 0x23 with
   `…_ENTER` 0x07 / `…_EXIT` 0x08, sent from the driver's `suspend`/`resume` callbacks.
 

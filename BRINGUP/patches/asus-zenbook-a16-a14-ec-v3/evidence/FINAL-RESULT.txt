@@ -19,7 +19,14 @@ READINGS
   fan2_input      1320 RPM
   temp1_input     36-38 C    label CPU
   temp2_input     38-41 C    label SoC
-  kbd_backlight   brightness 0, max 3
+  kbd_backlight   1 of 3, and the backlight responds
+
+MAILBOX
+  asus_ec_enable_writes() sends MBOX_CMD_MISC 0x02 / SUBCMD_MISC_ENABLE 0x83 at
+  probe, and the probe aborts if it fails -- so a bound driver is proof it worked.
+  The keyboard backlight level goes through the same mailbox (CMD_KBD 0x01 /
+  SUBCMD_KBD_LVL 0x87); setting it from the desktop works, with no EC write errors
+  in the log.
 
 SUSPEND / RESUME NOTIFICATION
   asus_glymur_ec_suspend   ret=0x0   488.593 us
@@ -37,6 +44,11 @@ SUSPEND / RESUME NOTIFICATION
                     suspend_stats success 1 -> 2, fail 0
 
 NOT TESTED
-  lid switch
-  power button
-  sideband event mailbox (ASUS_EC_MBOX_CMD_MISC 0x02 / MISC_ENABLE 0x83)
+  The event path.  asus_ec_irq() reads the event code from ASUS_QCOM_EC_EVENT_CMD
+  0x05 and logs it at dev_dbg only, so nothing is visible at the default log
+  level, and there is no evidence either way whether the EC raises events on this
+  machine.
+
+NOT THIS DRIVER'S BUSINESS -- listed here in error before
+  The lid switch and the power button are gpio-keys in the board dts.
+  asus-glymur-ec.c contains no lid or power-button code at all.
