@@ -1,0 +1,62 @@
+HDMI on the A16 -- tertiary combo PHY power domain
+2026-10-05, kernel 7.3.0-rc5-next-20261002-t2
+
+MACHINE
+  model        ASUS Zenbook A16 (UX3607OA)
+  soc          Qualcomm Snapdragon X2 Elite (Glymur)
+  kernel       7.3.0-rc5-next-20261002-t2
+  monitor      MSI, 5120x1440, plugged into the HDMI connector
+
+CAUSE
+  The HDMI output is fed from the tertiary combo PHY (phy@88e1000) through the
+  PS185 bridge.  That PHY's "com_aux" clock is parented to GCC_USB30_TERT_GDSC.
+  No device-tree node consumes that domain -- the USB controller on the same PHY
+  is not enabled on this board -- so the domain never powers on, the clock cannot
+  enable, and the PHY init fails:
+
+      Failed to enable clk 'com_aux': -16
+      phy phy-88e1000.phy.14: phy init failed --> -16
+      phy phy-88e1000.phy.14: phy_power_on was called before phy_init
+
+  card1-HDMI-A-1 then sits at connected-but-disabled, and probing it blocks in
+
+      drm_mode_getconnector
+      drm_helper_probe_single_connector_modes
+      detect_connector_status
+      msm_dp_bridge_detect+0x70/0x318 [msm]
+      __pm_runtime_resume+0x58/0xc0
+      rpm_resume+0x4b8/0x6b0
+
+  (that stack captured 2026-10-05 08:57:23).  A compositor enumerating connector
+  modes at startup or on hotplug blocks there, which presents as a frozen desktop
+  with the kernel still alive.
+
+FIX
+  One property on /hdmi-bridge in glymur-asus-zenbook-a16-ux3607oa.dts:
+
+      power-domains = <&gcc GCC_USB30_TERT_GDSC>;
+
+  The bridge (parade,ps185hdm, driver simple-bridge) binds on every boot, and a
+  single power-domain specifier is enough for genpd_dev_pm_attach() to power the
+  domain on at attach -- with no dependency on the unused USB controller.
+
+      patch  port-2026-10-03/patches/0014-dts-hdmi-bridge-tert-gdsc.patch
+      dtb    164631 bytes, sha256 8a9bc3d9587bdabd   (was 164611, 878e76d80eff172f)
+
+RESULT
+  "phy init failed" occurrences, by boot:
+
+      boot -5  x1        boot -2  x1
+      boot -4  x1        boot -1  x1
+      boot -3  x1        boot  0  x0
+
+  card1-HDMI-A-1   connected   enabled   5120x1440
+  card1-eDP-1      connected   enabled   2880x1800     (both at once)
+  A16 QMP DP PCS LN drive level 0x02 at 5400 Mbps
+  dpu error 0
+  drm ERROR 1 -- the gen80100_sqe.fw load failure at boot, unrelated, pre-existing
+  a16_dp_max_rate 0 -- no rate cap in force, so the cap is not needed for HDMI
+
+OPEN
+  refresh rate of the HDMI link
+  whether the link survives a hotplug cycle
