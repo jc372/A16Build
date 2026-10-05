@@ -9,7 +9,7 @@ Everything is usable day to day except the camera. Two things work and cannot be
 
 | What | State | Notes |
 |---|---|---|
-| Internal panel | Working | 2880x1800 |
+| Internal panel | Working | 2880x1800, at 60 or 120 Hz. 120 is the panel's preferred mode, so a fresh session comes up at 120 -- pick 60 in Settings if you would rather have that |
 | External monitors | Working | Two of them, and each works differently: a Gigabyte over USB-C, which needs the link-rate cap carried in `0012`, and an MSI over HDMI, because its own repeater never trains at any rate |
 | Bluetooth | Working | Earbuds connected over A2DP |
 | Wi-Fi | Working | |
