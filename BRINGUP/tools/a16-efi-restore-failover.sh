@@ -33,8 +33,8 @@ python3 - "$ARCHSRC/removed-menuentries.txt" "$ARCHNEW" "$APPLY" $MENUS <<'PY'
 import re, os, sys
 archsrc, archnew, apply_ = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
 menus = sys.argv[4:]
-DROP_TITLE = re.compile(r'^\[\d+\]\s*A16: 7\.2 \+ glymur DTB, internal input, panel via firmware framebuffer$')
-WANT_TITLE = re.compile(r'^\[\d+\]\s*A16: next 7\.3 \+ glymur DTB, panel left to firmware')
+DROP_TITLE = re.compile(r'^(?:\[\d+\]\s*)?A16: 7\.2 \+ glymur DTB, internal input, panel via firmware framebuffer$')
+WANT_TITLE = re.compile(r'^(?:\[\d+\]\s*)?A16: next 7\.3 \+ glymur DTB, panel left to firmware')
 
 # the archived block, taken verbatim
 src = open(archsrc).read()
