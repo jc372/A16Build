@@ -34,7 +34,7 @@ for p in /proc/device-tree/soc@0/cci@*/*/camera@36 /proc/device-tree/soc@0/cci@*
 done
 echo
 echo "--- modules of interest (loaded?)"
-for m in i2c_qcom_cci ov08x40 qcom_camss camcc_glymur pinctrl_glymur qcom_rpmh_regulator; do
+for m in i2c_qcom_cci ov02c10 ov08x40 qcom_camss camcc_glymur pinctrl_glymur qcom_rpmh_regulator; do
 	printf '  %-22s %s\n' "$m" "$(lsmod | awk -v m="$m" '$1==m{print "loaded ("$3" users)"}' | head -1)"
 done
 echo
@@ -70,8 +70,8 @@ for r in /sys/class/regulator/*/name; do
 	case "$v" in *l4i_e0*|*l7i_e0*) printf '  %s = %s uV, state=%s\n' "$v" "$(cat "${r%name}"microvolts 2>/dev/null)" "$(cat "${r%name}state" 2>/dev/null)";; esac
 done
 echo
-echo "--- dmesg: cci / ov08x40 / camcc / regulator, whole lines"
-dmesg 2>/dev/null | grep -iE 'cci|ov08x40|ov08x|camcc|cam_cc|titan|vreg_l4i|vreg_l7i|pmh0104|rpmh.*(ldo4_i|ldo7_i)' | sed 's/^/  /'
+echo "--- dmesg: cci / ov02c10 / camcc / regulator, whole lines"
+dmesg 2>/dev/null | grep -iE 'cci|ov02c10|ov08x40|ov08x|camcc|cam_cc|titan|vreg_l4i|vreg_l7i|pmh0104|rpmh.*(ldo4_i|ldo7_i)' | sed 's/^/  /'
 echo
 echo "--- dmesg: deferred probes and probe failures left over"
 dmesg 2>/dev/null | grep -iE 'defer|probe.*fail|could not find RPMh|unknown regulator|not enough clocks|parsing endpoint|chip ID' | tail -25 | sed 's/^/  /'
@@ -103,7 +103,7 @@ else
 	echo "  sensor client    : absent at 0x36 (nothing bound a device there)"
 fi
 # what the probe actually did, and what the i2c errno means
-err="$(dmesg 2>/dev/null | grep -iE 'ov08x40 .*error reading chip-id|ov08x40 .*chip id' | tail -1)"
+err="$(dmesg 2>/dev/null | grep -iE 'ov02c10|ov08x40'  | tail -1)"
 case "$err" in
 	*'-6'*)   echo "  chip id          : NOT read -- -6 is -ENXIO, the transfer finished and the sensor did not ACK."
 	          echo "                     that is a power/reset problem on the sensor side, not the CCI" ;;
@@ -111,7 +111,7 @@ case "$err" in
 	*'')      : ;;
 	*)        echo "  chip id          : $err" ;;
 esac
-if dmesg 2>/dev/null | grep -q 'ov08x40.*chip-id register: -6'; then
+if dmesg 2>/dev/null | grep -qE '(ov02c10|ov08x40).*chip-id register: -6'; then
 	echo "                     CCI, pins, reset gpio and MCLK are nevertheless proven" >/dev/null
 fi
 echo
