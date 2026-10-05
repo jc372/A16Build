@@ -1,40 +1,37 @@
 #!/bin/bash
-# a16-recovery-entry.sh -- add two entries that always get you in, and retire the failsafe
-# that hangs the boot.
+# a16-recovery-entry.sh -- add a recovery entry and a minimal failsafe, built by CLONING the
+# entry that is already known to boot, and retire the failsafes that do not.
 #
 #   report:  sudo bash ~/a16-payload/camera/a16-recovery-entry.sh
 #   apply:   sudo bash ~/a16-payload/camera/a16-recovery-entry.sh --apply
 #
-# Adds to the ubuntu menu and its EFI/BOOT fallback copy:
-#   1. "recovery - t2, command line, wifi": the t2 kernel with systemd.unit=multi-user.target.
-#      The normal display path is left ALONE, so the panel works and the text console is on
-#      it; NetworkManager is a service, so wifi comes up.  This is the one to use when the
-#      desktop or the login session is broken -- log in on tty0 or over ssh and fix it.
-#   2. "failsafe - t2, panel to firmware framebuffer": same, but with ONLY msm blacklisted,
-#      so Linux never takes the panel and the firmware's picture stays.  The old failsafe
-#      blacklisted dispcc/gpucc/videocc/phy_qcom_edp/panel too, which are clock-controller
-#      and GDSC providers the rest of the boot needs: that is why it died before systemd.
+# Design rule, after getting this wrong once: do not author boot entries.  The known-good
+# entry ("A16: linux-next 7.3.0-rc5-next-20261002-t2") is read out of the menu and cloned
+# verbatim, changing ONLY the cmdline suffix and the title.  Search, insmod, devicetree,
+# initrd, the file guard and the missing-file fallback all come from the entry that boots.
+# An earlier version wrote its own blocks and shipped an unset UUID variable: search got no
+# UUID, $root stayed on the ESP partition, the guard failed there and the entry reported
+# "kernel or initramfs missing".  Cloning cannot have that class of bug, and this script
+# refuses to run at all if it cannot find the base entry in the menu.
 #
-# Also removes the last of 7.2 from this machine: the staged ESP payload (/a16boot, 82M:
-# a 7.2 vmlinuz whose initramfs cannot boot this root filesystem, plus old DTBs and a staged
-# old menu) is moved to the archive, and the diagnostics entry stops probing the 7.2 kernel.
-# It is moved rather than deleted, and only if no surviving entry still boots from it.
-# Retires the old full-blacklist failsafe (archived), and makes the EFI/BOOT fallback default
-# to the recovery entry: a visible, safe landing instead of a hang.
+#   recovery = base + systemd.unit=multi-user.target   -> normal display path: panel + console
+#   failsafe = base + modprobe.blacklist=msm module_blacklist=msm  -> firmware framebuffer
+#
+# Also: retires the staged-7.2 framebuffer entry and the 7.3 full-blacklist failsafe (neither
+# boots; the latter takes out clock-controller/GDSC providers the boot needs), moves the
+# staged 7.2 ESP payload (/a16boot, 82M) to the archive, and drops the 7.2 probes from the
+# diagnostics entry.  Nothing is deleted without being archived first.  Run me twice and the
+# second run is a no-op.
 
 set -u
 STAMP=$(date +%Y%m%d-%H%M%S)
 ARCH=/home/jc/a16-payload/camera/grub-archive/$STAMP
-KVER=7.3.0-rc5-next-20261002-t2
-DTB=/boot/glymur-a16-7.3.0-rc5-next-20261002-t2.dtb
-UUID=f8e005e9-414c-4c8e-ad68-d1e9fdc208bc
-COMMON="root=UUID=$UUID ro acpi=off clk_ignore_unused pd_ignore_unused regulator_ignore_unused console=tty0 keep_bootcon loglevel=7"
-RECOVERY='A16: recovery - t2, command line, wifi'
-FAILSAFE='A16: failsafe - t2, panel left to firmware framebuffer (msm blacklisted)'
-# retire BOTH broken failsafes: the stale staged-7.2 one (boots /a16boot/vmlinuz, cannot work)
-# and the 7.3 full-blacklist one (its blacklist removes clock-controller/GDSC providers the
-# boot needs, so it dies before systemd).
-OLD_FAILSAFE_RE='^(?:\[\d+\]\s*)?A16: (?:7\.2 \+ glymur DTB, internal input, panel via firmware framebuffer|next 7\.3 \+ glymur DTB, panel left to firmware)'
+BASE_TITLE='A16: linux-next 7.3.0-rc5-next-20261002-t2'
+REC_TITLE='A16: recovery - t2, command line, wifi'
+FS_TITLE='A16: failsafe - t2, panel left to firmware framebuffer (msm blacklisted)'
+# the two that do not boot: the staged-7.2 one, and the 7.3 full-blacklist one
+BAD_RE='^(?:\[\d+\]\s*)?A16: (?:7\.2 \+ glymur DTB, internal input, panel via firmware framebuffer|next 7\.3 \+ glymur DTB, panel left to firmware)'
+STAGE=/boot/efi/a16boot
 MENUS="/boot/efi/EFI/ubuntu/grub.cfg /boot/efi/EFI/BOOT/grub.cfg"
 APPLY=0
 [ "${1:-}" = "--apply" ] && APPLY=1
@@ -42,109 +39,140 @@ APPLY=0
 echo "=== a16-recovery-entry ==="
 [ "$(id -u)" = 0 ] || { echo "  [fail] run me with sudo"; exit 1; }
 echo "  mode: $([ "$APPLY" = 1 ] && echo APPLY || echo 'report only')"
-[ -f "/boot/vmlinuz-$KVER" ] && [ -f "/boot/initrd.img-$KVER" ] && [ -f "$DTB" ] || { echo "  [fail] kernel/initramfs/dtb missing"; exit 1; }
-export KVER DTB COMMON RECOVERY FAILSAFE OLD_FAILSAFE_RE ARCH
+echo "  base entry to clone: $BASE_TITLE"
+[ -f /boot/vmlinuz-7.3.0-rc5-next-20261002-t2 ] || { echo "  [fail] the t2 kernel is not in /boot"; exit 1; }
+export BASE_TITLE REC_TITLE FS_TITLE BAD_RE ARCH
 
-for m in $MENUS; do
+# EFI/BOOT has no t2 entry of its own, but it needs the same clone.  Take the base block from
+# whichever menu has it, verbatim, and give it to every menu.
+BASEFILE=$(mktemp /tmp/a16-base.XXXXXX)
+python3 - "$BASEFILE" $MENUS <<'PYB'
+import os, re, sys
+out, menus = sys.argv[1], sys.argv[2:]
+for m in menus:
+	s = open(m).read()
+	b = re.search(r'^menuentry\s+"' + re.escape(os.environ['BASE_TITLE']) + r'"\s*\{.*?^\}', s, re.S | re.M)
+	if b:
+		open(out, 'w').write(b.group(0) + "\n"); print(f"  base entry taken from {os.path.basename(os.path.dirname(m))}"); break
+else:
+	print("  [fail] the base entry exists in none of the menus"); raise SystemExit(1)
+PYB
+[ -s "$BASEFILE" ] || { echo "  [fail] no base entry to clone -- stopping"; exit 1; }
+export BASEFILE
+
+for M in $MENUS; do
 	echo
-	echo "--- $m"
-	[ -f "$m" ] || { echo "  (absent)"; continue; }
-	python3 - "$m" "$APPLY" <<'PY'
-import os, re, sys, shutil
+	echo "--- $M"
+	[ -f "$M" ] || { echo "  (absent)"; continue; }
+	python3 - "$M" "$APPLY" <<'PY'
+import os, re, sys
 menu, apply_ = sys.argv[1], sys.argv[2] == "1"
-kver, dtb, common = os.environ['KVER'], os.environ['DTB'], os.environ['COMMON']
-rec, fs, oldre, arch = os.environ['RECOVERY'], os.environ['FAILSAFE'], os.environ['OLD_FAILSAFE_RE'], os.environ['ARCH']
+base_t, rec_t, fs_t = os.environ['BASE_TITLE'], os.environ['REC_TITLE'], os.environ['FS_TITLE']
+badre, arch = os.environ['BAD_RE'], os.environ['ARCH']
 s = open(menu).read()
 ent = list(re.finditer(r'^menuentry\s+"([^"]+)"\s*\{(.*?)^\}', s, re.S | re.M))
 names = [b.group(1) for b in ent]
-old = [b for b in ent if re.match(oldre, b.group(1))]
 
-def block(title, cmdline):
-    return (f'# added by a16-recovery-entry.sh\nmenuentry "{title}" {{\n'
-            f'    search --no-floppy --fs-uuid --set=root {os.environ.get("UUID","")}\n'
-            f'    if [ -f /boot/vmlinuz-{kver} -a -f /boot/initrd.img-{kver} ]; then\n'
-            f'        insmod fdt\n        insmod gzio\n'
-            f'        linux /boot/vmlinuz-{kver} {common} {cmdline}\n'
-            f'        devicetree {dtb}\n'
-            f'        initrd /boot/initrd.img-{kver}\n        boot\n    fi\n'
-            f'    echo "  kernel or initramfs missing"\n    sleep 20\n'
-            f'    configfile $prefix/grub.cfg\n}}\n')
+base = next((b.group(0) for b in ent if b.group(1) == base_t), None)
+local_base = base is not None
+if not base:
+	bf = os.environ.get('BASEFILE', '')
+	base = open(bf).read().rstrip("\n") if bf and os.path.exists(bf) and os.path.getsize(bf) else None
+if not base:
+	print("      [fail] no base entry available -- refusing to invent one")
+	raise SystemExit(0)
 
-sys.stderr.write(f"      entries {len(names)}; old failsafe present: {bool(old)}; recovery present: {rec in names}; failsafe present: {fs in names}\n")
+def clone(title, suffix):
+	blk = re.sub(r'^menuentry\s+"[^"]+"', lambda m: f'menuentry "{title}"', base, count=1, flags=re.M)
+	blk = re.sub(r'^([ \t]*linux\s+.*?)\s*$', lambda m: m.group(1) + ' ' + suffix, blk, count=1, flags=re.M)
+	return '# cloned from "' + base_t + '" by a16-recovery-entry.sh\n' + blk + "\n"
+
+rec_block = clone(rec_t, 'systemd.unit=multi-user.target')
+fs_block = clone(fs_t, 'modprobe.blacklist=msm module_blacklist=msm')
+bad = [b for b in ent if re.match(badre, b.group(1))]
+# our own earlier versions, if they are already in there (they do not boot): replace them
+previous = [b for b in ent if b.group(1) in (rec_t, fs_t)]
+print(f"      entries {len(names)}; base present: yes;"
+      f" recovery already here: {'yes' if rec_t in names else 'no'};"
+      f" failsafe already here: {'yes' if fs_t in names else 'no'};"
+      f" entries to retire: {len(bad)} + {len(previous)} replaced")
 if not apply_:
-    print("      [check] would add the recovery and failsafe entries, retire the old failsafe,")
-    print("              and point this menu's default at the recovery entry (BOOT) / leave t2 (ubuntu)")
-    raise SystemExit
+	print("      [check] would clone the base entry twice (recovery, failsafe):")
+	print("              recovery = base + systemd.unit=multi-user.target")
+	print("              failsafe = base + modprobe.blacklist=msm module_blacklist=msm")
+	print("              and retire the entries above; ubuntu keeps its default, EFI/BOOT gets recovery")
+	raise SystemExit(0)
 
 os.makedirs(arch, exist_ok=True)
 open(os.path.join(arch, os.path.basename(os.path.dirname(menu)) + '.grub.cfg'), 'w').write(s)
 with open(os.path.join(arch, 'retired-menuentries.txt'), 'a') as f:
-    for b in old:
-        f.write(f"# from {menu}\n{b.group(0)}\n\n")
+	for b in bad + previous:
+		f.write(f"# from {menu}\n{b.group(0)}\n\n")
 
 out = s
-for b in old:
-    for cand in (b.group(0) + "\n", b.group(0)):
-        if cand in out:
-            out = out.replace(cand, "", 1); break
-anchor = re.search(r'^menuentry\s+"A16: linux-next 7\.3\.0-rc5-next-20261002-t2"', out, re.M)
-add = ""
-if rec not in names:  add += block(rec, 'systemd.unit=multi-user.target') + "\n"
-if fs not in names:   add += block(fs, 'modprobe.blacklist=msm module_blacklist=msm') + "\n"
-out = (out[:anchor.start()] + add + out[anchor.start():]) if anchor else (out.rstrip() + "\n\n" + add)
-# the BOOT fallback should land on recovery (visible, safe); ubuntu keeps the plain t2
-want = 'A16: linux-next 7.3.0-rc5-next-20261002-t2' if 'vmlinuz-7.3.0-rc5-next-20261002-t2' in s and 'A16: linux-next' in s else rec
-out = re.sub(r'^set default=.*$', f'set default="{want}"', out, count=1, flags=re.M)
-# the diagnostics entry no longer has a staged payload to show, and no longer probes 7.2
+for b in bad + previous:
+	for cand in (b.group(0) + "\n\n", b.group(0) + "\n", b.group(0)):
+		if cand in out:
+			out = out.replace(cand, "", 1); break
+anchor = re.search(r'^menuentry\s+"' + re.escape(base_t) + r'"\s*\{.*?^\}', out, re.S | re.M)
+add = rec_block + "\n" + fs_block + "\n"
+if anchor:
+	out = out[:anchor.end()] + "\n\n" + add + out[anchor.end():]
+# EFI/BOOT is the firmware's fallback: land it on recovery (visible, safe).  ubuntu keeps t2.
+if base_t not in [m.group(1) for m in re.finditer(r'^menuentry\s+"([^"]+)"', out, re.M)]:
+	out = re.sub(r'^set default=.*$', f'set default="{rec_t}"', out, count=1, flags=re.M)
+# diagnostics: no staged payload to list any more, and no 7.2 probes
 out = re.sub(r'^[ \t]*search --no-floppy --file --set=a16esp /a16boot/vmlinuz\n', '', out, flags=re.M)
 out = out.replace('      echo "  staged ESP payload found on: $a16esp"\n', '')
-out = out.replace('      echo "  --- staged ESP payload ---"\n', '')
+out = re.sub(r'^[ \t]*echo "  --- staged ESP payload ---"\n', '', out, flags=re.M)
 out = re.sub(r'^[ \t]*ls \(\$a16esp\)/a16boot\n', '', out, flags=re.M)
 out = out.replace('7.3.0-rc3-next-20260914', '7.3.0-rc5-next-20261002-t2')
 out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/(?:vmlinuz|initrd\.img)-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
-out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/initrd\.img-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
-out = re.sub(r'^[ \t]*if \[ -f \(\$r17\)/boot/vmlinuz-7\.2\.0-5-generic \].*\n', '', out, flags=re.M)
-
 out = re.sub(r'\n{3,}', '\n\n', out)
 open(menu + '.new', 'w').write(out); os.replace(menu + '.new', menu)
 
 cur = open(menu).read()
 after = re.findall(r'^menuentry\s+"([^"]+)"\s*\{(.*?)^\}', cur, re.S | re.M)
 d = re.search(r'^set default=(.*)$', cur, re.M).group(1).strip().strip('"')
-tgt = [b for t, b in after if t == d]
-k = re.search(r'^\s*linux\s+(\S+)', tgt[0], re.M).group(1) if tgt else '?'
-broken = [t for t, b in after if (mm := re.search(r'^\s*linux\s+(\S+)', b, re.M)) and mm.group(1).startswith('/boot') and not os.path.exists(mm.group(1))]
-print(f"      -> {len(after)} entries; default '{d[:44]}' -> {os.path.basename(k)}; missing-kernel: {len(broken)}")
+broken = [t for t, b in after if (mm := re.search(r'^\s*linux\s+(\S+)', b, re.M))
+	  and mm.group(1).startswith('/boot') and not os.path.exists(mm.group(1))]
+print(f"      -> {len(after)} entries; default '{d[:40]}'; missing-kernel entries: {len(broken)}")
+for t in (rec_t, fs_t):
+	b = [bb for tt, bb in after if tt == t]
+	if not b:
+		print(f"         !! {t}: NOT PRESENT"); continue
+	whole = re.search(r'^menuentry\s+"[^"]+"\s*\{(.*?)^\}', b[0], re.S | re.M)
+	# prove the clone kept the mechanics of the base
+	mech = {k: bool(re.search(pat, b[0], re.M)) for k, pat in
+		(('search', r'^\s*search\s'), ('linux', r'^\s*linux\s'), ('devicetree', r'^\s*devicetree\s'),
+		 ('initrd', r'^\s*initrd\s'), ('boot', r'^\s*boot\s*$'))}
+	uuid = re.search(r'--set=root\s+(\S+)', b[0], re.M)
+	cmd = re.search(r'^\s*linux\s+(.*)$', b[0], re.M).group(1)
+	print(f"         {t[:32]}: search={mech['search']} dt={mech['devicetree']} initrd={mech['initrd']} boot={mech['boot']}")
+	print(f"            uuid={uuid.group(1) if uuid else '!! MISSING'}  tail=...{cmd[-58:]}")
 PY
 done
 
 echo
-# --- retire the 7.2 staged payload: nothing on this machine boots it any more -----------
-# The entry that used it (the staged-7.2 framebuffer one) is retired above, so the payload
-# is dead weight -- 82M on the ESP of a 7.2 kernel whose initramfs cannot boot this root
-# filesystem.  It is MOVED, not deleted, so it can be put back.
-STAGE=/boot/efi/a16boot
 if [ -d "$STAGE" ]; then
-	# guard: refuse to move it while any surviving entry actually boots from it
 	live=$(grep -lE '^[[:space:]]*(linux|initrd)[[:space:]]+/a16boot/' $MENUS 2>/dev/null)
 	if [ -n "$live" ]; then
 		echo "  [skip] an entry still boots /a16boot/: $live"
 	elif [ "$APPLY" != 1 ]; then
-		echo "  [check] would move $STAGE ($(du -sh $STAGE | cut -f1)) to $ARCH/a16boot/ and free it from the ESP"
+		echo "  [check] would move $STAGE ($(du -sh $STAGE | cut -f1)) to $ARCH/a16boot/ (frees it from the ESP)"
 	else
-		mkdir -p "$ARCH"
-		mv "$STAGE" "$ARCH/a16boot" && echo "  moved $STAGE -> $ARCH/a16boot ($(df -h /boot/efi | tail -1 | awk '{print $4}') free on the ESP now)"
+		mkdir -p "$ARCH"; mv "$STAGE" "$ARCH/a16boot" && echo "  moved $STAGE -> $ARCH/a16boot ($(df -h /boot/efi | tail -1 | awk '{print $4}') free on the ESP)"
 	fi
 else
-	echo "  $STAGE: already gone"
+	echo "  $STAGE: not present (nothing to move)"
 fi
 
 echo
 if [ "$APPLY" = 1 ]; then
-	echo "done.  Pre-change copies of the menus: $ARCH"
+	echo "done.  Pre-change menus and everything retired: $ARCH"
 	echo
-	echo "In the recovery entry: log in on the panel's console (tty0) or over ssh.  NetworkManager"
-	echo "is a service, so wifi comes up by itself; if the ath12k has wedged, run: sudo reload_wifi"
+	echo "recovery: log in on the panel's console (tty0) or over ssh.  NetworkManager is a"
+	echo "service, so wifi comes up by itself; if the ath12k has wedged: sudo reload_wifi"
 else
 	echo "Nothing changed.  Run with --apply."
 fi
