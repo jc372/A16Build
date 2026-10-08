@@ -156,6 +156,25 @@ if [ "${1:-}" = "suspendfix" ]; then
   exec bash /home/jc/A16Build/BRINGUP/tools/a16-install-xhci-suspend-fix.sh "$@"
 fi
 
+# "efi" (alias "bootorder"): which firmware boot option wins -- Windows Boot Manager or Ubuntu.
+# Reorders BootOrder only, saves the previous order first, and can restore it.  See a16-efi-order.sh.
+if [ "${1:-}" = "efi" ] || [ "${1:-}" = "bootorder" ]; then
+  shift
+  exec bash /home/jc/A16Build/BRINGUP/tools/a16-efi-order.sh "$@"
+fi
+
+# "backup": replicate this machine (home, the agent, system bits, the kernel tree) to a destination.
+if [ "${1:-}" = "backup" ]; then
+  shift
+  exec bash /home/jc/A16Build/BRINGUP/tools/a16-backup.sh "$@"
+fi
+
+# "backup-root": the root-only files a user-mode backup cannot read, bundled into one tarball.
+if [ "${1:-}" = "backup-root" ]; then
+  shift
+  exec bash /home/jc/A16Build/BRINGUP/tools/a16-backup-root.sh "$@"
+fi
+
 # "default": which menu entry the machine boots unattended (standing choice: [3]).
 if [ "${1:-}" = "default" ]; then
   shift

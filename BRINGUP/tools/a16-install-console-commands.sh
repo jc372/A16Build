@@ -11,11 +11,16 @@
 #   /usr/local/bin/lid_sleep   -> BRINGUP/tools/a16-sleep-test.sh      (the lid, and suspend)
 #   /usr/local/bin/a16step     -> BRINGUP/tools/a16-step.sh            (the whole Wi-Fi/sleep job, one line)
 #   /usr/local/bin/resume_log  -> BRINGUP/tools/a16-resume-log.sh      (the suspend/resume journal lines)
-#   ~/.local/bin/{reload_wifi,lid_sleep,a16step,resume_log}            (already on this user's PATH)
-#   ~/reload_wifi, ~/lid_sleep, ~/a16step, ~/a16step.sh, ~/resume_log  (for `sudo ~/a16step`)
+#   /usr/local/bin/reload_audio -> BRINGUP/tools/a16-audio-recover.sh  (the desktop sound, after a game)
+#   ~/.local/bin/{reload_wifi,lid_sleep,a16step,resume_log,reload_audio}   (already on this user's PATH)
+#   ~/reload_wifi, ~/lid_sleep, ~/a16step, ~/a16step.sh, ~/resume_log, ~/reload_audio  (for `sudo ~/a16step`)
 #
 # /usr/local/bin is what makes `sudo reload_wifi` work: sudo's secure_path includes it and, by
-# default, not ~/.local/bin.  Both commands answer `--help`.
+# default, not ~/.local/bin.  All of them answer `--help`.
+#
+# reload_audio is the exception to the sudo rule, and the inverse of the others: it drives the
+# *user* session's PipeWire/WirePlumber, so it must be run as yourself, never with sudo --
+# `sudo systemctl --user` would target root's own user manager and do nothing useful.
 set -u
 
 MODE="${1:-install}"
@@ -24,7 +29,8 @@ HOME_DIR=/home/jc
 BIN=/usr/local/bin
 USER_BIN=/home/jc/.local/bin
 declare -A SRC=( [reload_wifi]="$REPO/a16-wifi-recover.sh" [lid_sleep]="$REPO/a16-sleep-test.sh"
-                 [a16step]="$REPO/a16-step.sh" [resume_log]="$REPO/a16-resume-log.sh" )
+                 [a16step]="$REPO/a16-step.sh" [resume_log]="$REPO/a16-resume-log.sh"
+                 [reload_audio]="$REPO/a16-audio-recover.sh" )
 EXTRA_LINKS=( a16step.sh )   # both spellings, so `sudo ~/a16step` and `sudo bash ~/a16step.sh` work
 
 say() { printf '%s\n' "$*"; }
@@ -67,7 +73,7 @@ done
 if [ "$MODE" = install ]; then
   say ""
   say "checking that the commands resolve and answer --help:"
-  for n in reload_wifi lid_sleep; do
+  for n in reload_wifi lid_sleep reload_audio; do
     if command -v "$n" >/dev/null 2>&1; then
       say "   $n -> $(command -v "$n")"
       "$n" --help | head -1 | sed 's/^/      /'
@@ -77,7 +83,8 @@ if [ "$MODE" = install ]; then
     fi
   done
   say ""
-  say "Now type either of:   reload_wifi --help        lid_sleep --help"
+  say "Now type any of:   reload_wifi --help    lid_sleep --help    reload_audio --help"
   say "The radio one needs root for anything but 'status':  sudo reload_wifi"
+  say "The audio one is the other way round -- no sudo, ever:  reload_audio"
 fi
 exit $rc

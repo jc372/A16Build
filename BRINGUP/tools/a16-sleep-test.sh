@@ -276,7 +276,7 @@ case "$MODE" in
     ENTRY=/home/jc/A16Build/BRINGUP/tools/a16-drm-debug-entry.sh
     case "${ARG:-on}" in
       off|remove|revert)
-        A16_PARAMS="drm.debug=0x1ff" bash "$ENTRY" remove inline ;;
+        A16_PARAMS="drm.debug=0x1ff consoleblank=0 no_console_suspend ignore_loglevel initcall_debug pm_debug_messages" bash "$ENTRY" remove inline ;;
       shutdown)
         # For the other brown-screen bug: a shutdown/reboot that reaches systemd-shutdown and then never
         # completes.  With initcall_debug the kernel names every device as device_shutdown() walks them
@@ -284,15 +284,18 @@ case "$MODE" in
         # that hangs.  No drm.debug here on purpose -- the console has to stay readable.
         A16_PARAMS="initcall_debug ignore_loglevel consoleblank=0" bash "$ENTRY" arm
         say ""
-        say "-- next: reboot, pick [3], then shut down (or reboot) and WATCH THE PANEL.  The last device"
+        say "-- next: reboot (that row is the menu default), then shut down (or reboot) and WATCH THE PANEL.  The last device"
         say "   name printed before it stops is the one that hangs.  Write it down -- there is no"
         say "   post-mortem on this platform, the console is the record.  Remove with:"
         say "   sudo bash ~/a16.sh sleep debug off" ;;
       *)
-        A16_PARAMS="drm.debug=0x1ff consoleblank=0 no_console_suspend ignore_loglevel initcall_debug pm_debug_messages" bash "$ENTRY" arm
+        # No drm.debug here on purpose: this test is read off the panel, and DRM category
+        # logging would flood the console and bury the last PM line printed before a stall.
+        A16_PARAMS="consoleblank=0 no_console_suspend ignore_loglevel initcall_debug pm_debug_messages" bash "$ENTRY" arm
         say ""
-        say "-- next: reboot, pick entry [3], then suspend ('sudo bash ~/a16.sh sleep test 1' or just close"
-        say "   the lid).  No monitor, so nothing else is in the picture."
+        say "-- next: reboot and pick the row the tool named (the linux-next t2 row); it is still the"
+        say "   menu default, so an unattended boot lands on it.  Then suspend ('sudo bash ~/a16.sh"
+        say "   sleep test 1' or just close the lid).  No monitor, so nothing else is in the picture."
         say "   if it does not come back: the panel carries the last PM/device lines printed, and that is"
         say "   the stall point -- write down the last line or photograph it."
         say "   afterwards:  sudo bash ~/a16.sh sleep debug off" ;;
