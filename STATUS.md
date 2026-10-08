@@ -114,8 +114,10 @@ is dark.
    the atomic commit never completes, so gnome-shell's KMS thread blocks in `WAIT_VBLANK` and only the
    picture dies; the kernel keeps running and is reachable over SSH. Evidence and a capture tool are in
    `docs/display-outputs.md`.
-6. **Boot default is entry [3]** ("full display attempt"), set with `sudo bash ~/a16.sh default 3`;
-   the 30 s menu stays up so [2] remains reachable by hand, and [1] is retired.
+6. **The boot default is the t2 row** (`A16: linux-next 7.3.0-rc5-next-20261002-t2`).  The menu has named
+   entries by title since 2026-10-05 -- the numbering is gone and the default is a title inside the ESP's
+   grub.cfg, so nothing here should be described as "entry [3]" any more.  The 30 s menu stays up, so the
+   failsafe row (`A16: failsafe - t2, panel left to firmware framebuffer`) stays reachable by hand.
 7. **The external-display clock blocker is solved** (item 5's clock half, and NEXT-STEPS item 10):
    the tert combo PHY's `gcc_usb3_tert_phy_com_aux_clk` was never stuck because of the PHY — its
    controller domain `gcc_usb30_tert_gdsc` was simply never powered, since this board's only DT
@@ -229,7 +231,7 @@ instead.
 
        sudo ~/a16step          # or: sudo bash ~/a16step.sh
 
-   1st run installs the fix and says "start again into [3]"; after the restart the same line starts
+   1st run installs the fix and says "start again into the default row"; after the restart the same line
    the suspend test detached (an SSH drop at the suspend cannot lose it); the same line afterwards
    prints the verdict.  `sudo ~/a16step status|verdict|log` are read-only; `xhci` lands the
    second-suspend fix in the initramfs once the Wi-Fi question is settled.  Results of the first run:

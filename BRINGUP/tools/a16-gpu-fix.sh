@@ -2,9 +2,9 @@
 # a16-gpu-fix.sh -- one short command, two phases, for fixing the GNOME GPU oops.
 #
 #   type this at the console:      sudo bash ~/a16.sh
-#                                  sudo bash ~/a16.sh daily    (make entry [3] boot to the desktop)
+#                                  sudo bash ~/a16.sh daily    (make the default row boot to the desktop)
 #
-# Phase 1 (fix not live yet): installs the rebuilt msm.ko, then tells you to reboot into [3].
+# Phase 1 (fix not live yet): installs the rebuilt msm.ko, then tells you to reboot into the default row.
 # Phase 2 (after that reboot): proves the oopsing ioctl is safe, then starts the desktop.
 # It decides which phase it is in by comparing the running module's srcversion with the built one.
 #
@@ -12,21 +12,21 @@
 # log survives.  Env overrides for testing: A16_KO_SRC, A16_PROBE, A16_INSTALLER, A16_SKIP_ROOT,
 # A16_SKIP_GUI.
 set -u
-# Sub-mode "daily": strip the test parameters from entry [3] so it boots to the desktop instead of
+# Sub-mode "daily": strip the test parameters from the default row so it boots to the desktop instead of
 # a text console (drm.debug=0x1ff and systemd.unit=multi-user.target exist for display debugging).
 if [ "${1:-}" = "daily" ]; then
   TOOL=/home/jc/A16Build/BRINGUP/tools/a16-drm-debug-entry.sh
   if [ "$(id -u)" != 0 ]; then
     printf 'This needs root.  Type exactly:  sudo bash ~/a16.sh daily\n'; exit 1
   fi
-  echo "=== promoting entry [3] to daily use: removing the test parameters ==="
+  echo "=== promoting the default row to daily use: removing the test parameters ==="
   echo "-- before:"
   grep -m1 'linux /boot/vmlinuz' /boot/efi/EFI/ubuntu/grub.cfg | tr ' ' '\n' | grep -E 'drm.debug|systemd.unit|consoleblank' | sed 's/^/   /'
   A16_PARAMS="consoleblank=0" bash "$TOOL" remove inline >/dev/null 2>&1
   A16_PARAMS="consoleblank=0" bash "$TOOL" arm | sed 's/^/   /'
   echo "-- after:"
   grep -m1 'linux /boot/vmlinuz' /boot/efi/EFI/ubuntu/grub.cfg | tr ' ' '\n' | grep -E 'drm.debug|systemd.unit|consoleblank' | sed 's/^/   /'
-  echo "Entry [3] now boots straight to GDM.  Entry [2] is untouched and stays the fallback."
+  echo "The default row now boots straight to GDM.  The failsafe row is untouched."
   exit 0
 fi
 
@@ -122,7 +122,7 @@ fi
 #               reset", "AER: device recovery failed" -- the link dropped, the port re-initialised the
 #               device, and ath12k (which implements no PCIe error recovery) never found out.
 # pcie_port_pm=off keeps the port from being powered down in the suspend, pcie_aspm=off keeps the link
-# out of L1.  Both go into entry [3] (same mechanism as "display arm"), so pick [3] on the next boot.
+# out of L1.  Both go into the default row (same mechanism as "display arm"), so take that row next boot.
 if [ "${1:-}" = "pcielink" ]; then
   shift
   exec env A16_PARAMS="pcie_port_pm=off pcie_aspm=off" bash /home/jc/A16Build/BRINGUP/tools/a16-drm-debug-entry.sh "$@"
@@ -175,7 +175,7 @@ if [ "${1:-}" = "backup-root" ]; then
   exec bash /home/jc/A16Build/BRINGUP/tools/a16-backup-root.sh "$@"
 fi
 
-# "default": which menu entry the machine boots unattended (standing choice: [3]).
+# "default": which menu entry the machine boots unattended (standing choice: the t2 row).
 if [ "${1:-}" = "default" ]; then
   shift
   exec bash /home/jc/A16Build/BRINGUP/tools/a16-set-default-entry.sh "$@"
@@ -298,10 +298,10 @@ if [ "$running" != "$built" ] || [ -z "$built" ]; then
     exit 1
   fi
   rule
-  say "NEXT STEP -- reboot into entry [3], then run the same short command again:"
+  say "NEXT STEP -- reboot into the default row (the one the menu highlights), then run it again:"
   say ""
   say "    1.  sudo reboot"
-  say "    2.  (pick [3] in the menu if it is not already the default)"
+  say "    2.  (if the menu appears, take the row it already highlights -- the t2 one)"
   say "    3.  at the console:   sudo bash ~/a16.sh"
   say ""
   say "That second run takes one second to test the ioctl that used to oops the kernel, and starts"
@@ -358,5 +358,5 @@ say "graphical.target : $(systemctl is-active graphical.target)"
 say "gdm              : $(systemctl is-active gdm 2>/dev/null)"
 say "gnome-shell procs: $(pgrep -c gnome-shell 2>/dev/null || echo 0)"
 rule
-say "Black screen again but the machine is alive? Ctrl-Alt-F3, or reboot into [3]."
+say "Black screen again but the machine is alive? Ctrl-Alt-F3, or reboot into the default row."
 say "This run's log: $LOG"

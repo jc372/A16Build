@@ -74,7 +74,7 @@ Read the result like this:
 | came back, panel dark, then the picture returns within ~15 s | the hook did its job — it cycled the VT or nudged the session, so **your session survived** (check `journalctl -t a16-display-wake`) |
 | came back, panel dark, then a login screen a few seconds later | the hook reached its last rung (gdm restart) — no SSH needed, but the session is gone |
 | came back, panel blank but `enabled=enabled` | the dark test cannot see this: press Ctrl+Alt+F3 then Ctrl+Alt+F2, or install the `hook always` mode |
-| the journal ends at `PM: suspend entry` | the machine never came back. Then: `sudo bash ~/a16.sh sleep debug`, reboot, pick entry [3], suspend — the panel prints the last PM/device lines, which is the only post-mortem this platform has. Afterwards `sleep debug off`. |
+| the journal ends at `PM: suspend entry` | the machine never came back. Then: `sudo bash ~/a16.sh sleep debug`, reboot into the t2 row (the one the menu highlights as default), suspend — the panel prints the last PM/device lines, which is the only post-mortem this platform has. Afterwards `sleep debug off`. |
 
 Only the last row fails the goal — the machine not coming back. Every row above it leaves you with a
 usable machine and no SSH. If a hang does happen, the next lever is the other mode: `s2idle` is what is
@@ -256,8 +256,8 @@ A shutdown reaches `systemd-shutdown: Sending SIGTERM to remaining processes...`
 the machine stays on — held there by something after userspace, in the kernel's device teardown or the
 final PSCI poweroff. There is no post-mortem on this platform, so the console is the instrument:
 
-    sudo bash ~/a16.sh sleep debug shutdown     # entry [3] gains initcall_debug + ignore_loglevel
-    # reboot, pick [3], then shut down and WATCH THE PANEL
+    sudo bash ~/a16.sh sleep debug shutdown     # the t2 row gains initcall_debug + ignore_loglevel
+    # reboot into that row, then shut down and WATCH THE PANEL
 
 With `initcall_debug` the kernel names every device as `device_shutdown()` walks them
 (`drivers/base/core.c`), so the last name printed before it stops is the device that hangs. Write it down;
